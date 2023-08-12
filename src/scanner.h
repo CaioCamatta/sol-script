@@ -10,7 +10,7 @@
  *
  * @param inputCode a string of characters to be parsed.
  */
-TokenType scan(char* inputCode);
+TokenType* scan(char* inputCode);
 
 /**
  * Scan the next from a given index.

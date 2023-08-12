@@ -1,6 +1,6 @@
 #include "scanner.h"
 
-TokenType scan(char* inputCode) {
+TokenType* scan(char* inputCode) {
     return scanNext(inputCode, 0);
 }
 

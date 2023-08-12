@@ -2,6 +2,11 @@
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "ms-vscode.cpptools",
   "files.associations": {
-    "stdio.h": "c"
+    "stdio.h": "c",
+    "token.h": "c",
+    "scanner.h": "c",
+    "dynamic_array.h": "c",
+    "assert.h": "c",
+    "minunit.h": "c"
   }
 }

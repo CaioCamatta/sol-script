@@ -1,0 +1,10 @@
+{
+  "configurations": [
+    {
+      "name": "Mac",
+      "includePath": ["src/", "src/util/"],
+      "cStandard": "c17"
+    }
+  ],
+  "version": 4
+}
