@@ -1,9 +1,9 @@
-#define mu_assert(message, test)     \
-    do {                             \
-        if (!(test)) return message; \
+#define ASSERT(test)                                \
+    do {                                            \
+        if (!(test)) return "error, failed " #test; \
     } while (0)
 
-#define mu_run_test(test)            \
+#define RUN_TEST(test)               \
     do {                             \
         char *message = test();      \
         tests_run++;                 \

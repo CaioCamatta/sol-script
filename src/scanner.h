@@ -1,5 +1,5 @@
-#ifndef clox_scanner_h
-#define clox_scanner_h
+#ifndef delta_scanner_h
+#define delta_scanner_h
 
 #include "token.h"
 
