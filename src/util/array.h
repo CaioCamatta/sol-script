@@ -1,5 +1,5 @@
-#ifndef delta_dynamic_array_h
-#define delta_dynamic_array_h
+#ifndef delta_array_h
+#define delta_array_h
 
 #include <stdio.h>
 #include <stdlib.h>

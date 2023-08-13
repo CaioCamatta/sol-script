@@ -1,12 +1,12 @@
 #include <stdio.h>
 
 #include "minunit.h"
-#include "src/util/dynamic_array_test.c"
+#include "src/util/array_test.c"
 
 int tests_run = 0;
 
 static char *all_tests() {
-    RUN_TEST(test_dynamic_array);
+    RUN_TEST(test_array);
     return 0;
 }
 

@@ -1,10 +1,10 @@
-#include "util/dynamic_array.h"
+#include "util/array.h"
 
 #include <assert.h>
 
 #include "../../minunit.h"
 
-char* test_dynamic_array() {
+char* test_array() {
     IntArray arr;
     IntArray* arrPtr = &arr;
 
