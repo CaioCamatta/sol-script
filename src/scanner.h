@@ -22,4 +22,16 @@ TokenType* scan(char* inputCode);
  */
 TokenType scanNext(char* inputCode, int cursorIndex);
 
+/* Scanner struct to facilitate scanning through a file. */
+typedef struct {
+    const char* current;  // Current character. 0-indexed.
+    const char* start;    // Start of the current lexeme, inclusive.
+    int line;             // Current line, for error reporting. 1-indexed.
+    int charPos;          // The position of the curent character relative to the start of
+                          // the current line, for error reporting. 1-indexed.
+} Scanner;
+
+/* Initialize scanner at the beginning of the given sourceCode */
+void initScanner(Scanner* scanner, const char* sourceCode);
+
 #endif
