@@ -6,6 +6,6 @@
  *
  * @param relativePath relative path to input file.
  */
-static char *readFile(const char *relativePath);
+char *readFile(const char *relativePath);
 
 #endif
