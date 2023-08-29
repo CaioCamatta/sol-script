@@ -1,12 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "array.h"
 #include "file.h"
 #include "scanner.h"
+#include "token.h"
 
 static void executeFile(const char* path) {
     char* sourceCode = readFile(path);
-    printf(sourceCode);
+    Scanner scanner;
+    initScanner(&scanner, sourceCode);
+    TokenArray tokens = scan(&scanner);
+
+    for (size_t i = 0; i < tokens.used; i++) {
+        printf("%s\n", tokenTypeStrings[tokens.values[i].type]);
+    }
 }
 
 int main(int argc, const char* argv[]) {

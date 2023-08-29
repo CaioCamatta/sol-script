@@ -28,6 +28,10 @@ UNIT_TEST_EXEC := $(UNIT_TEST_DIR)/unit_test
 
 all: $(MAIN_EXEC)
 
+# For debugging, add a couple flags
+debug: CFLAGS += -pg
+debug: $(MAIN_EXEC)
+
 $(MAIN_EXEC): $(OBJ_FILES)
 	$(CC) $(CFLAGS) $(OBJ_FILES) -o $@
 

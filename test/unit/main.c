@@ -1,23 +1,14 @@
 #include <stdio.h>
 
 #include "minunit.h"
+#include "src/scanner_test.c"
 #include "src/util/array_test.c"
 
-int tests_run = 0;
-
-static char *all_tests() {
+static void all_tests() {
     RUN_TEST(test_array);
-    return 0;
+    RUN_TEST(test_scanner);
 }
 
 int main(int argc, char **argv) {
-    char *result = all_tests();
-    if (result != 0) {
-        printf("%s\n", result);
-    } else {
-        printf("ALL TESTS PASSED\n");
-    }
-    printf("Tests run: %d\n", tests_run);
-
-    return result != 0;
+    RUN_SUITE(all_tests);
 }

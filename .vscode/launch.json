@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Build & Debug Main",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/delta",
+      "args": ["${input:testFile}"],
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "Make debuggable program"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "testFile",
+      "type": "promptString",
+      "description": "Deltalang '.d' file to debug.",
+      "default": "./test/unit/src/all_tokens.d"
+    }
+  ]
+}
