@@ -4,9 +4,9 @@ Delta is a stack-based, prototype-based, interpreted, GC-ed programming language
 
 Developed in C17.
 
-# Language Design
+## Language Design
 
-## 1. Scanner
+### 1. Scanner
 
 The scanner is a regular language that turns characters into tokens. For example, the "val" becomes "TOKEN_VAL".
 
@@ -23,9 +23,9 @@ DIGIT           -> "0" - "9"
 PUNCTUATOR      -> "(" | ")" | "{" | "}" | "." | "*" | "+" | "-" | "!" | "%" | "<" | ">" | "=" | "<=" | ">=" | "==" | "!=" | "||" | "&&" | ";" | ","
 ```
 
-# Development
+## Development
 
-## Project structure
+### Project structure
 
 `src/` - `.c` and `.h` source files
 `src/util/` - `.c` and `.h` utility files
