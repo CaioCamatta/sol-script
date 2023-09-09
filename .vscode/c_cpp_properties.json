@@ -1,0 +1,12 @@
+{
+  "configurations": [
+    {
+      "name": "Mac",
+      "includePath": ["${workspaceFolder}/src/**"],
+      "intelliSenseMode": "macos-clang-arm64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "c17"
+    }
+  ],
+  "version": 4
+}
