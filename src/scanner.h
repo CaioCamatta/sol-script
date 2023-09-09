@@ -24,7 +24,7 @@ typedef struct {
  *
  * Throws exceptions in case of lexical errors.
  *
- * @param inputCode a string of characters to be parsed.
+ * @param scanner an initialized Scanner to use for scanning.
  */
 TokenArray scan(Scanner* scanner);
 
@@ -33,8 +33,7 @@ TokenArray scan(Scanner* scanner);
  *
  * Throws exceptions in case of lexical errors.
  *
- * @param inputCode a string of characters to be parsed.
- * @param cursorIndex the index (inclusive) to start scanning from.
+ * @param inputCode an initialized Scanner to use for scanning.
  */
 Token scanNext(Scanner* scanner);
 
