@@ -106,14 +106,15 @@ static void skipWhitespace(Scanner* scanner) {
 /*
  * Create a Token of 'tokenType' if 'keyword' matches current string in the 'scanner'.
  * Otherwise do nothing.
+ * TODO: optimize 'strlen(keyword)'; ideally it should be calculated at compile time
  */
-#define matchKeyword(scanner, keyword, tokenType)                            \
-    do {                                                                     \
-        int keywordLen = strlen(keyword);                                    \
-        if (scanner->current - scanner->start == strlen(keyword) &&          \
-            memcmp(scanner->start + keywordLen, keyword, keywordLen) == 0) { \
-            return makeToken(scanner, tokenType);                            \
-        }                                                                    \
+#define matchKeyword(scanner, keyword, tokenType)               \
+    do {                                                        \
+        int keywordLen = strlen(keyword);                       \
+        if (scanner->current - scanner->start == keywordLen &&  \
+            memcmp(scanner->start, keyword, keywordLen) == 0) { \
+            return makeToken(scanner, tokenType);               \
+        }                                                       \
     } while (0)
 
 /*
@@ -213,7 +214,7 @@ Token scanNext(Scanner* scanner) {
             return makeToken(scanner, TOKEN_MINUS);
         case '!':
             return makeToken(scanner,
-                             advanceIfMatch(scanner, '=') ? TOKEN_EXCLAMATION : TOKEN_EXCLAMATION_EQUAL);
+                             advanceIfMatch(scanner, '=') ? TOKEN_EXCLAMATION_EQUAL : TOKEN_EXCLAMATION);
         case '%':
             return makeToken(scanner, TOKEN_MODULO);
         case '<':
