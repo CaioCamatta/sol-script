@@ -28,7 +28,11 @@ PUNCTUATOR      -> "(" | ")" | "{" | "}" | "." | "*" | "+" | "-" | "!" | "%" | "
 ### Project structure
 
 `src/` - `.c` and `.h` source files
+
 `src/util/` - `.c` and `.h` utility files
+
 `test/unit/src/` - unit tests for the C code
+
 `test/unit/src/util/` - unit tests for the utilities C code
+
 `test/delta/` - tests for the Delta language
