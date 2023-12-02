@@ -36,6 +36,26 @@
     "locale": "c",
     "atomic": "c",
     "array.h": "c",
-    "file.h": "c"
-  }
+    "file.h": "c",
+    "__nullptr": "cpp",
+    "parser.h": "c",
+    "compiler.h": "c",
+    "bytecode.h": "c",
+    "__config": "c",
+    "__split_buffer": "c",
+    "cstdio": "c",
+    "cstdlib": "c",
+    "functional": "c",
+    "memory_resource": "c",
+    "initializer_list": "c",
+    "istream": "c",
+    "iterator": "c",
+    "memory": "c",
+    "new": "c",
+    "ostream": "c",
+    "sstream": "c",
+    "unordered_map": "c",
+    "utility": "c"
+  },
+  "C_Cpp.errorSquiggles": "enabled"
 }
