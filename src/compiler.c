@@ -4,6 +4,8 @@
 #include <string.h>
 
 #include "array.h"
+#include "config.h"
+#include "debug.h"
 #include "syntax.h"
 
 void initCompiler(Compiler* compiler) {
@@ -75,7 +77,7 @@ static void visitLiteral(Compiler* compiler, Literal* literal) {
             visitNumberLiteral(compiler, literal->as.numberLiteral);
             break;
         default:
-            fprintf(stderr, "Unimplemented literal type.");
+            fprintf(stderr, "Unimplemented literal type %d.", literal->type);
             exit(EXIT_FAILURE);
             break;
     }
@@ -92,7 +94,7 @@ static void visitExpression(Compiler* compiler, Expression* expression) {
             break;
 
         default:
-            fprintf(stderr, "Unimplemented expression type.");
+            fprintf(stderr, "Unimplemented expression type %d.", expression->type);
             exit(EXIT_FAILURE);
             break;
     }
@@ -105,7 +107,7 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
             break;
 
         default:
-            fprintf(stderr, "Unimplemented statement type.");
+            fprintf(stderr, "Unimplemented statement type %d.", statement->type);
             exit(EXIT_FAILURE);
             break;
     }
@@ -115,6 +117,10 @@ BytecodeArray compileAST(Compiler* compiler, Source ASTSource) {
     for (int i = 0; i < ASTSource.numberOfStatements; i++) {
         Statement* statement = &(ASTSource.statements[i]);
         visitStatement(compiler, statement);
+    }
+
+    if (DEBUG_COMPILER) {
+        printBytecodeArray(compiler->compiledBytecode);
     }
 
     return compiler->compiledBytecode;
