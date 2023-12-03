@@ -47,7 +47,7 @@ test: $(UNIT_TEST_EXEC)
 	$(UNIT_TEST_EXEC)
 
 $(UNIT_TEST_EXEC): $(filter-out $(SRC_DIR)/main.c, $(SRC_FILES)) $(UNIT_TEST_SRC_FILES) $(SRC_UTIL_FILES) # Everything but src/main.c
-	$(CC) $(CFLAGS) $(filter-out $(SRC_DIR)/main.c, $(SRC_FILES)) $(UNIT_TEST_SRC_FILES) $(SRC_UTIL_FILES) -o $@
+	$(CC) $(CFLAGS) -g -p $(filter-out $(SRC_DIR)/main.c, $(SRC_FILES)) $(UNIT_TEST_SRC_FILES) $(SRC_UTIL_FILES) -o $@
 
 clean:
 	rm -rf $(OBJ_DIR) $(MAIN_EXEC) $(UNIT_TEST_EXEC)
