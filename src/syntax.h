@@ -35,8 +35,8 @@ typedef struct {
 typedef struct {
     ExpressionType type;
     union {
-        AdditiveExpression *additiveExpression;
         PrimaryExpression *primaryExpression;
+        AdditiveExpression *additiveExpression;
     } as;
 } Expression;
 
