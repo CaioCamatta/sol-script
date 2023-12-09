@@ -6,6 +6,8 @@ Developed in C17.
 
 ## Language Design
 
+![Architecture](./architecture.png)
+
 ### 1. Scanner
 
 The scanner is a regular language that turns characters into tokens. For example, the "val" becomes "TOKEN_VAL".
