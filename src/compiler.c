@@ -3,10 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "array.h"
+#include "bytecode.h"
 #include "config.h"
 #include "debug.h"
 #include "syntax.h"
+#include "vm.h"
 
 void initCompiler(Compiler* compiler) {
     BytecodeArray bytecodeArray;
@@ -67,7 +68,7 @@ static void visitExpressionStatement(Compiler* compiler, ExpressionStatement* ex
 }
 
 static void visitNumberLiteral(Compiler* compiler, NumberLiteral* numberLiteral) {
-    Bytecode bytecode = BYTECODE_CONSTANT(tokenTodouble(numberLiteral->token));
+    Bytecode bytecode = BYTECODE_CONSTANT_DOUBLE(tokenTodouble(numberLiteral->token));
     emitBytecode(compiler, bytecode);
 }
 

@@ -1,6 +1,10 @@
 #ifndef delta_bytecode_h
 #define delta_bytecode_h
 
+#include <stddef.h>
+
+#include "value.h"
+
 typedef enum {
     OP_CONSTANT,
     OP_ADD,
@@ -8,13 +12,19 @@ typedef enum {
 } Opcode;
 
 typedef struct {
-    double constant;  // TODO, store this in constants table
+    ValueType type;
+    union {
+        double doubleVal;  // TODO, store this in constants table
+    } as;
 } BytecodeConstant;
 
 // ## suppresses substitution
-#define BYTECODE_CONSTANT(value)                                \
-    (Bytecode) {                                                \
-        .type = OP_CONSTANT, .operands = {.constant = {value} } \
+#define BYTECODE_CONSTANT_DOUBLE(value)                                        \
+    (Bytecode) {                                                               \
+        .type = OP_CONSTANT,                                                   \
+        .operands = {                                                          \
+            .constant = (BytecodeConstant){.type = TYPE_DOUBLE, .as = {value}} \
+        }                                                                      \
     }
 
 typedef struct {
@@ -31,5 +41,11 @@ typedef struct {
         BytecodeAdd add;
     } operands;
 } Bytecode;
+
+typedef struct {
+    Bytecode *values;
+    size_t used;
+    size_t size;
+} BytecodeArray;
 
 #endif

@@ -1,5 +1,7 @@
 #include "debug.h"
 
+#include <stdio.h>
+
 void printBytecodeArray(BytecodeArray bytecodeArray) {
     printf("Compiled bytecode:\n\n");
 
@@ -8,7 +10,7 @@ void printBytecodeArray(BytecodeArray bytecodeArray) {
             case OP_ADD:
                 printf("[ ADD ]\n");
             case OP_CONSTANT:
-                printf("[ CONSTANT %f ]\n", bytecodeArray.values[i].operands.constant.constant);
+                printf("[ CONSTANT %f ]\n", bytecodeArray.values[i].operands.constant.as.doubleVal);
         }
     }
 }

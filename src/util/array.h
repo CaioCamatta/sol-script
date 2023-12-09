@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "bytecode.h"
 #include "syntax.h"
 #include "token.h"
 
@@ -21,12 +20,6 @@ typedef struct {
     size_t used;
     size_t size;
 } TokenArray;
-
-typedef struct {
-    Bytecode *values;
-    size_t used;
-    size_t size;
-} BytecodeArray;
 
 // Initialize array of any type with INITIAL_ARRAY_SIZE
 #define INIT_ARRAY(array, type)                                   \

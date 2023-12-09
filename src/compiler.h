@@ -1,7 +1,7 @@
 #ifndef delta_compiler_h
 #define delta_compiler_h
 
-#include "array.h"
+#include "bytecode.h"
 #include "syntax.h"
 #include "token.h"
 
