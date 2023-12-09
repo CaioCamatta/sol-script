@@ -16,13 +16,13 @@ void initVM(VM* vm, BytecodeArray* bytecode) {
 }
 
 // Push value onto the stack
-static void push(VM* vm, Value value) {
+void push(VM* vm, Value value) {
     *vm->SP = value;
     vm->SP++;
 }
 
 // Pop (retrieve) value from stack
-static Value pop(VM* vm) {
+Value pop(VM* vm) {
     vm->SP--;
     return *(vm->SP);
 }
@@ -94,7 +94,7 @@ void step(VM* vm) {
  */
 void run(VM* vm) {
     // Find the last instruction so we know when to stop executing
-    Bytecode* lastInstruction = &(vm->instructions->values[vm->instructions->size]);
+    Bytecode* lastInstruction = &(vm->instructions->values[vm->instructions->used]);
 
     while (vm->IP != lastInstruction) {
         step(vm);
