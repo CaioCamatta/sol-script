@@ -67,11 +67,11 @@ struct NumberLiteral {
 };
 
 /**
- * The 'source' node of the AST.
+ * The 'source' node of the AST. It's named the same as Scala's 'Source'.
  */
 static const int MAX_NUMBER_STATEMENTS = 10000;  // TODO: use dynamic array
 typedef struct {
-    Statement statements[MAX_NUMBER_STATEMENTS];
+    Statement rootStatements[MAX_NUMBER_STATEMENTS];
     int numberOfStatements;
 } Source;
 

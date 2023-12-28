@@ -26,7 +26,7 @@ int test_compiler() {
     initCompiler(&compiler);
 
     Source testSource = {
-        .statements = {
+        .rootStatements = {
             {
                 .type = EXPRESSION_STATEMENT,
                 .as.expressionStatement = &(ExpressionStatement){

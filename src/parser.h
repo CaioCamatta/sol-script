@@ -4,27 +4,46 @@
 #include "array.h"
 #include "token.h"
 
+// These are the types of syntax nodes Delta has. We use it
+typedef enum {
+    STATEMENT,
+    EXPRESSION,
+    LITERAL
+} SyntaxType;
+
 /**
- * TreeParser struct to facilitate the creation of a parse tree.
+ * ASTParser struct to facilitate the creation of a parse tree.
  *
  * @param tokenArray Array of tokens generated from the scanner.
  * @param current Current token. 0-indexed.
  * */
 typedef struct {
+    // Inputs from scanner
     TokenArray tokenArray;
     Token* current;
-} TreeParser;
+
+    // Root of the AST
+    Source* source;
+
+    // Track current node as we build the AST
+    SyntaxType currSyntaxType;
+    union {
+        Statement currStatement;
+        Expression currExpression;
+        Literal currLiteral;
+    } currNode;
+} ASTParser;
 
 /**
  * Turn an array of tokens into a parse tree.
  *
  * Throws parsing errors.
  *
- * @param treeParser an initialized TreeParser to use for scanning.
+ * @param treeParser an initialized ASTParser to use for scanning.
  */
-TokenArray parseTree(TreeParser* treeParser);
+TokenArray parseAST(ASTParser* treeParser);
 
 /* Initialize treeParser at the beginning of the given token array */
-void initTreeParser(TreeParser* treeParser, const TokenArray tokens);
+void initTreeParser(ASTParser* treeParser, const TokenArray tokens);
 
 #endif
