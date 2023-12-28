@@ -15,14 +15,174 @@ The scanner is a regular language that turns characters into tokens. For example
 The following is Delta's lexical grammar. It's insipired by [Lox's lexical grammar](https://craftinginterpreters.com/appendix-i.html), the [C lexical grammar](https://learn.microsoft.com/en-us/cpp/c-language/lexical-grammar?view=msvc-170) , and [Scala's lexical syntax](https://www.scala-lang.org/files/archive/spec/2.12/01-lexical-syntax.html#identifiers).
 
 ```
-TOKEN           -> KEYWORD | IDENTIFIER | NUMBER-LITERAL | STRING-LITERAL | PUNCTUATOR
-KEYWORD         -> "number" | "if" | "else" | "struct" | "return" | "false" | "true" | "null" | "val"
-NUMBER -LITERAL -> DIGIT+ (. DIGIT+)?
-STRING-LITERAL  -> "\" "[^\"]* "\""
-IDENTIFIER      -> NONDIGIT (NONDIGIT | DIGIT)*
-NONDIGIT        -> "a" - "z" | "A" - "Z" | "_"
-DIGIT           -> "0" - "9"
-PUNCTUATOR      -> "(" | ")" | "{" | "}" | "." | "*" | "+" | "-" | "!" | "%" | "<" | ">" | "=" | "<=" | ">=" | "==" | "!=" | "||" | "&&" | ";" | ","
+token:
+	keyword
+	identifier
+	number-literal
+	string-literal
+	punctuator
+
+keyword:
+	"number" 
+    "if" 
+    "else" 
+    "struct" 
+    "return" 
+    "false" 
+    "true" 
+    "null"
+    "val"
+    "prototype"
+
+number-literal:
+	digit+ (. digit+)?
+
+string-literal:
+	" s-char-sequence* "
+
+s-char-sequence:
+	[^\"]
+
+identifier: 
+	non-digit (non-digit | digit)*
+
+non-digit: one of
+	 _ a b c d e f g h i j k l m
+	 n o p q r s t u v w x y z
+	 A B C D E F G H I J K L M
+	 N O P Q R S T U V W X Y Z
+
+digit: one of
+	0 1 2 3 4 5 6 7 8 9
+
+punctuator: one of
+	( ) { } . * + - ! % < > = <= >= == != || && ; ,
+```
+
+### 2. Parser
+
+```
+source: 
+	statement* EOF
+
+statement: 
+	declaration
+	block-statement
+	iteration-statement
+	selection-statement
+	return-statement
+	expression-statement
+	assignment-statement
+
+declaration:
+	var-declaration ";"
+	val-declaration ";"
+
+var-declaration:
+	"var" identifier ( "=" expression )?
+
+var-declaration:
+	"val" identifier "=" expression
+
+block-statement:
+	"{" statement* "}" ";"
+	block-expression ";"
+
+iteration-statement:
+	"while" "(" expression ")" block-statement ";"
+
+selection-statement:
+	"if" "(" expression ")" statement ( "else" statement )? ";"
+
+return-statement:
+	"return" ( expression )? ";"
+	
+expression-statement:
+	expression ";"
+
+assignment-statement:
+	postfix-expression "=" expression
+
+
+expression:
+	struct-expression
+	function-expression
+	block-expression
+	logical-or-expression
+
+
+
+struct-expression:
+	"struct" "{" struct-declaration-list "}"
+
+struct-declaration-list:
+	struct-declaration
+	struct-declaration-list "," struct-declaration
+	
+struct-declaration:
+	identifier ":" expression
+	"prototype" ":" identifier
+
+
+
+function-expression:
+	"(" (parameter-list)? ")" "=>" "{" statement "}"
+	
+parameter-list:
+	identifier ( "," identifier )*
+
+argument-list:
+	expression ( "," expression )*
+
+
+
+block-expression:
+	"{" statement* expression "}"
+
+
+
+logical-or-expression:
+	logical-and-expression ( "or" logical-and-expression )*
+
+logical-and-expression:
+	equality-expression ( "and" equality-expression )*
+
+equality-expression: 
+	relational-expression ( ("!=" | "==") relational-expression) )*
+
+comparison-expression:
+	additive-expression ( ( ">" | ">=" | "<" | "<=" ) additive-expression )*
+
+additive-expression:
+	multiplicative-expression ( ( "-" | "+" ) multiplicative-expression )* ;
+	
+multiplicative-expression:
+	unary-expression ( ( "-" | "+" ) unary-expression )* ;
+
+unary-expression:
+	( "!" | "-" )* postfix-expression
+
+postfix-expression:
+	primary-expression
+	postfix-expression "." identifier  
+
+primary-expression:
+	number-literal
+	string-literal
+	identifier
+	( expression )
+	"true"
+	"false"
+	"null"
+	"this"
+
+call-expression:
+	unary-expression
+	
+
+number-literal
+string-literal
+identifier
 ```
 
 ## Development
