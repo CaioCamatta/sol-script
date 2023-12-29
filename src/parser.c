@@ -8,53 +8,35 @@
 // ------------------------- PARSER HELPER FUNCTIONS -------------------------
 // ---------------------------------------------------------------------------
 
-void initTreeParser(ASTParser* parser, const TokenArray tokens) {
+void initASTParser(ASTParser* parser, const TokenArray tokens) {
     parser->current = tokens.values;
     parser->tokenArray = tokens;
     parser->source = (Source*)malloc(sizeof(Source));
     parser->source->numberOfStatements = 0;
     parser->currSyntaxType = STATEMENT;
 }
-// Allocate memory for a new Statement on the heap and return a pointer to the allocated Statement.
-Statement* allocateStatement() {
-    Statement* newStatement = (Statement*)malloc(sizeof(Statement));
-    return newStatement;
-}
-
-//  Allocate memory for a new Expression on the heap and return a pointer to the allocated Expression.
-Expression* allocateExpression() {
-    Expression* newExpression = (Expression*)malloc(sizeof(Expression));
-    return newExpression;
-}
-
-//  Allocate memory for a new Literal on the heap and return a pointer to the allocated Literal.
-Literal* allocateLiteral() {
-    Literal* newLiteral = (Literal*)malloc(sizeof(Literal));
-    return newLiteral;
-}
 
 // Allocate an AST node (literal, expression, statement) on the heap and return a pointer to the allocated node.
 #define allocateASTNode(type) (type*)malloc(sizeof(type));
 
-// Free memory allocated for a Statement.
-void freeStatement(Statement* statement) {
-    free(statement);
-}
-
-// Free memory allocated for an Expression.
-void freeExpression(Expression* expression) {
-    free(expression);
-}
-
-// Free memory allocated for a Literal.
-void freeLiteral(Literal* literal) {
-    free(literal);
-}
+// Free an AST node (literal, expression, statement) on the heap.
+#define freeASTNode(node) free(node);
 
 // Free memory allocated for an AST (the Source).
 void freeParseTree(ASTParser* parser) {
     // TODO: add logic to make freeing recursive
     free(parser->source);
+}
+
+// Print error at current token, halt execution
+static void errorAtCurrent(ASTParser* parser, const char* message) {
+    fprintf(stderr, "Error at line %d, column %d: %s", parser->current->lineNo, parser->current->colNo, message);
+    exit(EXIT_FAILURE);
+}
+
+// Peek token to be immediately parsed.
+static Token* peek(ASTParser* parser) {
+    return parser->current;
 }
 
 // Move the current token to the next one.
@@ -70,7 +52,7 @@ static void consume(ASTParser* parser, TokenType type, const char* message) {
         return;
     }
 
-    errorAtCurrent(message);
+    errorAtCurrent(parser, message);
 }
 
 /* Check if current token is of a given type. */
@@ -87,29 +69,6 @@ static bool match(ASTParser* parser, TokenType type) {
     return false;
 }
 
-/**
- * Check if an expression corresponding to a grammar production is used / is true. If so, allow
- * side effects to happen (i.e., allow the tokens used to be consumed). If not, reset the
- * `ASTParser` `current` pointer to where it was before the `expr` was evaluated.
- *
- * This is macro is necessary the `expr` evaluation has the side effect of moving the
- * `current` pointer.
- *
- * IMPORTANT: this macro assumes 'parser' is in scope.
- *
- * Args:
- *  expr: a C expression, e.g. `match(parser, TOKEN_VAL) && identifier(parser)`
- */
-#define commitIfProductionIsUsed(expr)                          \
-    do {                                                        \
-        Token* currentTokenBeforeTransaction = parser->current; \
-        if (!(expr)) {                                          \
-            parser->current = currentTokenBeforeTransaction;    \
-            return false;                                       \
-        }                                                       \
-        return true;                                            \
-    } while (0)
-
 // ---------------------------------------------------------------------------
 // ------------------------------- PRODUCTIONS -------------------------------
 // ---------------------------------------------------------------------------
@@ -119,30 +78,98 @@ static bool match(ASTParser* parser, TokenType type) {
  *
  * Returns true if this production was used, false otherwise.
  */
-static bool identifier(ASTParser* parser) {
-    match(parser->current, TOKEN_IDENTIFIER);
+static Literal* identifierLiteral(ASTParser* parser) {
+    consume(parser, TOKEN_IDENTIFIER, "Expected identifier.");
+    IdentifierLiteral* tempIdentifierLiteral = allocateASTNode(IdentifierLiteral);
+    tempIdentifierLiteral->token = *(parser->current);
+
+    Literal* literal = allocateASTNode(Literal);
+    literal->type = IDENTIFIER_LITERAL;
+    literal->as.identifierLiteral = tempIdentifierLiteral;
+
+    return literal;
 }
 
 /**
  * Terminal rule. Match number literal.
  *
- * Returns true if this production was used, false otherwise.
+ * Returns a pointer to a dynamically-allocated Literal.
  */
-static bool numberLiteral(ASTParser* parser) {
-    match(parser->current, TOKEN_NUMBER);
+static Literal* numberLiteral(ASTParser* parser) {
+    if (!match(parser, TOKEN_NUMBER)) {
+        return NULL;
+    }
+
+    NumberLiteral* numberLiteral = allocateASTNode(NumberLiteral);
+    numberLiteral->token = *(peek(parser));
+
+    Literal* literal = allocateASTNode(Literal);
+    literal->type = NUMBER_LITERAL;
+    literal->as.numberLiteral = numberLiteral;
+
+    return literal;
+}
+
+/**
+ * primary-expression:
+ * number-literal
+ * string-literal
+ * identifier
+ * ( expression )
+ * "true"
+ * "false"
+ * "null"
+ * "this"
+ *
+ * Returns a pointer to a dynamically-allocated PrimaryExpression.
+ */
+static Expression* primaryExpression(ASTParser* parser) {
+    switch (peek(parser)->type) {
+        case TOKEN_NUMBER: {
+            Literal* tempLiteral = numberLiteral(parser);
+
+            Expression* expression = allocateASTNode(Expression);
+            expression->type = PRIMARY_EXPRESSION;
+            expression->as.primaryExpression->literal = tempLiteral;
+
+            return expression;
+            break;
+        }
+        default: {
+            errorAtCurrent(parser, "Expected a primary-expression.");
+            return NULL;
+            break;
+        }
+    }
 }
 
 /**
  * additive-expression:
  *  multiplicative-expression ( ( "-" | "+" ) multiplicative-expression )* ;
  *
- * Returns true if this production was used, false otherwise.
+ * Returns a pointer to a dynamically-allocated Expression.
  */
-static AdditiveExpression additiveExpression(ASTParser* parser) {
-    commitIfProductionIsUsed(numberLiteral(parser) && match(parser, TOKEN_PLUS) && numberLiteral(parser));
+static Expression* additiveExpression(ASTParser* parser) {
+    Expression* leftExpression = primaryExpression(parser);
+
+    if (!check(parser, TOKEN_PLUS) && !check(parser, TOKEN_MINUS)) {
+        errorAtCurrent(parser, "Expected '+' or '-' in an additive expression.");
+    }
+    Token* punctuator = peek(parser);
+    advance(parser);
+
+    Expression* rightExpression = primaryExpression(parser);
 
     AdditiveExpression* additiveExpression = allocateASTNode(AdditiveExpression);
-    additiveExpression->leftExpression = allocateExpression();
+    additiveExpression->leftExpression = leftExpression;
+    additiveExpression->rightExpression = rightExpression;
+    additiveExpression->punctuator = punctuator;
+
+    Expression* expression = allocateASTNode(Expression);
+    expression->type = ADDITIVE_EXPRESSION;
+    expression->as.additiveExpression = additiveExpression;
+
+    return expression;
 }
 
 /**
@@ -150,20 +177,43 @@ static AdditiveExpression additiveExpression(ASTParser* parser) {
  *  struct-expression
  *  function-expression
  *  block-expression
- *  assignment-expression
+ *  logical-or-expression
  *
  * Returns true if this production was used, false otherwise.
  */
-static bool expression(ASTParser* parser) {
-    additiveExpression(parser);
+static Expression* expression(ASTParser* parser) {
+    switch (peek(parser)->type) {
+        case TOKEN_NUMBER: {
+            Expression* tempAdditiveExpression = additiveExpression(parser);
+            return tempAdditiveExpression;
+            break;
+        }
+        default:
+            return NULL;
+            break;
+    }
 }
 
 /**
  * val-declaration:
- *  "val" identifier ( "=" expression )?
+ *  "val" identifier ( "=" expression )? ";"
  */
-static bool valDeclaration(ASTParser* parser) {
-    commitIfProductionIsUsed(match(parser, TOKEN_VAL) && identifier(parser) && match(parser, TOKEN_EQUAL) && expression(parser));
+static Statement* valDeclaration(ASTParser* parser) {
+    consume(parser, TOKEN_VAL, "Expected 'val' in a val declaration.");
+    Literal* tempIdentifier = identifierLiteral(parser);
+    consume(parser, TOKEN_EQUAL, "Expected '=' in a val declaration.");
+    Expression* tempExpression = expression(parser);
+    consume(parser, TOKEN_SEMICOLON, "Expected semicolon");
+
+    ValDeclarationStatement* valDeclarationStatement = allocateASTNode(ValDeclarationStatement);
+    valDeclarationStatement->identifier = tempIdentifier->as.identifierLiteral;
+    valDeclarationStatement->expression = tempExpression;
+
+    // Wrap ValDeclarationStatement in a Statement
+    Statement* statement = allocateASTNode(Statement);
+    statement->type = VAL_DECLARATION_STATEMENT;
+    statement->as.valDeclarationStatement = valDeclarationStatement;
+    return statement;
 }
 
 /**
@@ -173,18 +223,14 @@ static bool valDeclaration(ASTParser* parser) {
  *
  * Returns true if this production was used, false otherwise.
  */
-static bool declaration(ASTParser* parser) {
-    commitIfProductionIsUsed(valDeclaration && match(parser, TOKEN_SEMICOLON));
-}
-
-/**
- * expression-statement:
- *  expression ";"
- *
- * Returns true if this production was used, false otherwise.
- */
-static bool expressionStatement(ASTParser* parser) {
-    commitIfProductionIsUsed(expression(parser) && match(parser, TOKEN_SEMICOLON));
+static Statement* declaration(ASTParser* parser) {
+    if (peek(parser)->type == TOKEN_VAL) {
+        return valDeclaration(parser);
+        // TODO: add VAR handling
+    } else {
+        errorAtCurrent(parser, "Expected 'var' or 'val' in a declaration.");  // Unreachable
+        return NULL;
+    }
 }
 
 /**
@@ -197,9 +243,30 @@ static bool expressionStatement(ASTParser* parser) {
  *  expression-statement
  *  assignment-statement
  */
-static void statement(ASTParser* parser) {
-    // Short-circuit
-    declaration(parser) || expressionStatement(parser);
+static Statement* statement(ASTParser* parser) {
+    // NOTE
+    // I don't love this, but in this `statement` function, but to make the parser efficient,
+    // we need logic from the child productions. We need look ahead to see if the next token
+    // matches the first token of a child production. If it does, we need to call that child.
+    // This could be refactored so the logic to "check" is in the child functions; it'd be
+    // cleaner IMO but probably less efficient.
+    TokenType currentType = peek(parser)->type;
+    switch (currentType) {
+        // case TOKEN_VAR:
+        case TOKEN_VAL:
+            return declaration(parser);
+        // case TOKEN_LEFT_CURLY:
+        //     return blockStatement(parser);
+        // case TOKEN_WHILE:
+        //     return iterationStatement(parser);
+        // case TOKEN_IF:
+        //     return selectionStatement(parser);
+        // case TOKEN_RETURN:
+        //     return returnStatement(parser);
+        default:
+            return NULL;
+            // return expressionStatement(parser);
+    }
 }
 
 /**
@@ -209,11 +276,12 @@ static void statement(ASTParser* parser) {
  *  statement* EOF
  */
 static void source(ASTParser* parser) {
-    while (parser->current != TOKEN_EOF) {
-        statement(parser);
+    while (!check(parser, TOKEN_EOF)) {
+        Statement* statementNode = statement(parser);
+        // TODO: Add statement to source's list of statements
     }
 }
 
-TokenArray parseAST(ASTParser* parser) {
+Source* parseAST(ASTParser* parser) {
     source(parser);
 }

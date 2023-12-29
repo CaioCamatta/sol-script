@@ -6,13 +6,17 @@
 
 // Forward declarations
 typedef struct ExpressionStatement ExpressionStatement;
+typedef struct ValDeclarationStatement ValDeclarationStatement;
 typedef struct AdditiveExpression AdditiveExpression;
 typedef struct PrimaryExpression PrimaryExpression;
 typedef struct NumberLiteral NumberLiteral;
+typedef struct IdentifierLiteral IdentifierLiteral;
+typedef struct StringLiteral StringLiteral;
 
 // --- Types ---
 typedef enum {
-    EXPRESSION_STATEMENT
+    EXPRESSION_STATEMENT,
+    VAL_DECLARATION_STATEMENT
 } StatementType;
 
 typedef enum {
@@ -21,7 +25,9 @@ typedef enum {
 } ExpressionType;
 
 typedef enum {
-    NUMBER_LITERAL
+    NUMBER_LITERAL,
+    IDENTIFIER_LITERAL,
+    STRING_LITERAL
 } LiteralType;
 
 // --- Abstract productions ---
@@ -29,6 +35,7 @@ typedef struct {
     StatementType type;
     union {
         ExpressionStatement *expressionStatement;
+        ValDeclarationStatement *valDeclarationStatement;
     } as;
 } Statement;
 
@@ -44,6 +51,8 @@ typedef struct {
     LiteralType type;
     union {
         NumberLiteral *numberLiteral;
+        IdentifierLiteral *identifierLiteral;
+        StringLiteral *stringLiteral;
     } as;
 } Literal;
 
@@ -58,11 +67,24 @@ struct AdditiveExpression {
     Token *punctuator;
 };
 
+struct ValDeclarationStatement {
+    IdentifierLiteral *identifier;
+    Expression *expression;
+};
+
 struct PrimaryExpression {
     Literal *literal;
 };
 
 struct NumberLiteral {
+    Token token;
+};
+
+struct IdentifierLiteral {
+    Token token;
+};
+
+struct StringLiteral {
     Token token;
 };
 

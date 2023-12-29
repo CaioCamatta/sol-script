@@ -35,15 +35,15 @@ typedef struct {
 } ASTParser;
 
 /**
- * Turn an array of tokens into a parse tree.
+ * Turn an array of tokens into a AST. Returns the Source of the AST.
  *
  * Throws parsing errors.
  *
  * @param treeParser an initialized ASTParser to use for scanning.
  */
-TokenArray parseAST(ASTParser* treeParser);
+Source* parseAST(ASTParser* treeParser);
 
 /* Initialize treeParser at the beginning of the given token array */
-void initTreeParser(ASTParser* treeParser, const TokenArray tokens);
+void initASTParser(ASTParser* treeParser, const TokenArray tokens);
 
 #endif
