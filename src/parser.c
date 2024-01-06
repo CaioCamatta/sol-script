@@ -23,7 +23,7 @@ void initASTParser(ASTParser* parser, const TokenArray tokens) {
 #define freeASTNode(node) free(node);
 
 // Free memory allocated for an AST (the Source).
-void freeParseTree(ASTParser* parser) {
+void freeParseTreeAndSource(ASTParser* parser) {
     // TODO: add logic to make freeing recursive
     free(parser->source);
 }
@@ -46,10 +46,11 @@ static void advance(ASTParser* parser) {
 }
 
 // Consume provided type & advance, or error
-static void consume(ASTParser* parser, TokenType type, const char* message) {
+static Token* consume(ASTParser* parser, TokenType type, const char* message) {
     if (parser->current->type == type) {
+        Token* currToken = parser->current;
         advance(parser);
-        return;
+        return currToken;
     }
 
     errorAtCurrent(parser, message);
@@ -79,9 +80,9 @@ static bool match(ASTParser* parser, TokenType type) {
  * Returns true if this production was used, false otherwise.
  */
 static Literal* identifierLiteral(ASTParser* parser) {
-    consume(parser, TOKEN_IDENTIFIER, "Expected identifier.");
+    Token* identifier = consume(parser, TOKEN_IDENTIFIER, "Expected identifier.");
     IdentifierLiteral* tempIdentifierLiteral = allocateASTNode(IdentifierLiteral);
-    tempIdentifierLiteral->token = *(parser->current);
+    tempIdentifierLiteral->token = *(identifier);
 
     Literal* literal = allocateASTNode(Literal);
     literal->type = IDENTIFIER_LITERAL;
@@ -96,12 +97,10 @@ static Literal* identifierLiteral(ASTParser* parser) {
  * Returns a pointer to a dynamically-allocated Literal.
  */
 static Literal* numberLiteral(ASTParser* parser) {
-    if (!match(parser, TOKEN_NUMBER)) {
-        return NULL;
-    }
+    Token* currToken = consume(parser, TOKEN_NUMBER, "Expected number literal.");
 
     NumberLiteral* numberLiteral = allocateASTNode(NumberLiteral);
-    numberLiteral->token = *(peek(parser));
+    numberLiteral->token = *(currToken);
 
     Literal* literal = allocateASTNode(Literal);
     literal->type = NUMBER_LITERAL;
@@ -130,7 +129,11 @@ static Expression* primaryExpression(ASTParser* parser) {
 
             Expression* expression = allocateASTNode(Expression);
             expression->type = PRIMARY_EXPRESSION;
-            expression->as.primaryExpression->literal = tempLiteral;
+
+            PrimaryExpression* primaryExpression = allocateASTNode(PrimaryExpression);
+            primaryExpression->literal = tempLiteral;
+
+            expression->as.primaryExpression = primaryExpression;
 
             return expression;
             break;
@@ -264,6 +267,7 @@ static Statement* statement(ASTParser* parser) {
         // case TOKEN_RETURN:
         //     return returnStatement(parser);
         default:
+            errorAtCurrent(parser, "Expected a non-null statement.");
             return NULL;
             // return expressionStatement(parser);
     }
@@ -277,20 +281,15 @@ static Statement* statement(ASTParser* parser) {
  */
 static void source(ASTParser* parser) {
     while (!check(parser, TOKEN_EOF)) {
-        Statement* statementNode = statement(parser);
-        // TODO: Add statement to source's list of statements
-    }
-
-    while (!check(parser, TOKEN_EOF)) {
         if (parser->source->numberOfStatements >= MAX_NUMBER_STATEMENTS) {
             errorAtCurrent(parser, "Exceeded maximum number of statements.");
         }
 
         Statement* statementNode = statement(parser);
+
         if (statementNode != NULL) {
             parser->source->rootStatements[parser->source->numberOfStatements++] = statementNode;
         } else {
-            errorAtCurrent(parser, "Expected a non-null statement.");
             exit(EXIT_FAILURE);
         }
     }

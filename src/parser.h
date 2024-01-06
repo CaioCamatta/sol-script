@@ -43,6 +43,13 @@ typedef struct {
  */
 Source* parseAST(ASTParser* treeParser);
 
+/**
+ * Free memory allocated for an AST (the Source).
+ *
+ * @param parser the ASTParser to free.
+ */
+void freeParseTreeAndSource(ASTParser* parser);
+
 /* Initialize treeParser at the beginning of the given token array */
 void initASTParser(ASTParser* treeParser, const TokenArray tokens);
 
