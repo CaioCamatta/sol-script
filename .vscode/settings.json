@@ -56,7 +56,8 @@
     "sstream": "c",
     "unordered_map": "c",
     "utility": "c",
-    "syntax.h": "c"
+    "syntax.h": "c",
+    "ios": "c"
   },
   "C_Cpp.errorSquiggles": "enabled"
 }

@@ -280,8 +280,23 @@ static void source(ASTParser* parser) {
         Statement* statementNode = statement(parser);
         // TODO: Add statement to source's list of statements
     }
+
+    while (!check(parser, TOKEN_EOF)) {
+        if (parser->source->numberOfStatements >= MAX_NUMBER_STATEMENTS) {
+            errorAtCurrent(parser, "Exceeded maximum number of statements.");
+        }
+
+        Statement* statementNode = statement(parser);
+        if (statementNode != NULL) {
+            parser->source->rootStatements[parser->source->numberOfStatements++] = statementNode;
+        } else {
+            errorAtCurrent(parser, "Expected a non-null statement.");
+            exit(EXIT_FAILURE);
+        }
+    }
 }
 
 Source* parseAST(ASTParser* parser) {
     source(parser);
+    return parser->source;
 }

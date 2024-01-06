@@ -11,6 +11,8 @@ void printBytecodeArray(BytecodeArray bytecodeArray) {
                 printf("[ ADD ]\n");
             case OP_CONSTANT:
                 printf("[ CONSTANT %f ]\n", bytecodeArray.values[i].operands.constant.as.doubleVal);
+            case OP_PRINT:
+                printf("[ PRINT %f ]\n");
         }
     }
 }
