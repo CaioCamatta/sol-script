@@ -108,7 +108,7 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
             break;
 
         default:
-            fprintf(stderr, "Unimplemented statement type %d.", statement->type);
+            fprintf(stderr, "Unimplemented statement type %d.\n", statement->type);
             exit(EXIT_FAILURE);
             break;
     }
@@ -116,7 +116,7 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
 
 BytecodeArray compileAST(Compiler* compiler, Source ASTSource) {
     for (int i = 0; i < ASTSource.numberOfStatements; i++) {
-        Statement* statement = &(ASTSource.rootStatements[i]);
+        Statement* statement = ASTSource.rootStatements[i];
         visitStatement(compiler, statement);
     }
 
@@ -124,5 +124,6 @@ BytecodeArray compileAST(Compiler* compiler, Source ASTSource) {
         printBytecodeArray(compiler->compiledBytecode);
     }
 
+    printf("Done.\n");
     return compiler->compiledBytecode;
 }
