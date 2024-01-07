@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "../minunit.h"
+#include "debug.h"
 
 // Helper function to create a token array
 static TokenArray createTokenArray(TokenType types[], int numTokens) {
@@ -50,6 +51,8 @@ int test_parser_simpleExpression() {
 
     // Parse the expression
     Source* source = parseAST(&parser);
+
+    printAST(source);
 
     // Assertions to check the structure of the parsed AST
     ASSERT(source->numberOfStatements == 1);

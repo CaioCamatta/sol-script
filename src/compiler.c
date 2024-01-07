@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "bytecode.h"
 #include "config.h"
@@ -115,6 +116,9 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
 }
 
 BytecodeArray compileAST(Compiler* compiler, Source ASTSource) {
+    clock_t startTime = clock();
+    printf("Started compiling.\n\n");
+
     for (int i = 0; i < ASTSource.numberOfStatements; i++) {
         Statement* statement = ASTSource.rootStatements[i];
         visitStatement(compiler, statement);
@@ -124,6 +128,9 @@ BytecodeArray compileAST(Compiler* compiler, Source ASTSource) {
         printBytecodeArray(compiler->compiledBytecode);
     }
 
-    printf("Done.\n");
+    clock_t endTime = clock();
+    double timeTaken = ((double)(endTime - startTime)) / CLOCKS_PER_SEC;
+    printf("Done compiling in %.5f seconds.\n\n", timeTaken);
+
     return compiler->compiledBytecode;
 }

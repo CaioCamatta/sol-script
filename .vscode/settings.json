@@ -57,7 +57,8 @@
     "unordered_map": "c",
     "utility": "c",
     "syntax.h": "c",
-    "ios": "c"
+    "ios": "c",
+    "debug.h": "c"
   },
   "C_Cpp.errorSquiggles": "enabled"
 }

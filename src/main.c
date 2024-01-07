@@ -3,18 +3,25 @@
 
 #include "array.h"
 #include "file.h"
+#include "parser.h"
 #include "scanner.h"
 #include "token.h"
 
 static void executeFile(const char* path) {
+    // First, read the file.
     char* sourceCode = readFile(path);
+
+    // Then, scan characters into Tokens.
     Scanner scanner;
     initScanner(&scanner, sourceCode);
     TokenArray tokens = scan(&scanner);
+    printTokenList(tokens);
 
-    for (size_t i = 0; i < tokens.used; i++) {
-        printf("%s\n", tokenTypeStrings[tokens.values[i].type]);
-    }
+    // Then, parse the tokens into an Abstract Syntax Tree.
+    // ASTParser treeParser;
+    // initASTParser(&treeParser, tokens);
+    // Source* source = parseAST(&treeParser);
+    // printAST(source);
 }
 
 int main(int argc, const char* argv[]) {
