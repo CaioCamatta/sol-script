@@ -9,6 +9,7 @@
 #define KRED "\x1B[31m"
 #define KGRN "\x1B[32m"
 #define KYEL "\x1B[33m"
+#define RESET "\x1B[0m"  // Normal colour. You have to reset the terminal after using a colour.
 
 static int testsRun = 0;
 static int testsFailed = 0;
@@ -71,9 +72,9 @@ static int assertionsFailed = 0;
         printf("Assertions run: %d, failed: %d.\n", assertionsRun, assertionsFailed); \
         printf("Tests run: %d, failed: %d.\n", testsRun, testsFailed);                \
         if (testsFailed) {                                                            \
-            printf(KRED "FAILED\n");                                                  \
+            printf(KRED "FAILED\n" RESET);                                            \
         } else {                                                                      \
-            printf(KGRN "PASSED\n");                                                  \
+            printf(KGRN "PASSED\n" RESET);                                            \
         }                                                                             \
         return testsFailed != 0;                                                      \
     } while (0)

@@ -26,7 +26,7 @@ typedef struct {
  *
  * @param scanner an initialized Scanner to use for scanning.
  */
-TokenArray scan(Scanner* scanner);
+TokenArray scanTokens(Scanner* scanner);
 
 /**
  * Scan the next Token following the Delta lexical Grammar.

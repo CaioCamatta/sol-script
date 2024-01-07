@@ -1,6 +1,7 @@
 #include "compiler.h"
 
 #include "../minunit.h"
+#include "debug.h"
 #include "syntax.h"
 
 // Compare two bytecode arrays
@@ -26,7 +27,7 @@ int test_compiler() {
     initCompiler(&compiler);
 
     Source testSource = {
-        .rootStatements = &(Statement){
+        .rootStatements = {&(Statement){
             .type = EXPRESSION_STATEMENT,
             .as.expressionStatement = &(ExpressionStatement){
                 .expression = &(Expression){
@@ -59,11 +60,12 @@ int test_compiler() {
                 },
             },
 
-        },
+        }},
         .numberOfStatements = 1,
     };
 
-    BytecodeArray compiledBytecode = compileAST(&compiler, testSource);
+    BytecodeArray compiledBytecode = compileAST(&compiler, &testSource);
+    printBytecodeArray(compiledBytecode);
 
     // Expected bytecode
     Bytecode expectedBytecode[] = {

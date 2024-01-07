@@ -241,13 +241,15 @@ Token scanNext(Scanner* scanner) {
     return errorToken(scanner, "Unexpected character.");
 }
 
-TokenArray scan(Scanner* scanner) {
+TokenArray scanTokens(Scanner* scanner) {
     TokenArray tokens;
     INIT_ARRAY(tokens, Token);
 
+    Token token;
     do {
-        INSERT_ARRAY(tokens, scanNext(scanner), Token);
-    } while (!isAtEnd(scanner));
+        token = scanNext(scanner);
+        INSERT_ARRAY(tokens, token, Token);
+    } while (token.type != TOKEN_EOF);
 
     return tokens;
 }

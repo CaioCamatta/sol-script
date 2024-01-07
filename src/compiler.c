@@ -115,18 +115,18 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
     }
 }
 
-BytecodeArray compileAST(Compiler* compiler, Source ASTSource) {
+BytecodeArray compileAST(Compiler* compiler, Source* ASTSource) {
     clock_t startTime = clock();
-    printf("Started compiling.\n\n");
+    printf("Started compiling.\n");
 
-    for (int i = 0; i < ASTSource.numberOfStatements; i++) {
-        Statement* statement = ASTSource.rootStatements[i];
+    for (int i = 0; i < ASTSource->numberOfStatements; i++) {
+        Statement* statement = ASTSource->rootStatements[i];
         visitStatement(compiler, statement);
     }
 
-    if (DEBUG_COMPILER) {
-        printBytecodeArray(compiler->compiledBytecode);
-    }
+    // if (DEBUG_COMPILER) {
+    //     printBytecodeArray(compiler->compiledBytecode);
+    // }
 
     clock_t endTime = clock();
     double timeTaken = ((double)(endTime - startTime)) / CLOCKS_PER_SEC;

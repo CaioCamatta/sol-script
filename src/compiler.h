@@ -23,6 +23,6 @@ void initCompiler(Compiler* compiler);
  *
  * @param scanner an initialized Compiler to use for scanning.
  */
-BytecodeArray compileAST(Compiler* compiler, Source ASTSource);
+BytecodeArray compileAST(Compiler* compiler, Source* ASTSource);
 
 #endif

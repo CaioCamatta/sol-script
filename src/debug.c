@@ -4,6 +4,7 @@
 
 #include "array.h"
 #include "token.h"
+#include "util/colors.h"
 
 // Forward declarations
 static void printStatement(const Statement* statement, int depth);
@@ -15,7 +16,7 @@ static void printLiteral(const Literal* literal, int depth);
 // ---------------------------------------------------------------------------
 
 // Get the string name for a token. The order of the `TokenType` enum is assumed to be the same as this array's.
-char const* tokenTypeStrings[] = {
+static char const* tokenTypeStrings[] = {
     // Keywords
     "TOKEN_IF",
     "TOKEN_ELSE",
@@ -63,8 +64,16 @@ char const* tokenTypeStrings[] = {
     "TOKEN_ERROR",
     "TOKEN_EOF"};
 
+char const* tokenTypeToString(TokenType tokenType) {
+    return tokenTypeStrings[tokenType];
+}
+
 void printToken(Token token) {
-    printf("%s\n", tokenTypeStrings[token.type]);
+    printf(" %s", tokenTypeToString(token.type));
+    printf(KGRY "(lexeme=\"%.*s\", line=%d, column=%d)\n" RESET,
+           token.length, token.start,
+           token.lineNo,
+           token.colNo);
 }
 
 void printTokenList(TokenArray tokenArray) {
@@ -81,23 +90,26 @@ void printTokenList(TokenArray tokenArray) {
 // --------------------------------- PARSER ----------------------------------
 // ---------------------------------------------------------------------------
 
+// Print indents for the given depth. This enables printing the AST in a tree-like format.
+static void printIndent(int depth) {
+    for (int i = 0; i < depth; ++i) {
+        printf(KGRY "|   " RESET);
+    }
+}
+
 void printAST(const Source* source) {
     if (source == NULL) {
         printf("<null AST>\n");
         return;
     }
 
-    printf("AST with %d statements.\n", source->numberOfStatements);
+    printf("AST:\n", source->numberOfStatements);
+    printf("Source" KGRY "(numberOfStatements=%d)\n" RESET, source->numberOfStatements);
     for (int i = 0; i < source->numberOfStatements; ++i) {
-        printStatement(source->rootStatements[i], 0);
+        printIndent(0);
+        printStatement(source->rootStatements[i], 1);
     }
-}
-
-// Print indents for the given depth. This enables printing the AST in a tree-like format.
-static void printIndent(int depth) {
-    for (int i = 0; i < depth; ++i) {
-        printf("|   ");
-    }
+    printf("\n");
 }
 
 static void printStatement(const Statement* statement, int depth) {
@@ -117,7 +129,7 @@ static void printStatement(const Statement* statement, int depth) {
 
         case VAL_DECLARATION_STATEMENT: {
             ValDeclarationStatement* valDecl = statement->as.valDeclarationStatement;
-            printf("ValDeclaration(identifier=\"%.*s\")\n", valDecl->identifier->token.length, valDecl->identifier->token.start);
+            printf("ValDeclaration" KGRY "(identifier=\"%.*s\")\n" RESET, valDecl->identifier->token.length, valDecl->identifier->token.start);
             printExpression(valDecl->expression, depth + 1);
             break;
         }
@@ -142,12 +154,12 @@ static void printExpression(const Expression* expression, int depth) {
         case ADDITIVE_EXPRESSION: {
             AdditiveExpression* addExpr = expression->as.additiveExpression;
             // Assuming the token.start is a null-terminated string
-            printf("AdditiveExpression(punctuator=\"%.*s\")\n", addExpr->punctuator->length, addExpr->punctuator->start);
+            printf("AdditiveExpression" KGRY "(punctuator=\"%.*s\")\n" RESET, addExpr->punctuator->length, addExpr->punctuator->start);
             printIndent(depth + 1);
-            printf("(left)\n");
+            printf(KGRY "(left)\n" RESET);
             printExpression(addExpr->leftExpression, depth + 2);
             printIndent(depth + 1);
-            printf("(right)\n");
+            printf(KGRY "(right)\n" RESET);
             printExpression(addExpr->rightExpression, depth + 2);
             break;
         }
@@ -165,15 +177,15 @@ static void printLiteral(const Literal* literal, int depth) {
 
     switch (literal->type) {
         case NUMBER_LITERAL:
-            printf("NumberLiteral(token=\"%s\")\n", literal->as.numberLiteral->token.start);
+            printf("NumberLiteral" KGRY "(token=\"%s\")\n" RESET, literal->as.numberLiteral->token.start);
             break;
 
         case IDENTIFIER_LITERAL:
-            printf("IdentifierLiteral(token=\"%s\")\n", literal->as.identifierLiteral->token.start);
+            printf("IdentifierLiteral" KGRY "(token=\"%s\")\n" RESET, literal->as.identifierLiteral->token.start);
             break;
 
         case STRING_LITERAL:
-            printf("StringLiteral(token=\"%s\")\n", literal->as.stringLiteral->token.start);
+            printf("StringLiteral" KGRY "(token=\"%s\")\n" RESET, literal->as.stringLiteral->token.start);
             break;
 
             // Add cases for other literal types

@@ -8,7 +8,7 @@
 
 void printToken(Token token);
 void printTokenList(TokenArray tokenArray);
-char const* tokenTypeStrings[];
+char const* tokenTypeToString(TokenType tokenType);
 
 void printAST(const Source* source);
 
