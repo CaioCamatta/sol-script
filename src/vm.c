@@ -99,4 +99,9 @@ void run(VM* vm) {
     while (vm->IP != lastInstruction) {
         step(vm);
     }
+
+    // TEMPORARY: print the last value on the stack
+    Value value = pop(vm);
+    printValue(value);
+    printf("\n");
 }

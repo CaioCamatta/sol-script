@@ -108,6 +108,14 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
             visitExpressionStatement(compiler, statement->as.expressionStatement);
             break;
 
+        case VAL_DECLARATION_STATEMENT: {
+            // TEMPORARY: just compile the expression.
+            ExpressionStatement* expressionStatement = &(ExpressionStatement){
+                .expression = statement->as.valDeclarationStatement->expression,
+            };
+            visitExpressionStatement(compiler, expressionStatement);
+            break;
+        }
         default:
             fprintf(stderr, "Unimplemented statement type %d.\n", statement->type);
             exit(EXIT_FAILURE);

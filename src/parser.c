@@ -267,7 +267,7 @@ static Statement* statement(ASTParser* parser) {
         // case TOKEN_RETURN:
         //     return returnStatement(parser);
         default:
-            errorAtCurrent(parser, "Expected a non-null statement.");
+            errorAtCurrent(parser, "Error parsing statement. Expected a non-null statement.");
             return NULL;
             // return expressionStatement(parser);
     }
