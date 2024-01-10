@@ -13,6 +13,18 @@ void initVM(VM* vm, BytecodeArray* bytecode) {
     vm->instructions = bytecode;
     vm->IP = vm->instructions->values;  // Set instruction pointer to the beginning of bytecode
     vm->SP = vm->stack;                 // Set stack pointer to the top of the stack
+
+    // Initialize stack with empty values.
+    for (int i = 0; i < STACK_MAX; ++i) {
+        vm->stack[i] = (Value){.type = TYPE_NULL};
+    }
+}
+
+void addBytecode(VM* vm, BytecodeArray* bytecode) {
+    for (int i = 0; i < bytecode->used; i++) {
+        vm->instructions->values[vm->instructions->used] = bytecode->values[i];
+        vm->instructions->used++;
+    }
 }
 
 // Push value onto the stack
@@ -101,7 +113,7 @@ void run(VM* vm) {
     }
 
     // TEMPORARY: print the last value on the stack
-    Value value = pop(vm);
+    Value value = *(vm->SP);
     printValue(value);
     printf("\n");
 }

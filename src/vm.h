@@ -31,6 +31,12 @@ typedef struct {
 void run(VM* vm);
 
 /**
+ * Add a BytecodeArray to the VM's instructions.
+ * (TODO: refactor the VM to have an "interpret" function that takes a BytecodeArray as an argument)
+ */
+void addBytecode(VM* vm, BytecodeArray* bytecode);
+
+/**
  * Execute one instruciton in the VM
  */
 void step(VM* vm);

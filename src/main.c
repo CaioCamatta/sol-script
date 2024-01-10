@@ -11,6 +11,43 @@
 #include "token.h"
 #include "vm.h"
 
+static void repl() {
+    Scanner scanner;
+    ASTParser treeParser;
+    Compiler compiler;
+
+    VM vm;
+    BytecodeArray bytecodeArray;
+    INIT_ARRAY(bytecodeArray, Bytecode);
+    initVM(&vm, &bytecodeArray);
+
+    char input[1024];
+    while (1) {
+        printf("> ");
+        if (!fgets(input, sizeof(input), stdin)) {
+            printf("Error reading input.");
+            continue;
+        }
+
+        // Fully reset the scanner, parser, and compiler and parse the input.
+        initScanner(&scanner, input);
+        TokenArray tokens = scanTokens(&scanner);
+        printTokenList(tokens);
+
+        initASTParser(&treeParser, tokens);
+        Source* source = parseAST(&treeParser);
+        printAST(source);
+
+        initCompiler(&compiler);
+        BytecodeArray newBytecode = compileAST(&compiler, source);
+        printBytecodeArray(newBytecode);
+
+        // Don't reset the VM for each line of input, since we want to keep the stack.
+        addBytecode(&vm, &newBytecode);
+        run(&vm);
+    }
+}
+
 static void executeFile(const char* path) {
     // First, read the file.
     char* sourceCode = readFile(path);
@@ -40,7 +77,9 @@ static void executeFile(const char* path) {
 }
 
 int main(int argc, const char* argv[]) {
-    if (argc >= 2) {
+    if (argc == 1) {
+        repl();
+    } else if (argc == 2) {
         executeFile(argv[1]);
     } else {
         fprintf(stderr, "Usage: delta [path]\n");
