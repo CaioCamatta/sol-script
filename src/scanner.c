@@ -253,3 +253,8 @@ TokenArray scanTokens(Scanner* scanner) {
 
     return tokens;
 }
+
+TokenArray scanTokensFromString(Scanner* scanner, const char* sourceCode) {
+    initScanner(scanner, sourceCode);
+    return scanTokens(scanner);
+}

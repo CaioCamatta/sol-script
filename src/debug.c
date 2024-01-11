@@ -103,7 +103,7 @@ void printAST(const Source* source) {
         return;
     }
 
-    printf("AST:\n", source->numberOfStatements);
+    printf("AST\n");
     printf("Source" KGRY "(numberOfStatements=%d)\n" RESET, source->numberOfStatements);
     for (int i = 0; i < source->numberOfStatements; ++i) {
         printIndent(0);

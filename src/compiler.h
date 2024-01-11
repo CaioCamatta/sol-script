@@ -7,22 +7,27 @@
 
 /**
  * Compiler struct to facilitate compiling an AST into bytecode.
- *
- * */
+ */
 typedef struct {
     BytecodeArray compiledBytecode;  // i.e., the compiled program
+    Source* ASTSource;               // Root of the AST
 } Compiler;
 
-/* Initialize a Compiler with an empty bytecode array */
-void initCompiler(Compiler* compiler);
+/* Initialize a Compiler with an AST to be parsed */
+void initCompiler(Compiler* compiler, Source* ASTSource);
 
 /**
- * Turn source code into an array of tokens.
+ * Compile an AST into bytecode.
  *
- * Throws exceptions in case of lexical errors.
- *
- * @param scanner an initialized Compiler to use for scanning.
+ * @param compiler an initialized Compiler to use for compiling.
  */
-BytecodeArray compileAST(Compiler* compiler, Source* ASTSource);
+BytecodeArray compile(Compiler* compiler);
+
+/**
+ * Reset the compiler and compile an AST into bytecode.
+ *
+ * @param source initialized Source to compile.
+ */
+BytecodeArray compileSource(Compiler* compiler, Source* ASTSource);
 
 #endif

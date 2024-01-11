@@ -14,8 +14,6 @@ static int compareBytecodeArrays(BytecodeArray expected, BytecodeArray actual) {
         if (expected.values[i].type != actual.values[i].type) {
             return 0;
         }
-
-        // Add more checks here
     }
 
     return 1;
@@ -24,7 +22,6 @@ static int compareBytecodeArrays(BytecodeArray expected, BytecodeArray actual) {
 // Test basic arithmetic expression
 int test_compiler() {
     Compiler compiler;
-    initCompiler(&compiler);
 
     Source testSource = {
         .rootStatements = {&(Statement){
@@ -64,7 +61,8 @@ int test_compiler() {
         .numberOfStatements = 1,
     };
 
-    BytecodeArray compiledBytecode = compileAST(&compiler, &testSource);
+    initCompiler(&compiler, &testSource);
+    BytecodeArray compiledBytecode = compile(&compiler);
     printBytecodeArray(compiledBytecode);
 
     // Expected bytecode

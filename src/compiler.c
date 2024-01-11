@@ -7,13 +7,15 @@
 #include "bytecode.h"
 #include "config.h"
 #include "debug.h"
+#include "parser.h"
 #include "syntax.h"
 #include "vm.h"
 
-void initCompiler(Compiler* compiler) {
+void initCompiler(Compiler* compiler, Source* ASTSource) {
     BytecodeArray bytecodeArray;
     INIT_ARRAY(bytecodeArray, Bytecode);
     compiler->compiledBytecode = bytecodeArray;
+    compiler->ASTSource = ASTSource;
 }
 
 /* FORWARD DECLARATIONS */
@@ -123,12 +125,12 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
     }
 }
 
-BytecodeArray compileAST(Compiler* compiler, Source* ASTSource) {
+BytecodeArray compile(Compiler* compiler) {
     clock_t startTime = clock();
     printf("Started compiling.\n");
 
-    for (int i = 0; i < ASTSource->numberOfStatements; i++) {
-        Statement* statement = ASTSource->rootStatements[i];
+    for (int i = 0; i < compiler->ASTSource->numberOfStatements; i++) {
+        Statement* statement = compiler->ASTSource->rootStatements[i];
         visitStatement(compiler, statement);
     }
 
@@ -139,6 +141,17 @@ BytecodeArray compileAST(Compiler* compiler, Source* ASTSource) {
     clock_t endTime = clock();
     double timeTaken = ((double)(endTime - startTime)) / CLOCKS_PER_SEC;
     printf("Done compiling in %.5f seconds.\n\n", timeTaken);
+
+    return compiler->compiledBytecode;
+}
+
+BytecodeArray compileSource(Compiler* compiler, Source* ASTSource) {
+    initCompiler(compiler, ASTSource);
+
+    for (int i = 0; i < ASTSource->numberOfStatements; i++) {
+        Statement* statement = ASTSource->rootStatements[i];
+        visitStatement(compiler, statement);
+    }
 
     return compiler->compiledBytecode;
 }

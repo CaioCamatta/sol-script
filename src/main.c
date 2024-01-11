@@ -12,10 +12,7 @@
 #include "vm.h"
 
 static void repl() {
-    Scanner scanner;
-    ASTParser treeParser;
-    Compiler compiler;
-
+    // Use the same VM throughout the REPL session.
     VM vm;
     BytecodeArray bytecodeArray;
     INIT_ARRAY(bytecodeArray, Bytecode);
@@ -29,22 +26,24 @@ static void repl() {
             continue;
         }
 
-        // Fully reset the scanner, parser, and compiler and parse the input.
-        initScanner(&scanner, input);
-        TokenArray tokens = scanTokens(&scanner);
+        Scanner scanner;
+        ASTParser treeParser;
+        Compiler compiler;
+
+        TokenArray tokens = scanTokensFromString(&scanner, input);
         printTokenList(tokens);
 
-        initASTParser(&treeParser, tokens);
-        Source* source = parseAST(&treeParser);
+        Source* source = parseASTFromTokens(&treeParser, &tokens);
         printAST(source);
 
-        initCompiler(&compiler);
-        BytecodeArray newBytecode = compileAST(&compiler, source);
+        BytecodeArray newBytecode = compileSource(&compiler, source);
         printBytecodeArray(newBytecode);
 
-        // Don't reset the VM for each line of input, since we want to keep the stack.
-        addBytecode(&vm, &newBytecode);
-        run(&vm);
+        interpret(&vm, &newBytecode);
+
+        FREE_ARRAY(tokens);
+        freeSource(source);
+        FREE_ARRAY(newBytecode);
     }
 }
 
@@ -66,8 +65,8 @@ static void executeFile(const char* path) {
 
     // Then, compile the AST into bytecode.
     Compiler compiler;
-    initCompiler(&compiler);
-    BytecodeArray bytecode = compileAST(&compiler, source);
+    initCompiler(&compiler, source);
+    BytecodeArray bytecode = compile(&compiler);
     printBytecodeArray(bytecode);
 
     // Then, execute the bytecode.

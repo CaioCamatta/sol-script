@@ -13,7 +13,6 @@ void initASTParser(ASTParser* parser, const TokenArray tokens) {
     parser->tokenArray = tokens;
     parser->source = (Source*)malloc(sizeof(Source));
     parser->source->numberOfStatements = 0;
-    parser->currSyntaxType = STATEMENT;
 }
 
 // Allocate an AST node (literal, expression, statement) on the heap and return a pointer to the allocated node.
@@ -22,10 +21,10 @@ void initASTParser(ASTParser* parser, const TokenArray tokens) {
 // Free an AST node (literal, expression, statement) on the heap.
 #define freeASTNode(node) free(node);
 
-// Free memory allocated for an AST (the Source).
-void freeParseTreeAndSource(ASTParser* parser) {
+// Free memory allocated for the Source of an AST.
+void freeSource(Source* source) {
     // TODO: add logic to make freeing recursive
-    free(parser->source);
+    free(source);
 }
 
 // Print error at current token, halt execution
@@ -298,4 +297,10 @@ static void source(ASTParser* parser) {
 Source* parseAST(ASTParser* parser) {
     source(parser);
     return parser->source;
+}
+
+Source* parseASTFromTokens(ASTParser* parser, TokenArray* tokenArray) {
+    initASTParser(parser, *tokenArray);
+    Source* source = parseAST(parser);
+    return source;
 }

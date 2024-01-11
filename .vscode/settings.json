@@ -58,7 +58,9 @@
     "utility": "c",
     "syntax.h": "c",
     "ios": "c",
-    "debug.h": "c"
+    "debug.h": "c",
+    "__availability": "c",
+    "complex": "c"
   },
   "C_Cpp.errorSquiggles": "enabled"
 }

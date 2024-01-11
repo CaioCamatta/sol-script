@@ -44,7 +44,8 @@ int test_vm_addition() {
 
     // Check the result on the stack
     Value expected_result = DOUBLE_VAL(3.0);
-    ASSERT(compareValues(popVmStack(&vm), expected_result));
+    Value actual_result = popVmStack(&vm);
+    ASSERT(compareValues(actual_result, expected_result));
 
     // Clean up
     FREE_ARRAY(bytecode);

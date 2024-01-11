@@ -82,7 +82,7 @@ int test_parser_simpleExpression() {
     ASSERT(strcmp(rightPrimary->literal->as.numberLiteral->token.start, "2") == 0);
 
     // Clean up
-    freeParseTreeAndSource(&parser);
+    freeSource(source);
 
     return SUCCESS_RETURN_CODE;
 }

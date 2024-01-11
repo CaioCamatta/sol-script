@@ -20,13 +20,6 @@ void initVM(VM* vm, BytecodeArray* bytecode) {
     }
 }
 
-void addBytecode(VM* vm, BytecodeArray* bytecode) {
-    for (int i = 0; i < bytecode->used; i++) {
-        vm->instructions->values[vm->instructions->used] = bytecode->values[i];
-        vm->instructions->used++;
-    }
-}
-
 // Push value onto the stack
 void push(VM* vm, Value value) {
     *vm->SP = value;
@@ -116,4 +109,13 @@ void run(VM* vm) {
     Value value = *(vm->SP);
     printValue(value);
     printf("\n");
+}
+
+void interpret(VM* vm, BytecodeArray* bytecode) {
+    for (int i = 0; i < bytecode->used; i++) {
+        vm->instructions->values[vm->instructions->used] = bytecode->values[i];
+        vm->instructions->used++;
+    }
+
+    run(vm);
 }

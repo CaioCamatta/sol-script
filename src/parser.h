@@ -16,41 +16,48 @@ typedef enum {
  *
  * @param tokenArray Array of tokens generated from the scanner.
  * @param current Current token. 0-indexed.
+ * @param source Root of the AST.
  * */
 typedef struct {
     // Inputs from scanner
     TokenArray tokenArray;
     Token* current;
-
-    // Root of the AST
-    Source* source;
-
-    // Track current node as we build the AST
-    SyntaxType currSyntaxType;
-    union {
-        Statement currStatement;
-        Expression currExpression;
-        Literal currLiteral;
-    } currNode;
+    Source* source;  // Root of the AST
 } ASTParser;
 
 /**
- * Turn an array of tokens into a AST. Returns the Source of the AST.
+ * Turn an array of tokens into a AST.
  *
- * Throws parsing errors.
+ * Details: May throw parsing errors.
  *
  * @param treeParser an initialized ASTParser to use for scanning.
+ * @return the Source of the parsed AST.
  */
 Source* parseAST(ASTParser* treeParser);
 
 /**
- * Free memory allocated for an AST (the Source).
+ * Reset the parser and parse array of tokens.
  *
- * @param parser the ASTParser to free.
+ * Details: Frees the input token before returning. MayThrows parsing errors.
+ *
+ * @param tokenArray an initialized TokenArray to use for scanning.
+ * @return the Source of the parsed AST.
  */
-void freeParseTreeAndSource(ASTParser* parser);
+Source* parseASTFromTokens(ASTParser* treeParser, TokenArray* tokenArray);
 
-/* Initialize treeParser at the beginning of the given token array */
+/**
+ * Free memory allocated for the Source of an AST.
+ *
+ * @param source the Source to free.
+ */
+void freeSource(Source* source);
+
+/**
+ *  Initialize treeParser at the beginning of the given token array to be parsed.
+ *
+ * @param treeParser an uninitialized ASTParser.
+ * @param tokens the token array to parse.
+ */
 void initASTParser(ASTParser* treeParser, const TokenArray tokens);
 
 #endif
