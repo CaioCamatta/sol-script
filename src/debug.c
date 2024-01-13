@@ -177,15 +177,15 @@ static void printLiteral(const Literal* literal, int depth) {
 
     switch (literal->type) {
         case NUMBER_LITERAL:
-            printf("NumberLiteral" KGRY "(token=\"%s\")\n" RESET, literal->as.numberLiteral->token.start);
+            printf("NumberLiteral" KGRY "(token=\"%.*s\")\n" RESET, literal->as.numberLiteral->token.length, literal->as.numberLiteral->token.start);
             break;
 
         case IDENTIFIER_LITERAL:
-            printf("IdentifierLiteral" KGRY "(token=\"%s\")\n" RESET, literal->as.identifierLiteral->token.start);
+            printf("IdentifierLiteral" KGRY "(token=\"%.*s\")\n" RESET, literal->as.identifierLiteral->token.length, literal->as.identifierLiteral->token.start);
             break;
 
         case STRING_LITERAL:
-            printf("StringLiteral" KGRY "(token=\"%s\")\n" RESET, literal->as.stringLiteral->token.start);
+            printf("StringLiteral" KGRY "(token=\"%.*s\")\n" RESET, literal->as.stringLiteral->token.length, literal->as.stringLiteral->token.start);
             break;
 
             // Add cases for other literal types
