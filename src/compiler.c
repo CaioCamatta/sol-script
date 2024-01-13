@@ -53,7 +53,7 @@ static void visitAdditiveExpression(Compiler* compiler, AdditiveExpression* addi
 
     switch (additiveExpression->punctuator->type) {
         case TOKEN_PLUS:
-            emitBytecode(compiler, BYTECODE_ADD());
+            emitBytecode(compiler, BYTECODE(OP_ADD));
             break;
 
         default:
@@ -68,6 +68,11 @@ static void visitPrimaryExpression(Compiler* compiler, PrimaryExpression* primar
 
 static void visitExpressionStatement(Compiler* compiler, ExpressionStatement* expressionStatement) {
     visitExpression(compiler, expressionStatement->expression);
+}
+
+static void visitPrintStatement(Compiler* compiler, PrintStatement* printStatement) {
+    visitExpression(compiler, printStatement->expression);
+    emitBytecode(compiler, BYTECODE(OP_PRINT));
 }
 
 static void visitNumberLiteral(Compiler* compiler, NumberLiteral* numberLiteral) {
@@ -118,6 +123,9 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
             visitExpressionStatement(compiler, expressionStatement);
             break;
         }
+        case PRINT_STATEMENT:
+            visitPrintStatement(compiler, statement->as.printStatement);
+            break;
         default:
             fprintf(stderr, "Unimplemented statement type %d.\n", statement->type);
             exit(EXIT_FAILURE);

@@ -78,3 +78,40 @@ int test_compiler() {
 
     return SUCCESS_RETURN_CODE;
 }
+
+int test_compiler_print() {
+    Compiler compiler;
+
+    // Set up a source structure with a print statement
+    Source testSource = {
+        .rootStatements = {&(Statement){
+            .type = PRINT_STATEMENT,
+            .as.printStatement = &(PrintStatement){
+                .expression = &(Expression){
+                    .type = PRIMARY_EXPRESSION,
+                    .as.primaryExpression = &(PrimaryExpression){
+                        .literal = &(Literal){
+                            .type = NUMBER_LITERAL,
+                            .as.numberLiteral = &(NumberLiteral){
+                                .token = (Token){.type = TOKEN_NUMBER, .start = "42", .length = 2}}}}}}}},
+        .numberOfStatements = 1,
+    };
+
+    // Initialize and run the compiler
+    initCompiler(&compiler, &testSource);
+    BytecodeArray compiledBytecode = compile(&compiler);
+
+    // Verify the bytecode
+    // Assuming the bytecode for a print statement is OP_PRINT followed by the value to print
+    ASSERT(compiledBytecode.used == 2);                      // Check if two bytecode instructions are generated
+    ASSERT(compiledBytecode.values[0].type == OP_CONSTANT);  // First should be OP_CONSTANT
+    ASSERT(compiledBytecode.values[1].type == OP_PRINT);     // Second should be OP_PRINT
+
+    // Optionally, print the bytecode for visual verification
+    printBytecodeArray(compiledBytecode);
+
+    // Clean up
+    FREE_ARRAY(compiledBytecode);
+
+    return SUCCESS_RETURN_CODE;
+}

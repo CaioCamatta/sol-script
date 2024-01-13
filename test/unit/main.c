@@ -11,9 +11,12 @@ static void all_tests() {
     RUN_TEST(test_array);
     RUN_TEST(test_scanner);
     RUN_TEST(test_compiler);
+    RUN_TEST(test_compiler_print);
     RUN_TEST(test_vm_addition);
+    RUN_TEST(test_vm_print);
     // RUN_TEST(test_parser_errorHandling);
     RUN_TEST(test_parser_simpleExpression);
+    RUN_TEST(test_parser_printStatement);
 }
 
 int main(int argc, char **argv) {

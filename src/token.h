@@ -12,6 +12,7 @@ typedef enum {
     TOKEN_TRUE,
     TOKEN_NULL,
     TOKEN_VAL,
+    TOKEN_PRINT,
 
     // Identifier
     TOKEN_IDENTIFIER,

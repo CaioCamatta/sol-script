@@ -77,7 +77,6 @@ void step(VM* vm) {
 
             break;
         }
-
         case OP_PRINT: {
             Value value = pop(vm);
             printValue(value);

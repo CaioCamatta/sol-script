@@ -26,6 +26,7 @@ static char const* tokenTypeStrings[] = {
     "TOKEN_TRUE",
     "TOKEN_NULL",
     "TOKEN_VAL",
+    "TOKEN_PRINT",
 
     // Identifier
     "TOKEN_IDENTIFIER",
@@ -133,6 +134,10 @@ static void printStatement(const Statement* statement, int depth) {
             printExpression(valDecl->expression, depth + 1);
             break;
         }
+        case PRINT_STATEMENT:
+            printf("PrintStatement\n");
+            printExpression(statement->as.printStatement->expression, depth + 1);
+            break;
     }
 }
 

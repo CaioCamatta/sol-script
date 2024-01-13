@@ -25,7 +25,6 @@ static Value popVmStack(VM* vm) {
     return *(vm->SP);
 }
 
-// Test case 1: Execute addition in the VM
 int test_vm_addition() {
     // Create a simple bytecode program: 1 + 2
     BytecodeArray bytecode;
@@ -33,7 +32,7 @@ int test_vm_addition() {
 
     INSERT_ARRAY(bytecode, BYTECODE_CONSTANT_DOUBLE(1.0), Bytecode);
     INSERT_ARRAY(bytecode, BYTECODE_CONSTANT_DOUBLE(2.0), Bytecode);
-    INSERT_ARRAY(bytecode, BYTECODE_ADD(), Bytecode);
+    INSERT_ARRAY(bytecode, BYTECODE(OP_ADD), Bytecode);
 
     // Initialize VM with the bytecode
     VM vm;
@@ -49,6 +48,49 @@ int test_vm_addition() {
 
     // Clean up
     FREE_ARRAY(bytecode);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_vm_print() {
+    // Initialize the VM
+    VM vm;
+    BytecodeArray bytecodeArray;
+    INIT_ARRAY(bytecodeArray, Bytecode);
+
+    // Setup bytecode for a print statement
+    double numberToPrint = 42.0;
+    Bytecode constantBytecode = BYTECODE_CONSTANT_DOUBLE(numberToPrint);
+    INSERT_ARRAY(bytecodeArray, constantBytecode, Bytecode);
+
+    Bytecode printBytecode = BYTECODE(OP_PRINT);
+    INSERT_ARRAY(bytecodeArray, printBytecode, Bytecode);
+
+    initVM(&vm, &bytecodeArray);
+
+    // Redirect stdout to a buffer
+    char buffer[128];
+    memset(buffer, 0, sizeof(buffer));
+    fflush(stdout);
+    FILE* prev_stdout = stdout;
+    stdout = fmemopen(buffer, sizeof(buffer), "w");
+
+    // Run the VM
+    run(&vm);
+
+    // Restore stdout
+    fflush(stdout);
+    fclose(stdout);
+    stdout = prev_stdout;
+
+    // Assertions
+    // Check if the buffer contains the expected output
+    char expectedOutput[128];
+    sprintf(expectedOutput, "%f\n", numberToPrint);
+    ASSERT(strcmp(buffer, expectedOutput) == 0);
+
+    // Clean up
+    FREE_ARRAY(bytecodeArray);
 
     return SUCCESS_RETURN_CODE;
 }

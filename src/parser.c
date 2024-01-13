@@ -75,8 +75,6 @@ static bool match(ASTParser* parser, TokenType type) {
 
 /**
  * Terminal rule. Match identifier token.
- *
- * Returns true if this production was used, false otherwise.
  */
 static Literal* identifierLiteral(ASTParser* parser) {
     Token* identifier = consume(parser, TOKEN_IDENTIFIER, "Expected identifier.");
@@ -180,8 +178,6 @@ static Expression* additiveExpression(ASTParser* parser) {
  *  function-expression
  *  block-expression
  *  logical-or-expression
- *
- * Returns true if this production was used, false otherwise.
  */
 static Expression* expression(ASTParser* parser) {
     switch (peek(parser)->type) {
@@ -222,8 +218,6 @@ static Statement* valDeclaration(ASTParser* parser) {
  * declaration:
  *  var-declaration ";"
  *  val-declaration ";"
- *
- * Returns true if this production was used, false otherwise.
  */
 static Statement* declaration(ASTParser* parser) {
     if (peek(parser)->type == TOKEN_VAL) {
@@ -236,6 +230,25 @@ static Statement* declaration(ASTParser* parser) {
 }
 
 /**
+ * print-statement:
+ *  "print" expression ";"
+ */
+static Statement* printStatement(ASTParser* parser) {
+    consume(parser, TOKEN_PRINT, "Expected 'print' in a print statement.");
+    Expression* expr = expression(parser);
+    consume(parser, TOKEN_SEMICOLON, "Expected ';' after print statement.");
+
+    PrintStatement* printStatement = allocateASTNode(PrintStatement);
+    printStatement->expression = expr;
+
+    Statement* stmt = allocateASTNode(Statement);
+    stmt->type = PRINT_STATEMENT;
+    stmt->as.printStatement = printStatement;
+
+    return stmt;
+}
+
+/**
  * statement:
  *  declaration
  *  block-statement
@@ -244,6 +257,7 @@ static Statement* declaration(ASTParser* parser) {
  *  return-statement
  *  expression-statement
  *  assignment-statement
+ *  print-statement
  */
 static Statement* statement(ASTParser* parser) {
     // NOTE
@@ -257,6 +271,9 @@ static Statement* statement(ASTParser* parser) {
         // case TOKEN_VAR:
         case TOKEN_VAL:
             return declaration(parser);
+        case TOKEN_PRINT: {
+            return printStatement(parser);
+        }
         // case TOKEN_LEFT_CURLY:
         //     return blockStatement(parser);
         // case TOKEN_WHILE:

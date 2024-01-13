@@ -62,7 +62,7 @@ punctuator: one of
 ### 2. Parser
 
 ```
-source: 
+urce: 
 	statement* EOF
 
 statement: 
@@ -73,26 +73,27 @@ statement:
 	return-statement
 	expression-statement
 	assignment-statement
+	print-statement
 
 declaration:
-	var-declaration ";"
-	val-declaration ";"
+	var-declaration
+	val-declaration
 
 var-declaration:
-	"var" identifier ( "=" expression )?
+	"var" identifier ( "=" expression )?  ";"
 
-var-declaration:
-	"val" identifier "=" expression
+val-declaration:
+	"val" identifier "=" expression ";"
 
 block-statement:
 	"{" statement* "}" ";"
-	block-expression ";"
+	block-expression
 
 iteration-statement:
-	"while" "(" expression ")" block-statement ";"
+	"while" "(" expression ")" block-statement
 
 selection-statement:
-	"if" "(" expression ")" statement ( "else" statement )? ";"
+	"if" "(" expression ")" statement ( "else" statement )?
 
 return-statement:
 	"return" ( expression )? ";"
@@ -102,6 +103,9 @@ expression-statement:
 
 assignment-statement:
 	postfix-expression "=" expression
+
+print-statement:
+	"print" expression ";"
 
 
 expression:
@@ -154,13 +158,13 @@ comparison-expression:
 	additive-expression ( ( ">" | ">=" | "<" | "<=" ) additive-expression )*
 
 additive-expression:
-	multiplicative-expression ( ( "-" | "+" ) multiplicative-expression )* ;
+	multiplicative-expression ( ( "-" | "+" ) multiplicative-expression )* 
 	
 multiplicative-expression:
-	unary-expression ( ( "-" | "+" ) unary-expression )* ;
+	unary-expression ( ( "/" | "*" ) unary-expression )* 
 
 unary-expression:
-	( "!" | "-" )* postfix-expression
+	( "!"* | "-"* )? postfix-expression
 
 postfix-expression:
 	primary-expression
@@ -180,9 +184,9 @@ call-expression:
 	unary-expression
 	
 
-number-literal
-string-literal
-identifier
+number-literal      # terminal
+string-literal      # terminal
+identifier-literal  # terminal
 ```
 
 ## Development

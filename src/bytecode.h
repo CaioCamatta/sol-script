@@ -30,8 +30,8 @@ typedef struct {
 typedef struct {
 } BytecodeAdd;
 
-#define BYTECODE_ADD() \
-    (Bytecode) { .type = OP_ADD }
+#define BYTECODE(op) \
+    (Bytecode) { .type = op }
 
 /* The bytecode contains the Opcode and optional operands depending on the type of operation. */
 typedef struct {

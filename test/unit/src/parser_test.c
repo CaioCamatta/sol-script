@@ -87,6 +87,21 @@ int test_parser_simpleExpression() {
     return SUCCESS_RETURN_CODE;
 }
 
+int test_parser_printStatement() {
+    TokenType types[] = {TOKEN_PRINT, TOKEN_NUMBER, TOKEN_PLUS, TOKEN_NUMBER, TOKEN_SEMICOLON, TOKEN_EOF};
+    TokenArray tokens = createTokenArray(types, 6);
+
+    ASTParser parser;
+    Source* source = parseASTFromTokens(&parser, &tokens);
+    ASSERT(source->numberOfStatements == 1);
+    ASSERT(source->rootStatements[0]->type == PRINT_STATEMENT);
+    ASSERT(source->rootStatements[0]->as.printStatement->expression->type == ADDITIVE_EXPRESSION);
+
+    FREE_ARRAY(tokens);
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
 // TODO: fill out this test
 int test_parser_errorHandling() {
     TokenType types[] = {TOKEN_NUMBER, TOKEN_PLUS, TOKEN_EOF};

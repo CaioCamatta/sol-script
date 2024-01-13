@@ -6,6 +6,7 @@
 
 // Forward declarations
 typedef struct ExpressionStatement ExpressionStatement;
+typedef struct PrintStatement PrintStatement;
 typedef struct ValDeclarationStatement ValDeclarationStatement;
 typedef struct AdditiveExpression AdditiveExpression;
 typedef struct PrimaryExpression PrimaryExpression;
@@ -16,7 +17,8 @@ typedef struct StringLiteral StringLiteral;
 // --- Types ---
 typedef enum {
     EXPRESSION_STATEMENT,
-    VAL_DECLARATION_STATEMENT
+    VAL_DECLARATION_STATEMENT,
+    PRINT_STATEMENT
 } StatementType;
 
 typedef enum {
@@ -36,6 +38,7 @@ typedef struct {
     union {
         ExpressionStatement *expressionStatement;
         ValDeclarationStatement *valDeclarationStatement;
+        PrintStatement *printStatement;
     } as;
 } Statement;
 
@@ -58,6 +61,10 @@ typedef struct {
 
 // --- Concrete productions ---
 struct ExpressionStatement {
+    Expression *expression;
+};
+
+struct PrintStatement {
     Expression *expression;
 };
 
