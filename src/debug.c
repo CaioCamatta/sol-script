@@ -203,10 +203,13 @@ void printBytecodeArray(BytecodeArray bytecodeArray) {
         switch (bytecodeArray.values[i].type) {
             case OP_ADD:
                 printf(" [ ADD ]\n");
+                break;
             case OP_CONSTANT:
                 printf(" [ CONSTANT %f ]\n", bytecodeArray.values[i].operands.constant.as.doubleVal);
+                break;
             case OP_PRINT:
                 printf(" [ PRINT ]\n");
+                break;
         }
     }
     printf("\n");
