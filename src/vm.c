@@ -106,7 +106,7 @@ void run(VM* vm) {
     }
 
     // TEMPORARY: print the last value on the stack
-    Value value = *(vm->SP);
+    Value value = *(vm->SP - 1);
     printValue(value);
     printf("\n");
 }

@@ -20,7 +20,7 @@ typedef struct {
     BytecodeArray* instructions;
     Bytecode* IP;
     Value stack[STACK_MAX];
-    Value* SP;  // points to next empty value in the stack, e.g. [<val>, <val>, <empty> SP, <empty>, ...]
+    Value* SP;  // points to next slot to be used in the stack, e.g. [<val>, <val>, <empty> SP, <empty>, ...]
 } VM;
 
 /**
