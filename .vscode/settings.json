@@ -60,7 +60,10 @@
     "ios": "c",
     "debug.h": "c",
     "__availability": "c",
-    "complex": "c"
+    "complex": "c",
+    "__threading_support": "c",
+    "stdbool.h": "c",
+    "value.h": "c"
   },
   "C_Cpp.errorSquiggles": "enabled"
 }
