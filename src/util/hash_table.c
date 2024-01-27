@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -36,6 +37,11 @@ static void initHashTableWithCapacity(HashTable* table, int capacity) {
     table->size = 0;
     table->entries = malloc(table->capacity * sizeof(HashTableEntry));
 
+    if (table->entries == NULL) {
+        fprintf(stderr, "Failed to allocate memory for hash table.\n");
+        exit(EXIT_FAILURE);
+    }
+
     for (int i = 0; i < table->capacity; i++) {
         table->entries[i].key = NULL;
         table->entries[i].value = BOOL_VAL(false);  // Empty value. NOT a tombstone.
@@ -50,14 +56,14 @@ void initHashTable(HashTable* table) {
 void freeHashTable(HashTable* table) {
     for (int i = 0; i < table->capacity; i++) {
         if (table->entries[i].key != NULL) {
-            free(table->entries[i].key);
+            free(table->entries[i].key);  // All keys are dynamically allocated
         }
     }
     free(table->entries);
 }
 
 HashTableEntry* hashTableGet(HashTable* table, const char* key) {
-    // Math tells us that n % 2^i = n & (2^i - 1) if n is positive
+    // Note that n % 2^i = n & (2^i - 1) if n is positive
     // Bitwise and is much faster than modulo.
     // The table capacity is always a multiple of two, enforced in initHashTableWithCapacity().
     int index = hash(key) & (table->capacity - 1);
@@ -70,13 +76,14 @@ HashTableEntry* hashTableGet(HashTable* table, const char* key) {
         HashTableEntry* entry = &table->entries[probeIndex];
 
         if (entry->key == NULL) {
+            // TODO: remove redundant key == NULL check
             if (IS_TOMBSTONE(entry) && firstTombstone == NULL) {
                 // If it's the first tombstone encountered, save it.
                 firstTombstone = entry;
             } else {
                 // If it's a non-tombstone spot, the key isn't in the hashtable.
                 // So, return the first tombstone encountered if any, else NULL
-                return firstTombstone ? firstTombstone : NULL;
+                return firstTombstone ? firstTombstone : entry;
             }
         } else if (strcmp(entry->key, key) == 0) {  // TODO: internallize strings so we can use
                                                     // pointer comparison instead of strcmp
@@ -86,6 +93,7 @@ HashTableEntry* hashTableGet(HashTable* table, const char* key) {
     }
 
     // If the entire table was full of tombstones, return the first tombstone encountered
+    // Assuming tombstones count towards the load factor, this should never happen.
     return firstTombstone;
 }
 
@@ -95,13 +103,20 @@ bool hashTableInsert(HashTable* table, char* key, Value value) {
         hashTableResize(table, table->capacity * 2);
     }
 
+    // Dynamically allocate a copy of the key
+    char* copiedKey = strdup(key);
+    if (!copiedKey) {
+        fprintf(stderr, "Failed to allocate memory for hash table key.\n");
+        exit(EXIT_FAILURE);
+    }
+
     // Find an entry to insert into
-    HashTableEntry* entry = hashTableGet(table, key);
+    HashTableEntry* entry = hashTableGet(table, copiedKey);
 
     // Only add count if we are not replacing a tombstone
     if (!IS_TOMBSTONE(entry)) table->size++;
 
-    entry->key = key;
+    entry->key = copiedKey;
     entry->value = value;
 
     return true;

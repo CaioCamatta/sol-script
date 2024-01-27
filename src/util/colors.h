@@ -1,7 +1,7 @@
 #ifndef COLORS_H
 #define COLORS_H
 
-#define RESET "\x1B[0m"   // Normal colour. You have to reset the terminal after using a colour.
+#define RESET "\x1B[0m"   // Normal color. You have to reset the terminal after using a colour.
 #define KRED "\x1B[31m"   // Red
 #define KGRN "\x1B[32m"   // Green
 #define KYEL "\x1B[33m"   // Yellow

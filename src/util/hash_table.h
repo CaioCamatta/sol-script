@@ -43,7 +43,7 @@ void freeHashTable(HashTable* table);
 // Insert an entry pair into the hash table. Returns true if successful.
 bool hashTableInsert(HashTable* table, char* key, Value value);
 
-// Search for a value by key in the hash table. Returns a pointer to the value or NULL if not found.
+// Search for an entry by key in the hash table. The entry may be empty or a tombstone.
 HashTableEntry* hashTableGet(HashTable* table, const char* key);
 
 // Delete an entry from the hash table by key. Returns true if the entry was found and deleted.

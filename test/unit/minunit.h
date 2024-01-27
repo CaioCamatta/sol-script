@@ -2,14 +2,12 @@
 #ifndef minunit_h
 #define minunit_h
 
+#include <stdio.h>
+
+#include "util/colors.h"
+
 #define SUCCESS_RETURN_CODE 0
 #define FAILURE_RETURN_CODE 1
-
-// Colors for UNIX terminal
-#define KRED "\x1B[31m"
-#define KGRN "\x1B[32m"
-#define KYEL "\x1B[33m"
-#define RESET "\x1B[0m"  // Normal colour. You have to reset the terminal after using a colour.
 
 static int testsRun = 0;
 static int testsFailed = 0;
@@ -21,14 +19,14 @@ static int assertionsFailed = 0;
  *
  * @param test an expression that evaluates to a truthy or falsy value.
  */
-#define ASSERT(test)                              \
-    do {                                          \
-        assertionsRun++;                          \
-        if (!(test)) {                            \
-            assertionsFailed++;                   \
-            printf("ERROR - failed " #test "\n"); \
-            return FAILURE_RETURN_CODE;           \
-        }                                         \
+#define ASSERT(test)                                          \
+    do {                                                      \
+        assertionsRun++;                                      \
+        if (!(test)) {                                        \
+            assertionsFailed++;                               \
+            printf(KRED "ERROR - failed: " #test "\n" RESET); \
+            return FAILURE_RETURN_CODE;                       \
+        }                                                     \
     } while (0)
 
 /**

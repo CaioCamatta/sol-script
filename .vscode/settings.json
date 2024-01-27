@@ -63,7 +63,9 @@
     "complex": "c",
     "__threading_support": "c",
     "stdbool.h": "c",
-    "value.h": "c"
+    "value.h": "c",
+    "colors.h": "c",
+    "hash_table.h": "c"
   },
   "C_Cpp.errorSquiggles": "enabled"
 }
