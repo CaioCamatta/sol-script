@@ -9,10 +9,10 @@
 /**
  * Initialize VM with some source code.
  */
-void initVM(VM* vm, BytecodeArray* bytecode) {
-    vm->instructions = bytecode;
-    vm->IP = vm->instructions->values;  // Set instruction pointer to the beginning of bytecode
-    vm->SP = vm->stack;                 // Set stack pointer to the top of the stack
+void initVM(VM* vm, CompiledCode compiledCode) {
+    vm->compiledCode = compiledCode;
+    vm->IP = vm->compiledCode.bytecodeArray.values;  // Set instruction pointer to the beginning of bytecode
+    vm->SP = vm->stack;                              // Set stack pointer to the top of the stack
 
     // Initialize stack with empty values.
     for (int i = 0; i < STACK_MAX; ++i) {
@@ -32,17 +32,15 @@ Value pop(VM* vm) {
     return *(vm->SP);
 }
 
-// Convert a BytecodeConstant (from the compiler) to a Value (which is used in the VM)
-// TODO: make this a macro
-static Value bytecodeConstantToValue(BytecodeConstant* bytecodeConstant) {
-    switch (bytecodeConstant->type) {
-        case TYPE_DOUBLE:
-            return (Value){.type = TYPE_DOUBLE, .as = {.doubleVal = bytecodeConstant->as.doubleVal}};
-            break;
-
-        default:
-            break;
-    };
+// Convert a Constant in the constants pool from the compiled bytecode into a runtime Value
+Value bytecodeConstantToValue(VM* vm, size_t constantIndex) {
+    Constant constant = vm->compiledCode.constantPool.values[constantIndex];
+    switch (constant.type) {
+        case CONST_TYPE_DOUBLE:
+            return (Value){.type = TYPE_DOUBLE, .as = {.doubleVal = constant.as.number}};
+        case CONST_TYPE_STRING:
+            return (Value){.type = TYPE_STRING, .as = {.stringVal = constant.as.string}};
+    }
 }
 
 // Print a Value
@@ -65,8 +63,9 @@ void step(VM* vm) {
     Bytecode* instruction = vm->IP;
 
     switch (instruction->type) {
-        case OP_CONSTANT:
-            push(vm, bytecodeConstantToValue(&(instruction->operands.constant)));
+        case OP_LOAD_CONSTANT:
+            // constant 1 is assumed to exist
+            push(vm, bytecodeConstantToValue(vm, instruction->maybeConstantIndex));
             break;
         case OP_ADD: {
             Value operand1 = pop(vm);
@@ -98,7 +97,7 @@ void step(VM* vm) {
  */
 void run(VM* vm) {
     // Find the last instruction so we know when to stop executing
-    Bytecode* lastInstruction = &(vm->instructions->values[vm->instructions->used]);
+    Bytecode* lastInstruction = &(vm->compiledCode.bytecodeArray.values[vm->compiledCode.bytecodeArray.used]);
 
     while (vm->IP != lastInstruction) {
         step(vm);
@@ -108,13 +107,4 @@ void run(VM* vm) {
     Value value = *(vm->SP - 1);
     printValue(value);
     printf("\n");
-}
-
-void interpret(VM* vm, BytecodeArray* bytecode) {
-    for (int i = 0; i < bytecode->used; i++) {
-        vm->instructions->values[vm->instructions->used] = bytecode->values[i];
-        vm->instructions->used++;
-    }
-
-    run(vm);
 }

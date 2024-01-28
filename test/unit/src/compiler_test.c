@@ -4,8 +4,8 @@
 #include "debug.h"
 #include "syntax.h"
 
-// Compare two bytecode arrays
-static int compareBytecodeArrays(BytecodeArray expected, BytecodeArray actual) {
+// Compare two bytecode arrays. Returns 1 if equal, 0 if not
+static int compareTypesInBytecodeArrays(BytecodeArray expected, BytecodeArray actual) {
     if (expected.used != actual.used) {
         return 0;
     }
@@ -62,19 +62,27 @@ int test_compiler() {
     };
 
     initCompiler(&compiler, &testSource);
-    BytecodeArray compiledBytecode = compile(&compiler);
-    printBytecodeArray(compiledBytecode);
+    CompiledCode compiledCode = compile(&compiler);
+    printCompiledCode(compiledCode);
 
     // Expected bytecode
     Bytecode expectedBytecode[] = {
-        {.type = OP_CONSTANT},
-        {.type = OP_CONSTANT},
+        {.type = OP_LOAD_CONSTANT},
+        {.type = OP_LOAD_CONSTANT},
         {.type = OP_ADD},
     };
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 3};
 
     // Compared the actual and expected
-    ASSERT(compareBytecodeArrays(expectedBytecodeArray, compiledBytecode));
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+    ASSERT(compiledCode.constantPool.values[0].as.number == 5);            // 5 is in slot 0 of the pool
+    ASSERT(compiledCode.bytecodeArray.values[0].maybeConstantIndex == 0);  // first instruction loads slot 0
+    ASSERT(compiledCode.constantPool.values[1].as.number == 7);
+    ASSERT(compiledCode.bytecodeArray.values[1].maybeConstantIndex == 1);
+
+    // Clean up
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -99,19 +107,20 @@ int test_compiler_print() {
 
     // Initialize and run the compiler
     initCompiler(&compiler, &testSource);
-    BytecodeArray compiledBytecode = compile(&compiler);
+    CompiledCode compiledCode = compile(&compiler);
 
     // Verify the bytecode
     // Assuming the bytecode for a print statement is OP_PRINT followed by the value to print
-    ASSERT(compiledBytecode.used == 2);                      // Check if two bytecode instructions are generated
-    ASSERT(compiledBytecode.values[0].type == OP_CONSTANT);  // First should be OP_CONSTANT
-    ASSERT(compiledBytecode.values[1].type == OP_PRINT);     // Second should be OP_PRINT
+    ASSERT(compiledCode.bytecodeArray.used == 2);                           // Check if two bytecode instructions are generated
+    ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);  // First should be OP_CONSTANT
+    ASSERT(compiledCode.bytecodeArray.values[1].type == OP_PRINT);          // Second should be OP_PRINT
 
     // Optionally, print the bytecode for visual verification
-    printBytecodeArray(compiledBytecode);
+    printCompiledCode(compiledCode);
 
     // Clean up
-    FREE_ARRAY(compiledBytecode);
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
 
     return SUCCESS_RETURN_CODE;
 }

@@ -12,6 +12,6 @@ char const* tokenTypeToString(TokenType tokenType);
 
 void printAST(const Source* source);
 
-void printBytecodeArray(BytecodeArray bytecodeArray);
+void printCompiledCode(CompiledCode compiledCode);
 
 #endif

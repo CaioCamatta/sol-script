@@ -9,8 +9,9 @@
  * Compiler struct to facilitate compiling an AST into bytecode.
  */
 typedef struct {
-    BytecodeArray compiledBytecode;  // i.e., the compiled program
-    Source* ASTSource;               // Root of the AST
+    BytecodeArray compiledBytecode;
+    ConstantPool constantPool;
+    Source* ASTSource;  // Root of the AST
 } Compiler;
 
 /* Initialize a Compiler with an AST to be parsed */
@@ -21,13 +22,6 @@ void initCompiler(Compiler* compiler, Source* ASTSource);
  *
  * @param compiler an initialized Compiler to use for compiling.
  */
-BytecodeArray compile(Compiler* compiler);
-
-/**
- * Reset the compiler and compile an AST into bytecode.
- *
- * @param source initialized Source to compile.
- */
-BytecodeArray compileSource(Compiler* compiler, Source* ASTSource);
+CompiledCode compile(Compiler* compiler);
 
 #endif

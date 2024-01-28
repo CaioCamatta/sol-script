@@ -20,7 +20,7 @@ typedef struct {
 
     union {
         double doubleVal;
-        uint16_t stringVal;  // Pointer to string in compiled string pool
+        char* stringVal;  // This string should live in the constant pool, which persists through the VM's lifetime.
         bool booleanVal;
     } as;
 } Value;
@@ -38,6 +38,11 @@ typedef struct {
 #define BOOL_VAL(doubleValArg)                                    \
     (Value) {                                                     \
         .type = TYPE_BOOLEAN, .as = {.booleanVal = doubleValArg } \
+    }
+
+#define STRING_VAL(stringValArg)                                \
+    (Value) {                                                   \
+        .type = TYPE_STRING, .as = {.stringVal = stringValArg } \
     }
 
 #endif

@@ -201,21 +201,50 @@ static void printLiteral(const Literal* literal, int depth) {
 // -------------------------------- COMPILER ---------------------------------
 // ---------------------------------------------------------------------------
 
-void printBytecodeArray(BytecodeArray bytecodeArray) {
-    printf("Compiled bytecode:\n");
+static void printConstantPool(ConstantPool constantPool) {
+    printf("Constant Pool \n");
+    for (size_t i = 0; i < constantPool.used; i++) {
+        Constant value = constantPool.values[i];
+        printf(" #%zu ", i);
+        switch (value.type) {
+            case CONST_TYPE_DOUBLE:
+                printf("(double) %f\n", value.as.number);
+                break;
+            case CONST_TYPE_STRING:
+                // Assuming a function to get string from string pool: getStringFromPool(index)
+                printf("(string) \"%s\"\n", value.as.string);
+                break;
+        }
+    }
+}
+
+static void printBytecodeArray(BytecodeArray bytecodeArray) {
+    printf("Bytecode\n");
 
     for (int i = 0; i < bytecodeArray.used; i++) {
         switch (bytecodeArray.values[i].type) {
             case OP_ADD:
                 printf(" [ ADD ]\n");
                 break;
-            case OP_CONSTANT:
-                printf(" [ CONSTANT %f ]\n", bytecodeArray.values[i].operands.constant.as.doubleVal);
+            case OP_LOAD_CONSTANT:
+                printf(" [ LOAD_CONSTANT #%zu ]\n", bytecodeArray.values[i].maybeConstantIndex);
                 break;
             case OP_PRINT:
                 printf(" [ PRINT ]\n");
                 break;
+            case OP_TRUE:
+                printf(" [ TRUE ]\n");
+                break;
+            case OP_FALSE:
+                printf(" [ FALSE ]\n");
+                break;
         }
     }
+}
+
+void printCompiledCode(CompiledCode compiledCode) {
+    printf("Compiled code:\n");
+    printConstantPool(compiledCode.constantPool);
+    printBytecodeArray(compiledCode.bytecodeArray);
     printf("\n");
 }

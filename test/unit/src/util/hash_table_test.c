@@ -3,7 +3,7 @@
 #include "../../minunit.h"
 
 // Hash table initialization test
-int test_hashTableInit() {
+int test_hashTable_init() {
     HashTable table;
     initHashTable(&table);
 
@@ -16,7 +16,7 @@ int test_hashTableInit() {
 }
 
 // Hash table insert and get test
-int test_hashTableInsertAndGet() {
+int test_hashTable_insertAndGet() {
     HashTable table;
     initHashTable(&table);
 
@@ -36,7 +36,7 @@ int test_hashTableInsertAndGet() {
 }
 
 // Hash table delete test
-int test_hashTableDelete() {
+int test_hashTable_delete() {
     HashTable table;
     initHashTable(&table);
 
@@ -55,7 +55,7 @@ int test_hashTableDelete() {
 }
 
 // Hash table resize test
-int test_hashTableResize() {
+int test_hashTable_resize() {
     HashTable table;
     initHashTable(&table);
     int oldCapacity = table.capacity;

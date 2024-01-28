@@ -26,17 +26,22 @@ static Value popVmStack(VM* vm) {
 }
 
 int test_vm_addition() {
-    // Create a simple bytecode program: 1 + 2
-    BytecodeArray bytecode;
-    INIT_ARRAY(bytecode, Bytecode);
+    CompiledCode code = (CompiledCode){
+        .constantPool = (ConstantPool){},
+        .bytecodeArray = (BytecodeArray){}};
+    INIT_ARRAY(code.bytecodeArray, Bytecode);
+    INIT_ARRAY(code.constantPool, Constant);
 
-    INSERT_ARRAY(bytecode, BYTECODE_CONSTANT_DOUBLE(1.0), Bytecode);
-    INSERT_ARRAY(bytecode, BYTECODE_CONSTANT_DOUBLE(2.0), Bytecode);
-    INSERT_ARRAY(bytecode, BYTECODE(OP_ADD), Bytecode);
+    // Create a simple bytecode program: 1 + 2
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(1.0), Constant);  // put Constant in index 0
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(2.0), Constant);  // put Constant in index 1
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 1), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_ADD), Bytecode);
 
     // Initialize VM with the bytecode
     VM vm;
-    initVM(&vm, &bytecode);
+    initVM(&vm, code);
 
     // Run the VM
     run(&vm);
@@ -47,7 +52,8 @@ int test_vm_addition() {
     ASSERT(compareValues(actual_result, expected_result));
 
     // Clean up
-    FREE_ARRAY(bytecode);
+    FREE_ARRAY(code.bytecodeArray);
+    FREE_ARRAY(code.constantPool);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -55,18 +61,24 @@ int test_vm_addition() {
 int test_vm_print() {
     // Initialize the VM
     VM vm;
-    BytecodeArray bytecodeArray;
-    INIT_ARRAY(bytecodeArray, Bytecode);
+    CompiledCode code = (CompiledCode){
+        .constantPool = (ConstantPool){},
+        .bytecodeArray = (BytecodeArray){}};
+    INIT_ARRAY(code.bytecodeArray, Bytecode);
+    INIT_ARRAY(code.constantPool, Value);
 
     // Setup bytecode for a print statement
-    double numberToPrint = 42.0;
-    Bytecode constantBytecode = BYTECODE_CONSTANT_DOUBLE(numberToPrint);
-    INSERT_ARRAY(bytecodeArray, constantBytecode, Bytecode);
+    Constant numberToPrint = DOUBLE_CONST(42);
+    INSERT_ARRAY(code.constantPool, numberToPrint, Constant);
+    size_t indexOfNumberToPrintInPool = 0;
+
+    Bytecode constantBytecode = BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, indexOfNumberToPrintInPool);
+    INSERT_ARRAY(code.bytecodeArray, constantBytecode, Bytecode);
 
     Bytecode printBytecode = BYTECODE(OP_PRINT);
-    INSERT_ARRAY(bytecodeArray, printBytecode, Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, printBytecode, Bytecode);
 
-    initVM(&vm, &bytecodeArray);
+    initVM(&vm, code);
 
     // Redirect stdout to a buffer
     char buffer[128];
@@ -86,11 +98,12 @@ int test_vm_print() {
     // Assertions
     // Check if the buffer contains the expected output
     char expectedOutput[128];
-    sprintf(expectedOutput, "%f\n", numberToPrint);
+    sprintf(expectedOutput, "%f\n", numberToPrint.as.number);
     ASSERT(strcmp(buffer, expectedOutput) == 0);
 
     // Clean up
-    FREE_ARRAY(bytecodeArray);
+    FREE_ARRAY(code.bytecodeArray);
+    FREE_ARRAY(code.constantPool);
 
     return SUCCESS_RETURN_CODE;
 }

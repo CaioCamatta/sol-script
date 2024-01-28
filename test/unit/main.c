@@ -11,10 +11,10 @@
 static void all_tests() {
     RUN_TEST(test_array);
 
-    RUN_TEST(test_hashTableInit);
-    RUN_TEST(test_hashTableInsertAndGet);
-    RUN_TEST(test_hashTableDelete);
-    RUN_TEST(test_hashTableResize);
+    RUN_TEST(test_hashTable_init);
+    RUN_TEST(test_hashTable_insertAndGet);
+    RUN_TEST(test_hashTable_delete);
+    RUN_TEST(test_hashTable_resize);
 
     RUN_TEST(test_scanner);
 

@@ -12,11 +12,19 @@
 #include "vm.h"
 
 static void repl() {
-    // Use the same VM throughout the REPL session.
+    // Use the same Compiler throughout the REPL session so we can add to the same constant pool
+    Compiler compiler;
+    initCompiler(&compiler, NULL);
+
+    // Use the same VM throughout the REPL session so we can maintain runtime values
     VM vm;
     BytecodeArray bytecodeArray;
     INIT_ARRAY(bytecodeArray, Bytecode);
-    initVM(&vm, &bytecodeArray);
+    CompiledCode compiledCode = (CompiledCode){
+        .bytecodeArray = bytecodeArray,
+        .constantPool = compiler.constantPool};
+
+    initVM(&vm, compiledCode);
 
     char input[1024];
     while (1) {
@@ -28,7 +36,6 @@ static void repl() {
 
         Scanner scanner;
         ASTParser treeParser;
-        Compiler compiler;
 
         TokenArray tokens = scanTokensFromString(&scanner, input);
         printTokenList(tokens);
@@ -36,14 +43,21 @@ static void repl() {
         Source* source = parseASTFromTokens(&treeParser, &tokens);
         printAST(source);
 
-        BytecodeArray newBytecode = compileSource(&compiler, source);
-        printBytecodeArray(newBytecode);
+        // Reset compiled bytecode and feed new AST, but maintain same constant pool
+        INIT_ARRAY(compiler.compiledBytecode, Bytecode);
+        compiler.ASTSource = source;
+        CompiledCode newCode = compile(&compiler);
+        printCompiledCode(newCode);
 
-        interpret(&vm, &newBytecode);
+        // Add new bytecode to VM
+        for (int i = 0; i < newCode.bytecodeArray.used; i++) {
+            vm.compiledCode.bytecodeArray.values[vm.compiledCode.bytecodeArray.used] = newCode.bytecodeArray.values[i];
+            vm.compiledCode.bytecodeArray.used++;
+        }
+        run(&vm);
 
         FREE_ARRAY(tokens);
         freeSource(source);
-        FREE_ARRAY(newBytecode);
     }
 }
 
@@ -66,12 +80,12 @@ static void executeFile(const char* path) {
     // Then, compile the AST into bytecode.
     Compiler compiler;
     initCompiler(&compiler, source);
-    BytecodeArray bytecode = compile(&compiler);
-    printBytecodeArray(bytecode);
+    CompiledCode compiledCode = compile(&compiler);
+    printCompiledCode(compiledCode);
 
-    // Then, execute the bytecode.
+    // Then, execute the compiledCode.
     VM vm;
-    initVM(&vm, &bytecode);
+    initVM(&vm, compiledCode);
     run(&vm);
 }
 

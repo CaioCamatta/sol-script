@@ -14,8 +14,11 @@
 void initCompiler(Compiler* compiler, Source* ASTSource) {
     BytecodeArray bytecodeArray;
     INIT_ARRAY(bytecodeArray, Bytecode);
+    ConstantPool constantPool;
+    INIT_ARRAY(constantPool, Constant);
     compiler->compiledBytecode = bytecodeArray;
     compiler->ASTSource = ASTSource;
+    compiler->constantPool = constantPool;
 }
 
 /* FORWARD DECLARATIONS */
@@ -39,11 +42,13 @@ static double tokenTodouble(Token token) {
 }
 
 /**
- * Add a constant to the compiler's constant table.
- * These go alongwise the bytecode in the compiled code.
+ * Add a constant to the compiler's constant pool, returns index in the pool.
+ * These constants go alongwise the bytecode in the compiled code.
  * */
-// static void addLiteralToConstantTable(Compiler* compiler) {
-// }
+static size_t addConstantToPool(Compiler* compiler, Constant constant) {
+    INSERT_ARRAY(compiler->constantPool, constant, Constant);
+    return compiler->constantPool.used - 1;
+}
 
 /* VISITOR FUNCTIONS */
 
@@ -76,7 +81,11 @@ static void visitPrintStatement(Compiler* compiler, PrintStatement* printStateme
 }
 
 static void visitNumberLiteral(Compiler* compiler, NumberLiteral* numberLiteral) {
-    Bytecode bytecode = BYTECODE_CONSTANT_DOUBLE(tokenTodouble(numberLiteral->token));
+    double number = tokenTodouble(numberLiteral->token);
+    Constant constant = DOUBLE_CONST(number);
+    size_t constantIndex = addConstantToPool(compiler, constant);
+
+    Bytecode bytecode = BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, constantIndex);
     emitBytecode(compiler, bytecode);
 }
 
@@ -133,7 +142,7 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
     }
 }
 
-BytecodeArray compile(Compiler* compiler) {
+CompiledCode compile(Compiler* compiler) {
     clock_t startTime = clock();
     printf("Started compiling.\n");
 
@@ -150,16 +159,9 @@ BytecodeArray compile(Compiler* compiler) {
     double timeTaken = ((double)(endTime - startTime)) / CLOCKS_PER_SEC;
     printf("Done compiling in %.5f seconds.\n\n", timeTaken);
 
-    return compiler->compiledBytecode;
-}
+    CompiledCode code = (CompiledCode){
+        .bytecodeArray = compiler->compiledBytecode,
+        .constantPool = compiler->constantPool};
 
-BytecodeArray compileSource(Compiler* compiler, Source* ASTSource) {
-    initCompiler(compiler, ASTSource);
-
-    for (int i = 0; i < ASTSource->numberOfStatements; i++) {
-        Statement* statement = ASTSource->rootStatements[i];
-        visitStatement(compiler, statement);
-    }
-
-    return compiler->compiledBytecode;
+    return code;
 }
