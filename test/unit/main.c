@@ -34,6 +34,8 @@ static void all_tests() {
     RUN_TEST(test_parser_multiplicativeExpression);
     RUN_TEST(test_parser_unaryExpression);
     RUN_TEST(test_parser_booleanLiteral);
+    RUN_TEST(test_parser_complexExpression);
+    RUN_TEST(test_parser_nestedParenthesesExpression);
 }
 
 int main(int argc, char **argv) {

@@ -77,6 +77,9 @@ static bool match(ASTParser* parser, TokenType type) {
 // ------------------------------- PRODUCTIONS -------------------------------
 // ---------------------------------------------------------------------------
 
+// Forward declarations
+static Expression* expression(ASTParser* parser);
+
 /**
  * Terminal rule. Match identifier token.
  */
@@ -165,6 +168,13 @@ static Expression* primaryExpression(ASTParser* parser) {
             expression->as.primaryExpression = primaryExpression;
 
             return expression;
+            break;
+        }
+        case TOKEN_LEFT_PAREN: {
+            advance(parser);
+            Expression* expr = expression(parser);
+            consume(parser, TOKEN_RIGHT_PAREN, "Expected ')' after expression.");
+            return expr;
             break;
         }
         default: {
