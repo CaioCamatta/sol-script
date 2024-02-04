@@ -162,3 +162,241 @@ int test_parser_logicalOrExpression() {
     freeSource(source);
     return SUCCESS_RETURN_CODE;
 }
+
+// Test for parsing a logical AND expression
+int test_parser_logicalAndExpression() {
+    Token tokensArray[] = {
+        createToken(TOKEN_FALSE, "false"),
+        createToken(TOKEN_AND_AND, "&&"),
+        createToken(TOKEN_TRUE, "true"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 4,
+        .size = 4};
+
+    ASTParser parser;
+    initASTParser(&parser, tokens);
+    Source* source = parseAST(&parser);
+    printAST(source);
+
+    ASSERT(source->numberOfStatements == 1);
+
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == EXPRESSION_STATEMENT);
+
+    Expression* expression = statement->as.expressionStatement->expression;
+    ASSERT(expression->type == LOGICAL_AND_EXPRESSION);
+
+    LogicalAndExpression* andExpr = expression->as.logicalAndExpression;
+    ASSERT(andExpr->leftExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(andExpr->rightExpression->type == PRIMARY_EXPRESSION);
+
+    PrimaryExpression* leftPrimary = andExpr->leftExpression->as.primaryExpression;
+    ASSERT(leftPrimary->literal->type == BOOLEAN_LITERAL);
+    ASSERT(strcmp(leftPrimary->literal->as.booleanLiteral->token.start, "false") == 0);
+
+    PrimaryExpression* rightPrimary = andExpr->rightExpression->as.primaryExpression;
+    ASSERT(rightPrimary->literal->type == BOOLEAN_LITERAL);
+    ASSERT(strcmp(rightPrimary->literal->as.booleanLiteral->token.start, "true") == 0);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+// Test for parsing an Equality Expression
+int test_parser_equalityExpression() {
+    Token tokensArray[] = {
+        createToken(TOKEN_NUMBER, "5"),
+        createToken(TOKEN_EQUAL_EQUAL, "=="),
+        createToken(TOKEN_NUMBER, "5"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 4,
+        .size = 4};
+
+    ASTParser parser;
+    initASTParser(&parser, tokens);
+    Source* source = parseAST(&parser);
+    printAST(source);
+
+    ASSERT(source->numberOfStatements == 1);
+
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == EXPRESSION_STATEMENT);
+
+    Expression* expression = statement->as.expressionStatement->expression;
+    ASSERT(expression->type == EQUALITY_EXPRESSION);
+
+    EqualityExpression* eqExpr = expression->as.equalityExpression;
+    ASSERT(eqExpr->leftExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(eqExpr->rightExpression->type == PRIMARY_EXPRESSION);
+
+    PrimaryExpression* leftPrimary = eqExpr->leftExpression->as.primaryExpression;
+    ASSERT(leftPrimary->literal->type == NUMBER_LITERAL);
+    ASSERT(strcmp(leftPrimary->literal->as.numberLiteral->token.start, "5") == 0);
+
+    PrimaryExpression* rightPrimary = eqExpr->rightExpression->as.primaryExpression;
+    ASSERT(rightPrimary->literal->type == NUMBER_LITERAL);
+    ASSERT(strcmp(rightPrimary->literal->as.numberLiteral->token.start, "5") == 0);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_comparisonExpression() {
+    Token tokensArray[] = {
+        createToken(TOKEN_NUMBER, "10"),
+        createToken(TOKEN_GREATER, ">"),
+        createToken(TOKEN_NUMBER, "5"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 4,
+        .size = 4};
+
+    ASTParser parser;
+    initASTParser(&parser, tokens);
+    Source* source = parseAST(&parser);
+    printAST(source);
+
+    ASSERT(source->numberOfStatements == 1);
+
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == EXPRESSION_STATEMENT);
+
+    Expression* expression = statement->as.expressionStatement->expression;
+    ASSERT(expression->type == COMPARISON_EXPRESSION);
+
+    ComparisonExpression* compExpr = expression->as.comparisonExpression;
+    ASSERT(compExpr->leftExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(compExpr->rightExpression->type == PRIMARY_EXPRESSION);
+
+    PrimaryExpression* leftPrimary = compExpr->leftExpression->as.primaryExpression;
+    ASSERT(leftPrimary->literal->type == NUMBER_LITERAL);
+    ASSERT(strcmp(leftPrimary->literal->as.numberLiteral->token.start, "10") == 0);
+
+    PrimaryExpression* rightPrimary = compExpr->rightExpression->as.primaryExpression;
+    ASSERT(rightPrimary->literal->type == NUMBER_LITERAL);
+    ASSERT(strcmp(rightPrimary->literal->as.numberLiteral->token.start, "5") == 0);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_multiplicativeExpression() {
+    Token tokensArray[] = {
+        createToken(TOKEN_NUMBER, "3"),
+        createToken(TOKEN_STAR, "*"),
+        createToken(TOKEN_NUMBER, "2"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 4,
+        .size = 4};
+
+    ASTParser parser;
+    initASTParser(&parser, tokens);
+    Source* source = parseAST(&parser);
+    printAST(source);
+
+    ASSERT(source->numberOfStatements == 1);
+
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == EXPRESSION_STATEMENT);
+
+    Expression* expression = statement->as.expressionStatement->expression;
+    ASSERT(expression->type == MULTIPLICATIVE_EXPRESSION);
+
+    MultiplicativeExpression* multExpr = expression->as.multiplicativeExpression;
+    ASSERT(multExpr->leftExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(multExpr->rightExpression->type == PRIMARY_EXPRESSION);
+
+    PrimaryExpression* leftPrimary = multExpr->leftExpression->as.primaryExpression;
+    ASSERT(leftPrimary->literal->type == NUMBER_LITERAL);
+    ASSERT(strcmp(leftPrimary->literal->as.numberLiteral->token.start, "3") == 0);
+
+    PrimaryExpression* rightPrimary = multExpr->rightExpression->as.primaryExpression;
+    ASSERT(rightPrimary->literal->type == NUMBER_LITERAL);
+    ASSERT(strcmp(rightPrimary->literal->as.numberLiteral->token.start, "2") == 0);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_unaryExpression() {
+    Token tokensArray[] = {
+        createToken(TOKEN_MINUS, "-"),
+        createToken(TOKEN_NUMBER, "1"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 3,
+        .size = 3};
+
+    ASTParser parser;
+    initASTParser(&parser, tokens);
+    Source* source = parseAST(&parser);
+    printAST(source);
+
+    ASSERT(source->numberOfStatements == 1);
+
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == EXPRESSION_STATEMENT);
+
+    Expression* expression = statement->as.expressionStatement->expression;
+    ASSERT(expression->type == UNARY_EXPRESSION);
+
+    UnaryExpression* unaryExpr = expression->as.unaryExpression;
+    ASSERT(unaryExpr->rightExpression->type == PRIMARY_EXPRESSION);
+
+    PrimaryExpression* rightPrimary = unaryExpr->rightExpression->as.primaryExpression;
+    ASSERT(rightPrimary->literal->type == NUMBER_LITERAL);
+    ASSERT(strcmp(rightPrimary->literal->as.numberLiteral->token.start, "1") == 0);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_booleanLiteral() {
+    Token tokensArray[] = {
+        createToken(TOKEN_TRUE, "true"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 2,
+        .size = 2};
+
+    ASTParser parser;
+    initASTParser(&parser, tokens);
+    Source* source = parseAST(&parser);
+    printAST(source);
+
+    ASSERT(source->numberOfStatements == 1);
+
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == EXPRESSION_STATEMENT);
+
+    Expression* expression = statement->as.expressionStatement->expression;
+    ASSERT(expression->type == PRIMARY_EXPRESSION);
+
+    PrimaryExpression* primaryExpr = expression->as.primaryExpression;
+    ASSERT(primaryExpr->literal->type == BOOLEAN_LITERAL);
+    ASSERT(strcmp(primaryExpr->literal->as.booleanLiteral->token.start, "true") == 0);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}

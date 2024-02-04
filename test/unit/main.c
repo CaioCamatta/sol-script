@@ -28,6 +28,12 @@ static void all_tests() {
     RUN_TEST(test_parser_simpleExpression);
     RUN_TEST(test_parser_printStatement);
     RUN_TEST(test_parser_logicalOrExpression);
+    RUN_TEST(test_parser_logicalAndExpression);
+    RUN_TEST(test_parser_equalityExpression);
+    RUN_TEST(test_parser_comparisonExpression);
+    RUN_TEST(test_parser_multiplicativeExpression);
+    RUN_TEST(test_parser_unaryExpression);
+    RUN_TEST(test_parser_booleanLiteral);
 }
 
 int main(int argc, char **argv) {
