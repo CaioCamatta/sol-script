@@ -118,3 +118,47 @@ int test_parser_errorHandling() {
 
     return SUCCESS_RETURN_CODE;
 }
+
+// Example function to test parsing of a logical OR expression, including detailed assertions
+int test_parser_logicalOrExpression() {
+    Token tokensArray[] = {
+        createToken(TOKEN_TRUE, "true"),
+        createToken(TOKEN_OR_OR, "||"),
+        createToken(TOKEN_FALSE, "false"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 4,
+        .size = 4};
+
+    ASTParser parser;
+    Source* source = parseASTFromTokens(&parser, &tokens);
+    printAST(source);
+
+    ASSERT(source->numberOfStatements == 1);
+
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == EXPRESSION_STATEMENT);
+
+    Expression* expression = statement->as.expressionStatement->expression;
+    ASSERT(expression->type == LOGICAL_OR_EXPRESSION);
+
+    LogicalOrExpression* orExpr = expression->as.logicalOrExpression;
+    ASSERT(orExpr->leftExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(orExpr->rightExpression->type == PRIMARY_EXPRESSION);
+
+    // Assert the left expression is a primary expression with a literal of type TRUE
+    PrimaryExpression* leftPrimary = orExpr->leftExpression->as.primaryExpression;
+    ASSERT(leftPrimary->literal->type == BOOLEAN_LITERAL);
+    ASSERT(strcmp(leftPrimary->literal->as.booleanLiteral->token.start, "true") == 0);
+
+    // Assert the right expression is a primary expression with a literal of type FALSE
+    PrimaryExpression* rightPrimary = orExpr->rightExpression->as.primaryExpression;
+    ASSERT(rightPrimary->literal->type == BOOLEAN_LITERAL);
+    ASSERT(strcmp(rightPrimary->literal->as.booleanLiteral->token.start, "false") == 0);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}

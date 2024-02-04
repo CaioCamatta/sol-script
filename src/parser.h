@@ -21,8 +21,9 @@ typedef enum {
 typedef struct {
     // Inputs from scanner
     TokenArray tokenArray;
-    Token* current;
-    Source* source;  // Root of the AST
+    Token* current;   // the token to be consumed next
+    Token* previous;  // the token just consumed
+    Source* source;   // Root of the AST
 } ASTParser;
 
 /**

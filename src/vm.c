@@ -46,7 +46,7 @@ Value bytecodeConstantToValue(VM* vm, size_t constantIndex) {
 // Print a Value
 static void printValue(Value value) {
     switch (value.type) {
-        case NUMBER_LITERAL:
+        case TYPE_DOUBLE:
             printf("%f", value.as.doubleVal);
             break;
 

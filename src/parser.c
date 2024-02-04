@@ -13,6 +13,7 @@ void initASTParser(ASTParser* parser, const TokenArray tokens) {
     parser->tokenArray = tokens;
     parser->source = (Source*)malloc(sizeof(Source));
     parser->source->numberOfStatements = 0;
+    parser->previous = NULL;
 }
 
 // Allocate an AST node (literal, expression, statement) on the heap and return a pointer to the allocated node.
@@ -40,8 +41,10 @@ static Token* peek(ASTParser* parser) {
 
 // Move the current token to the next one.
 static void advance(ASTParser* parser) {
-    if (parser->current->type != TOKEN_EOF)
+    if (parser->current->type != TOKEN_EOF) {
+        parser->previous = parser->current;
         parser->current++;
+    }
 }
 
 // Consume provided type & advance, or error
@@ -53,6 +56,7 @@ static Token* consume(ASTParser* parser, TokenType type, const char* message) {
     }
 
     errorAtCurrent(parser, message);
+    return NULL;
 }
 
 /* Check if current token is of a given type. */
@@ -106,6 +110,19 @@ static Literal* numberLiteral(ASTParser* parser) {
     return literal;
 }
 
+static Literal* booleanLiteral(ASTParser* parser) {
+    Token* currToken = consume(parser, peek(parser)->type, "Expected boolean literal.");
+
+    BooleanLiteral* booleanLiteral = allocateASTNode(BooleanLiteral);
+    booleanLiteral->token = *currToken;
+
+    Literal* literal = allocateASTNode(Literal);
+    literal->type = BOOLEAN_LITERAL;
+    literal->as.booleanLiteral = booleanLiteral;
+
+    return literal;
+}
+
 /**
  * primary-expression:
  * number-literal
@@ -135,8 +152,23 @@ static Expression* primaryExpression(ASTParser* parser) {
             return expression;
             break;
         }
+        case TOKEN_TRUE:
+        case TOKEN_FALSE: {
+            Literal* tempLiteral = booleanLiteral(parser);
+
+            Expression* expression = allocateASTNode(Expression);
+            expression->type = PRIMARY_EXPRESSION;
+
+            PrimaryExpression* primaryExpression = allocateASTNode(PrimaryExpression);
+            primaryExpression->literal = tempLiteral;
+
+            expression->as.primaryExpression = primaryExpression;
+
+            return expression;
+            break;
+        }
         default: {
-            errorAtCurrent(parser, "Expected a primary-expression.");
+            errorAtCurrent(parser, "Expected a primary expression.");
             return NULL;
             break;
         }
@@ -144,32 +176,155 @@ static Expression* primaryExpression(ASTParser* parser) {
 }
 
 /**
+ * unary-expression:
+ *  ( "!"* | "-"* )? postfix-expression
+ */
+static Expression* unaryExpression(ASTParser* parser) {
+    if (match(parser, TOKEN_EXCLAMATION) || match(parser, TOKEN_MINUS)) {
+        Token punctuator = *(parser->previous);                 // Capture the punctuator
+        Expression* rightExpression = unaryExpression(parser);  // Recursively parse the right side
+
+        UnaryExpression* unaryExpression = allocateASTNode(UnaryExpression);
+        unaryExpression->punctuator = punctuator;
+        unaryExpression->rightExpression = rightExpression;
+
+        Expression* expression = allocateASTNode(Expression);
+        expression->type = UNARY_EXPRESSION;
+        expression->as.unaryExpression = unaryExpression;
+
+        return expression;
+    }
+    return primaryExpression(parser);
+}
+
+/**
+ * multiplicative-expression:
+ *  unary-expression ( ( "/" | "*" ) unary-expression )*
+ */
+static Expression* multiplicativeExpression(ASTParser* parser) {
+    Expression* leftExpression = unaryExpression(parser);
+    while (match(parser, TOKEN_STAR) || match(parser, TOKEN_SLASH)) {
+        Token punctuator = *(parser->previous);
+        Expression* rightExpression = unaryExpression(parser);
+
+        MultiplicativeExpression* multiplicativeExpression = allocateASTNode(MultiplicativeExpression);
+        multiplicativeExpression->leftExpression = leftExpression;
+        multiplicativeExpression->rightExpression = rightExpression;
+        multiplicativeExpression->punctuator = punctuator;
+
+        leftExpression = allocateASTNode(Expression);
+        leftExpression->type = MULTIPLICATIVE_EXPRESSION;
+        leftExpression->as.multiplicativeExpression = multiplicativeExpression;
+    }
+    return leftExpression;
+}
+
+/**
  * additive-expression:
- *  multiplicative-expression ( ( "-" | "+" ) multiplicative-expression )* ;
- *
- * Returns a pointer to a dynamically-allocated Expression.
+ *  multiplicative-expression ( ( "-" | "+" ) multiplicative-expression )*
  */
 static Expression* additiveExpression(ASTParser* parser) {
-    Expression* leftExpression = primaryExpression(parser);
+    Expression* leftExpression = multiplicativeExpression(parser);
+    while (match(parser, TOKEN_PLUS) || match(parser, TOKEN_MINUS)) {
+        Token punctuator = *(parser->previous);
+        Expression* rightExpression = multiplicativeExpression(parser);
 
-    if (!check(parser, TOKEN_PLUS) && !check(parser, TOKEN_MINUS)) {
-        errorAtCurrent(parser, "Expected '+' or '-' in an additive expression.");
+        AdditiveExpression* additiveExpression = allocateASTNode(AdditiveExpression);
+        additiveExpression->leftExpression = leftExpression;
+        additiveExpression->rightExpression = rightExpression;
+        additiveExpression->punctuator = punctuator;
+
+        leftExpression = allocateASTNode(Expression);
+        leftExpression->type = ADDITIVE_EXPRESSION;
+        leftExpression->as.additiveExpression = additiveExpression;
     }
-    Token* punctuator = peek(parser);
-    advance(parser);
+    return leftExpression;
+}
 
-    Expression* rightExpression = primaryExpression(parser);
+/**
+ * comparison-expression:
+ *  additive-expression ( ( ">" | ">=" | "<" | "<=" ) additive-expression )*
+ */
+static Expression* comparisonExpression(ASTParser* parser) {
+    Expression* leftExpression = additiveExpression(parser);
+    while (match(parser, TOKEN_GREATER) || match(parser, TOKEN_GREATER_EQUAL) ||
+           match(parser, TOKEN_LESSER) || match(parser, TOKEN_LESSER_EQUAL)) {
+        Token punctuator = *(parser->previous);
+        Expression* rightExpression = additiveExpression(parser);
 
-    AdditiveExpression* additiveExpression = allocateASTNode(AdditiveExpression);
-    additiveExpression->leftExpression = leftExpression;
-    additiveExpression->rightExpression = rightExpression;
-    additiveExpression->punctuator = punctuator;
+        ComparisonExpression* comparisonExpression = allocateASTNode(ComparisonExpression);
+        comparisonExpression->leftExpression = leftExpression;
+        comparisonExpression->rightExpression = rightExpression;
+        comparisonExpression->punctuator = punctuator;
 
-    Expression* expression = allocateASTNode(Expression);
-    expression->type = ADDITIVE_EXPRESSION;
-    expression->as.additiveExpression = additiveExpression;
+        leftExpression = allocateASTNode(Expression);
+        leftExpression->type = COMPARISON_EXPRESSION;
+        leftExpression->as.comparisonExpression = comparisonExpression;
+    }
+    return leftExpression;
+}
 
-    return expression;
+/**
+ * equality-expression:
+ *  comparison-expression ( ("!=" | "==") comparison-expression) )*
+ */
+static Expression* equalityExpression(ASTParser* parser) {
+    Expression* leftExpression = comparisonExpression(parser);
+    while (match(parser, TOKEN_EQUAL_EQUAL) || match(parser, TOKEN_EXCLAMATION_EQUAL)) {
+        Token punctuator = *(parser->previous);
+        Expression* rightExpression = comparisonExpression(parser);
+
+        EqualityExpression* equalityExpression = allocateASTNode(EqualityExpression);
+        equalityExpression->leftExpression = leftExpression;
+        equalityExpression->rightExpression = rightExpression;
+        equalityExpression->punctuator = punctuator;
+
+        leftExpression = allocateASTNode(Expression);
+        leftExpression->type = EQUALITY_EXPRESSION;
+        leftExpression->as.equalityExpression = equalityExpression;
+    }
+    return leftExpression;
+}
+
+/**
+ * logical-and-expression:
+ *  equality-expression ( "and" equality-expression )*
+ */
+static Expression* logicalAndExpression(ASTParser* parser) {
+    Expression* leftExpression = equalityExpression(parser);
+    while (match(parser, TOKEN_AND_AND)) {
+        Expression* rightExpression = equalityExpression(parser);
+
+        LogicalAndExpression* logicalAndExpression = allocateASTNode(LogicalAndExpression);
+        logicalAndExpression->leftExpression = leftExpression;
+        logicalAndExpression->rightExpression = rightExpression;
+
+        leftExpression = allocateASTNode(Expression);
+        leftExpression->type = LOGICAL_AND_EXPRESSION;
+        leftExpression->as.logicalAndExpression = logicalAndExpression;
+    }
+    return leftExpression;
+}
+
+/**
+ * logical-or-expression:
+ *  logical-and-expression ( "or" logical-and-expression )*
+ */
+static Expression* logicalOrExpression(ASTParser* parser) {
+    Expression* leftExpression = logicalAndExpression(parser);
+    while (match(parser, TOKEN_OR_OR)) {
+        Expression* rightExpression = logicalAndExpression(parser);
+
+        LogicalOrExpression* logicalOrExpression = allocateASTNode(LogicalOrExpression);
+        logicalOrExpression->leftExpression = leftExpression;
+        logicalOrExpression->rightExpression = rightExpression;
+
+        Expression* expression = allocateASTNode(Expression);
+        expression->type = LOGICAL_OR_EXPRESSION;
+        expression->as.logicalOrExpression = logicalOrExpression;
+        return expression;
+    }
+    return leftExpression;
 }
 
 /**
@@ -180,16 +335,7 @@ static Expression* additiveExpression(ASTParser* parser) {
  *  logical-or-expression
  */
 static Expression* expression(ASTParser* parser) {
-    switch (peek(parser)->type) {
-        case TOKEN_NUMBER: {
-            Expression* tempAdditiveExpression = additiveExpression(parser);
-            return tempAdditiveExpression;
-            break;
-        }
-        default:
-            return NULL;
-            break;
-    }
+    return logicalOrExpression(parser);
 }
 
 /**
@@ -248,6 +394,20 @@ static Statement* printStatement(ASTParser* parser) {
     return stmt;
 }
 
+static Statement* expressionStatement(ASTParser* parser) {
+    Expression* expr = expression(parser);
+    consume(parser, TOKEN_SEMICOLON, "Expected ';' after expression.");
+
+    ExpressionStatement* exprStmt = allocateASTNode(ExpressionStatement);
+    exprStmt->expression = expr;
+
+    Statement* stmt = allocateASTNode(Statement);
+    stmt->type = EXPRESSION_STATEMENT;
+    stmt->as.expressionStatement = exprStmt;
+
+    return stmt;
+}
+
 /**
  * statement:
  *  declaration
@@ -283,9 +443,7 @@ static Statement* statement(ASTParser* parser) {
         // case TOKEN_RETURN:
         //     return returnStatement(parser);
         default:
-            errorAtCurrent(parser, "Error parsing statement. Expected a non-null statement.");
-            return NULL;
-            // return expressionStatement(parser);
+            return expressionStatement(parser);
     }
 }
 

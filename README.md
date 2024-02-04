@@ -152,7 +152,7 @@ logical-and-expression:
 	equality-expression ( "and" equality-expression )*
 
 equality-expression: 
-	relational-expression ( ("!=" | "==") relational-expression) )*
+	comparison-expression ( ("!=" | "==") comparison-expression) )*
 
 comparison-expression:
 	additive-expression ( ( ">" | ">=" | "<" | "<=" ) additive-expression )*

@@ -52,7 +52,7 @@ int test_compiler() {
                                 },
                             },
                         },
-                        .punctuator = &(Token){.type = TOKEN_PLUS, .start = "+", .length = 1},
+                        .punctuator = (Token){.type = TOKEN_PLUS, .start = "+", .length = 1},
                     },
                 },
             },

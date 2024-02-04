@@ -56,7 +56,7 @@ static void visitAdditiveExpression(Compiler* compiler, AdditiveExpression* addi
     visitExpression(compiler, additiveExpression->leftExpression);
     visitExpression(compiler, additiveExpression->rightExpression);
 
-    switch (additiveExpression->punctuator->type) {
+    switch (additiveExpression->punctuator.type) {
         case TOKEN_PLUS:
             emitBytecode(compiler, BYTECODE(OP_ADD));
             break;
@@ -110,7 +110,6 @@ static void visitExpression(Compiler* compiler, Expression* expression) {
         case PRIMARY_EXPRESSION:
             visitPrimaryExpression(compiler, expression->as.primaryExpression);
             break;
-
         default:
             fprintf(stderr, "Unimplemented expression type %d.", expression->type);
             exit(EXIT_FAILURE);

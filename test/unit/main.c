@@ -27,6 +27,7 @@ static void all_tests() {
     // RUN_TEST(test_parser_errorHandling);
     RUN_TEST(test_parser_simpleExpression);
     RUN_TEST(test_parser_printStatement);
+    RUN_TEST(test_parser_logicalOrExpression);
 }
 
 int main(int argc, char **argv) {

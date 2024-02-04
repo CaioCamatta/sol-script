@@ -8,8 +8,15 @@
 typedef struct ExpressionStatement ExpressionStatement;
 typedef struct PrintStatement PrintStatement;
 typedef struct ValDeclarationStatement ValDeclarationStatement;
+typedef struct LogicalOrExpression LogicalOrExpression;
+typedef struct LogicalAndExpression LogicalAndExpression;
+typedef struct EqualityExpression EqualityExpression;
+typedef struct ComparisonExpression ComparisonExpression;
 typedef struct AdditiveExpression AdditiveExpression;
+typedef struct MultiplicativeExpression MultiplicativeExpression;
+typedef struct UnaryExpression UnaryExpression;
 typedef struct PrimaryExpression PrimaryExpression;
+typedef struct BooleanLiteral BooleanLiteral;
 typedef struct NumberLiteral NumberLiteral;
 typedef struct IdentifierLiteral IdentifierLiteral;
 typedef struct StringLiteral StringLiteral;
@@ -22,11 +29,18 @@ typedef enum {
 } StatementType;
 
 typedef enum {
+    LOGICAL_OR_EXPRESSION,
+    LOGICAL_AND_EXPRESSION,
+    EQUALITY_EXPRESSION,
+    COMPARISON_EXPRESSION,
     ADDITIVE_EXPRESSION,
+    MULTIPLICATIVE_EXPRESSION,
+    UNARY_EXPRESSION,
     PRIMARY_EXPRESSION
 } ExpressionType;
 
 typedef enum {
+    BOOLEAN_LITERAL,
     NUMBER_LITERAL,
     IDENTIFIER_LITERAL,
     STRING_LITERAL
@@ -45,14 +59,21 @@ typedef struct {
 typedef struct {
     ExpressionType type;
     union {
-        PrimaryExpression *primaryExpression;
+        LogicalOrExpression *logicalOrExpression;
+        LogicalAndExpression *logicalAndExpression;
+        EqualityExpression *equalityExpression;
+        ComparisonExpression *comparisonExpression;
         AdditiveExpression *additiveExpression;
+        MultiplicativeExpression *multiplicativeExpression;
+        UnaryExpression *unaryExpression;
+        PrimaryExpression *primaryExpression;
     } as;
 } Expression;
 
 typedef struct {
     LiteralType type;
     union {
+        BooleanLiteral *booleanLiteral;
         NumberLiteral *numberLiteral;
         IdentifierLiteral *identifierLiteral;
         StringLiteral *stringLiteral;
@@ -68,19 +89,56 @@ struct PrintStatement {
     Expression *expression;
 };
 
-struct AdditiveExpression {
-    Expression *leftExpression;
-    Expression *rightExpression;
-    Token *punctuator;
-};
-
 struct ValDeclarationStatement {
     IdentifierLiteral *identifier;
     Expression *expression;
 };
 
+struct LogicalOrExpression {
+    Expression *leftExpression;
+    Expression *rightExpression;
+};
+
+struct LogicalAndExpression {
+    Expression *leftExpression;
+    Expression *rightExpression;
+};
+
+struct EqualityExpression {
+    Expression *leftExpression;
+    Expression *rightExpression;
+    Token punctuator;
+};
+
+struct ComparisonExpression {
+    Expression *leftExpression;
+    Expression *rightExpression;
+    Token punctuator;
+};
+
+struct AdditiveExpression {
+    Expression *leftExpression;
+    Expression *rightExpression;
+    Token punctuator;
+};
+
+struct MultiplicativeExpression {
+    Expression *leftExpression;
+    Expression *rightExpression;
+    Token punctuator;
+};
+
+struct UnaryExpression {
+    Token punctuator;
+    Expression *rightExpression;
+};
+
 struct PrimaryExpression {
     Literal *literal;
+};
+
+struct BooleanLiteral {
+    Token token;
 };
 
 struct NumberLiteral {

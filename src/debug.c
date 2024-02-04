@@ -141,6 +141,30 @@ static void printStatement(const Statement* statement, int depth) {
     }
 }
 
+// Macro to pretty print a binary expression
+#define printBinaryExpression(expr, type)                  \
+    do {                                                   \
+        printf(#type "\n");                                \
+        printIndent(depth + 1);                            \
+        printf(KGRY "(left)\n" RESET);                     \
+        printExpression(expr->leftExpression, depth + 2);  \
+        printIndent(depth + 1);                            \
+        printf(KGRY "(right)\n" RESET);                    \
+        printExpression(expr->rightExpression, depth + 2); \
+    } while (0)
+
+#define printBinaryExpressionWithPunctuator(expr, type)          \
+    do {                                                         \
+        printf(#type KGRY "(punctuator=\"%.*s\")\n" RESET,       \
+               expr->punctuator.length, expr->punctuator.start); \
+        printIndent(depth + 1);                                  \
+        printf(KGRY "(left)\n" RESET);                           \
+        printExpression(expr->leftExpression, depth + 2);        \
+        printIndent(depth + 1);                                  \
+        printf(KGRY "(right)\n" RESET);                          \
+        printExpression(expr->rightExpression, depth + 2);       \
+    } while (0)
+
 static void printExpression(const Expression* expression, int depth) {
     if (expression == NULL) {
         printIndent(depth);
@@ -157,15 +181,39 @@ static void printExpression(const Expression* expression, int depth) {
             break;
 
         case ADDITIVE_EXPRESSION: {
-            AdditiveExpression* addExpr = expression->as.additiveExpression;
-            // Assuming the token.start is a null-terminated string
-            printf("AdditiveExpression" KGRY "(punctuator=\"%.*s\")\n" RESET, addExpr->punctuator->length, addExpr->punctuator->start);
+            printBinaryExpressionWithPunctuator(expression->as.additiveExpression, AdditiveExpression);
+            break;
+        }
+
+        case MULTIPLICATIVE_EXPRESSION: {
+            printBinaryExpressionWithPunctuator(expression->as.multiplicativeExpression, MultiplicativeExpression);
+            break;
+        }
+
+        case UNARY_EXPRESSION: {
+            UnaryExpression* unaryExpr = expression->as.unaryExpression;
+            printf("UnaryExpression\n");
             printIndent(depth + 1);
-            printf(KGRY "(left)\n" RESET);
-            printExpression(addExpr->leftExpression, depth + 2);
-            printIndent(depth + 1);
-            printf(KGRY "(right)\n" RESET);
-            printExpression(addExpr->rightExpression, depth + 2);
+            printf(KGRY "(punctuator=\"%.*s\")\n" RESET, unaryExpr->punctuator.length, unaryExpr->punctuator.start);
+            printExpression(unaryExpr->rightExpression, depth + 2);
+            break;
+        }
+
+        case COMPARISON_EXPRESSION: {
+            printBinaryExpressionWithPunctuator(expression->as.comparisonExpression, ComparisonExpression);
+            break;
+        }
+
+        case EQUALITY_EXPRESSION: {
+            printBinaryExpressionWithPunctuator(expression->as.equalityExpression, EqualityExpression);
+            break;
+        }
+        case LOGICAL_AND_EXPRESSION: {
+            printBinaryExpression(expression->as.logicalAndExpression, LogicalAndExpression);
+            break;
+        }
+        case LOGICAL_OR_EXPRESSION: {
+            printBinaryExpression(expression->as.logicalOrExpression, LogicalOrExpression);
             break;
         }
     }
@@ -183,6 +231,10 @@ static void printLiteral(const Literal* literal, int depth) {
     switch (literal->type) {
         case NUMBER_LITERAL:
             printf("NumberLiteral" KGRY "(token=\"%.*s\")\n" RESET, literal->as.numberLiteral->token.length, literal->as.numberLiteral->token.start);
+            break;
+
+        case BOOLEAN_LITERAL:
+            printf("BooleanLiteral" KGRY "(token=\"%.*s\")\n" RESET, literal->as.booleanLiteral->token.length, literal->as.numberLiteral->token.start);
             break;
 
         case IDENTIFIER_LITERAL:
