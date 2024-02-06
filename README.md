@@ -1,12 +1,61 @@
 # Delta-lang
 
-Delta is a stack-based, prototype-based, interpreted, GC-ed programming language.
-
-Developed in C17.
+Delta is a stack-based, prototype-based, interpreted, GC-ed programming language developed in C.
 
 ## Language Design
 
 ![Architecture](./architecture.png)
+
+### Example 
+
+Delta has a debug module that shows the tokens parsed, the AST, and the compiled code. Here's an example for the statement `print 2+3-4;`.
+
+```
+% ./delta   
+> print 2+3-4;
+Tokens:
+  TOKEN_PRINT(lexeme="print", line=1, column=6)
+  TOKEN_NUMBER(lexeme="2", line=1, column=8)
+  TOKEN_PLUS(lexeme="+", line=1, column=9)
+  TOKEN_NUMBER(lexeme="3", line=1, column=10)
+  TOKEN_MINUS(lexeme="-", line=1, column=11)
+  TOKEN_NUMBER(lexeme="4", line=1, column=12)
+  TOKEN_SEMICOLON(lexeme=";", line=1, column=13)
+  TOKEN_EOF(lexeme="", line=2, column=2)
+
+AST
+Source(numberOfStatements=1)
+|   PrintStatement
+|   |   AdditiveExpression(punctuator="-")
+|   |   |   (left)
+|   |   |   |   AdditiveExpression(punctuator="+")
+|   |   |   |   |   (left)
+|   |   |   |   |   |   PrimaryExpression
+|   |   |   |   |   |   |   NumberLiteral(token="2")
+|   |   |   |   |   (right)
+|   |   |   |   |   |   PrimaryExpression
+|   |   |   |   |   |   |   NumberLiteral(token="3")
+|   |   |   (right)
+|   |   |   |   PrimaryExpression
+|   |   |   |   |   NumberLiteral(token="4")
+
+Started compiling.
+Done compiling in 0.00001 seconds.
+
+Compiled code:
+Constant Pool 
+ #0 (double) 2.000000
+ #1 (double) 3.000000
+ #2 (double) 4.000000
+Bytecode
+ [ LOAD_CONSTANT #0 ]
+ [ LOAD_CONSTANT #1 ]
+ [ ADD ]
+ [ LOAD_CONSTANT #2 ]
+ [ PRINT ]
+
+4.000000
+```
 
 ### 1. Scanner
 
@@ -61,8 +110,12 @@ punctuator: one of
 
 ### 2. Parser
 
+The syntactical grammar implemented by the Parser _should_ be parsable a look-ahead, left-to-right grammar with 1 token of look-ahead (aka LALR(1)). A program (`source`) is a series of `statement`s. Statements have side effects (or they aren't useful). `expression`s and `literal`s are the other two main "types". Expressions are evaluated to a value.
+
+This grammar is primarily inspired by the [ANSI C grammar](https://slebok.github.io/zoo/c/c90/sdf/extracted/index.html#Statement) and Scala.
+
 ```
-urce: 
+source: 
 	statement* EOF
 
 statement: 
