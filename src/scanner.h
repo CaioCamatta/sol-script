@@ -26,18 +26,27 @@ typedef struct {
  *
  * @param scanner an initialized Scanner to use for scanning.
  */
-TokenArray scan(Scanner* scanner);
+TokenArray scanTokens(Scanner* scanner);
+
+/**
+ * Reset the scanner and turn source code into an array of tokens.
+ *
+ * Throws exceptions in case of lexical errors.
+ *
+ * @param sourceCode the source code to scan.
+ */
+TokenArray scanTokensFromString(Scanner* scanner, const char* sourceCode);
 
 /**
  * Scan the next Token following the Delta lexical Grammar.
  *
  * Throws exceptions in case of lexical errors.
  *
- * @param inputCode an initialized Scanner to use for scanning.
+ * @param scanner an initialized Scanner to use for scanning.
  */
 Token scanNext(Scanner* scanner);
 
-/* Initialize scanner at the beginning of the given sourceCode */
+/* Initialize scanner at the beginning of the given sourceCode to be scanned. */
 void initScanner(Scanner* scanner, const char* sourceCode);
 
 #endif

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "syntax.h"
 #include "token.h"
 
 #define INITIAL_ARRAY_SIZE (size_t)8

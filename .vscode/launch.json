@@ -9,6 +9,14 @@
       "args": ["${input:testFile}"],
       "cwd": "${workspaceFolder}",
       "preLaunchTask": "Make debuggable program"
+    },
+    {
+      "name": "Build & Debug tests",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/test/unit/unit_test",
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "Make debuggable test program"
     }
   ],
   "inputs": [

@@ -136,6 +136,8 @@ static Token identifierOrKeyword(Scanner* scanner) {
             matchKeyword(scanner, "null", TOKEN_NULL);
         case 'v':
             matchKeyword(scanner, "val", TOKEN_VAL);
+        case 'p':
+            matchKeyword(scanner, "print", TOKEN_PRINT);
         case 'r':
             matchKeyword(scanner, "return", TOKEN_RETURN);
         case 't':
@@ -241,13 +243,20 @@ Token scanNext(Scanner* scanner) {
     return errorToken(scanner, "Unexpected character.");
 }
 
-TokenArray scan(Scanner* scanner) {
+TokenArray scanTokens(Scanner* scanner) {
     TokenArray tokens;
     INIT_ARRAY(tokens, Token);
 
+    Token token;
     do {
-        INSERT_ARRAY(tokens, scanNext(scanner), Token);
-    } while (!isAtEnd(scanner));
+        token = scanNext(scanner);
+        INSERT_ARRAY(tokens, token, Token);
+    } while (token.type != TOKEN_EOF);
 
     return tokens;
+}
+
+TokenArray scanTokensFromString(Scanner* scanner, const char* sourceCode) {
+    initScanner(scanner, sourceCode);
+    return scanTokens(scanner);
 }

@@ -9,6 +9,15 @@
         "kind": "build",
         "isDefault": true
       }
+    },
+    {
+      "label": "Make debuggable test program",
+      "type": "shell",
+      "command": "make clean && make test",
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      }
     }
   ]
 }

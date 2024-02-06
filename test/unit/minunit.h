@@ -2,6 +2,10 @@
 #ifndef minunit_h
 #define minunit_h
 
+#include <stdio.h>
+
+#include "util/colors.h"
+
 #define SUCCESS_RETURN_CODE 0
 #define FAILURE_RETURN_CODE 1
 
@@ -15,14 +19,14 @@ static int assertionsFailed = 0;
  *
  * @param test an expression that evaluates to a truthy or falsy value.
  */
-#define ASSERT(test)                              \
-    do {                                          \
-        assertionsRun++;                          \
-        if (!(test)) {                            \
-            assertionsFailed++;                   \
-            printf("ERROR - failed " #test "\n"); \
-            return FAILURE_RETURN_CODE;           \
-        }                                         \
+#define ASSERT(test)                                          \
+    do {                                                      \
+        assertionsRun++;                                      \
+        if (!(test)) {                                        \
+            assertionsFailed++;                               \
+            printf(KRED "ERROR - failed: " #test "\n" RESET); \
+            return FAILURE_RETURN_CODE;                       \
+        }                                                     \
     } while (0)
 
 /**
@@ -66,9 +70,9 @@ static int assertionsFailed = 0;
         printf("Assertions run: %d, failed: %d.\n", assertionsRun, assertionsFailed); \
         printf("Tests run: %d, failed: %d.\n", testsRun, testsFailed);                \
         if (testsFailed) {                                                            \
-            printf("\nFAILED.\n");                                                    \
+            printf(KRED "FAILED\n" RESET);                                            \
         } else {                                                                      \
-            printf("\nPASSED.\n");                                                    \
+            printf(KGRN "PASSED\n" RESET);                                            \
         }                                                                             \
         return testsFailed != 0;                                                      \
     } while (0)
