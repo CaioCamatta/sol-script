@@ -124,3 +124,33 @@ int test_compiler_print() {
 
     return SUCCESS_RETURN_CODE;
 }
+
+int test_compiler_valDeclaration() {
+    Compiler compiler;
+
+    // Setup a source structure with a val declaration statement
+    Source testSource = {
+        .rootStatements = {&(Statement){
+            .type = VAL_DECLARATION_STATEMENT,
+            .as.valDeclarationStatement = &(ValDeclarationStatement){
+                .identifier = &(IdentifierLiteral){
+                    .token = (Token){.type = TOKEN_IDENTIFIER, .start = "x", .length = 1}},
+                .expression = &(Expression){.type = PRIMARY_EXPRESSION, .as.primaryExpression = &(PrimaryExpression){.literal = &(Literal){.type = NUMBER_LITERAL, .as.numberLiteral = &(NumberLiteral){.token = (Token){.type = TOKEN_NUMBER, .start = "42", .length = 2}}}}}}}},
+        .numberOfStatements = 1,
+    };
+
+    initCompiler(&compiler, &testSource);
+    CompiledCode compiledCode = compile(&compiler);
+
+    // Verify bytecode for val declaration
+    ASSERT(compiledCode.bytecodeArray.used == 2);                           // Check if two bytecode instructions are generated
+    ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);  // First should be OP_LOAD_CONSTANT
+    ASSERT(compiledCode.bytecodeArray.values[1].type == OP_SET_VAL);        // Second should be OP_SET_VAL
+
+    printCompiledCode(compiledCode);
+
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}

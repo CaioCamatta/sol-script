@@ -20,7 +20,7 @@ typedef struct {
 
     union {
         double doubleVal;
-        char* stringVal;  // This string should live in the constant pool, which persists through the VM's lifetime.
+        const char* stringVal;  // This string should live in the constant pool, which persists through the VM's lifetime.
         bool booleanVal;
     } as;
 } Value;

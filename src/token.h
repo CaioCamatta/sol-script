@@ -54,7 +54,7 @@ typedef enum {
 
 typedef struct {
     TokenType type;
-    const char* start;
+    const char* start;  // Identifier tokens are not null-terminated!
     int length;
     int lineNo;
     int colNo;

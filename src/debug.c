@@ -281,6 +281,12 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
             case OP_LOAD_CONSTANT:
                 printf(" [ LOAD_CONSTANT #%zu ]\n", bytecodeArray.values[i].maybeConstantIndex);
                 break;
+            case OP_SET_VAL:
+                printf(" [ OP_SET_VAL #%zu ]\n", bytecodeArray.values[i].maybeConstantIndex);
+                break;
+            case OP_GET_VAL:
+                printf(" [ OP_GET_VAL #%zu ]\n", bytecodeArray.values[i].maybeConstantIndex);
+                break;
             case OP_PRINT:
                 printf(" [ PRINT ]\n");
                 break;
