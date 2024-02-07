@@ -4,6 +4,7 @@
 #include "array.h"
 #include "bytecode.h"
 #include "token.h"
+#include "util/hash_table.h"
 #include "value.h"
 
 #define STACK_MAX 256
@@ -20,6 +21,7 @@ typedef struct {
     CompiledCode compiledCode;
     Bytecode* IP;
     Value stack[STACK_MAX];
+    HashTable globals;
     Value* SP;  // points to next slot to be used in the stack, e.g. [<val>, <val>, <empty> SP, <empty>, ...]
 } VM;
 

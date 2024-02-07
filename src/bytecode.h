@@ -7,11 +7,13 @@
 
 // --------------------------------- Bytecode ----------------------------------
 typedef enum {
-    OP_LOAD_CONSTANT,
-    OP_TRUE,
-    OP_FALSE,
-    OP_ADD,
-    OP_PRINT
+    OP_LOAD_CONSTANT,  // load a constant from the compiled constant pool onto the stack
+    OP_SET_VAL,        // expects an identifier at the top of the stack, and a value right below it
+    OP_GET_VAL,        // expects an identifier at the top of the stack
+    OP_TRUE,           // put Value true on the stack
+    OP_FALSE,          // put Value false on the stack
+    OP_ADD,            // add two numbers at the top of the stack, replace them with the result Value
+    OP_PRINT           // print value at the top of the stack
 } Opcode;
 
 // Create simple bytecode with no operands or constants
@@ -47,15 +49,15 @@ typedef enum {
 typedef struct {
     ConstantType type;
     union {
-        char* string;
+        char* string;  // Null-terminated
         double number;
     } as;
 } Constant;
 
-#define STRING_CONST(stringArg)      \
-    (Constant) {                     \
-        .type = CONST_TYPE_STRING,   \
-        .as = {.string = stringArg}, \
+#define STRING_CONST(nullTerminatedStringArg)      \
+    (Constant) {                                   \
+        .type = CONST_TYPE_STRING,                 \
+        .as = {.string = nullTerminatedStringArg}, \
     }
 
 #define DOUBLE_CONST(numberArg)      \

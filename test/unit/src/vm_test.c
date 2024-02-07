@@ -107,3 +107,41 @@ int test_vm_print() {
 
     return SUCCESS_RETURN_CODE;
 }
+
+int test_vm_setAndGetGlobal() {
+    CompiledCode code = (CompiledCode){
+        .constantPool = (ConstantPool){},
+        .bytecodeArray = (BytecodeArray){}};
+    INIT_ARRAY(code.bytecodeArray, Bytecode);
+    INIT_ARRAY(code.constantPool, Constant);
+
+    // Setup a simple bytecode program: set global variable 'x' to 42, then get 'x'
+    Constant valName = STRING_CONST("x");
+    INSERT_ARRAY(code.constantPool, valName, Constant);
+    size_t valNameIndex = 0;
+    Constant numberValue = DOUBLE_CONST(42.0);
+    INSERT_ARRAY(code.constantPool, numberValue, Constant);
+    size_t numberValueIndex = 1;
+
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, numberValueIndex), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_SET_VAL, valNameIndex), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_GET_VAL, valNameIndex), Bytecode);
+
+    // Initialize VM with the bytecode
+    VM vm;
+    initVM(&vm, code);
+
+    // Run the VM
+    run(&vm);
+
+    // Check the result on the stack should be 42
+    Value expected_result = DOUBLE_VAL(42.0);
+    Value actual_result = popVmStack(&vm);
+    ASSERT(compareValues(actual_result, expected_result));
+
+    // Clean up
+    FREE_ARRAY(code.bytecodeArray);
+    FREE_ARRAY(code.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}

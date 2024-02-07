@@ -41,6 +41,15 @@ static double tokenTodouble(Token token) {
     return atof(token.start);
 }
 
+// Copy a string from the input code to the heap and make it null-terminated so it can be used by the VM.
+char* copyStringToHeap(const char* chars, int length) {
+    // TODO: consider adding the hash here to potentially save time in the VM
+    char* heapString = malloc(sizeof(char) * (length + 1));
+    memcpy(heapString, chars, length);
+    heapString[length] = '\0';
+    return heapString;
+}
+
 /**
  * Add a constant to the compiler's constant pool, returns index in the pool.
  * These constants go alongwise the bytecode in the compiled code.
@@ -73,6 +82,15 @@ static void visitPrimaryExpression(Compiler* compiler, PrimaryExpression* primar
 
 static void visitExpressionStatement(Compiler* compiler, ExpressionStatement* expressionStatement) {
     visitExpression(compiler, expressionStatement->expression);
+}
+
+static void visitValDeclarationStatement(Compiler* compiler, ValDeclarationStatement* valDeclarationStatement) {
+    visitExpression(compiler, valDeclarationStatement->expression);
+
+    Constant constant = STRING_CONST(copyStringToHeap(valDeclarationStatement->identifier->token.start,
+                                                      valDeclarationStatement->identifier->token.length));
+    size_t constantIndex = addConstantToPool(compiler, constant);
+    emitBytecode(compiler, BYTECODE_CONSTANT_1(OP_SET_VAL, constantIndex));
 }
 
 static void visitPrintStatement(Compiler* compiler, PrintStatement* printStatement) {
@@ -124,11 +142,7 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
             break;
 
         case VAL_DECLARATION_STATEMENT: {
-            // TEMPORARY: just compile the expression.
-            ExpressionStatement* expressionStatement = &(ExpressionStatement){
-                .expression = statement->as.valDeclarationStatement->expression,
-            };
-            visitExpressionStatement(compiler, expressionStatement);
+            visitValDeclarationStatement(compiler, statement->as.valDeclarationStatement);
             break;
         }
         case PRINT_STATEMENT:
