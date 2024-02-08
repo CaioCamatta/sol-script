@@ -29,6 +29,18 @@ static void visitLiteral(Compiler* compiler, Literal* literal);
 
 /* UTILITIES */
 
+/**
+ * Print error and crash.
+ *
+ * TODO: make it so we don't crash completely. It should be simple to print and error, move to compiling the next statement,
+ * then after all statements have been compiled print all errors and exit the program.
+ */
+#define errorAndExit(...)             \
+    {                                 \
+        fprintf(stderr, __VA_ARGS__); \
+        exit(EXIT_FAILURE);           \
+    }
+
 // Add bytecode to the compiled program.
 static void emitBytecode(Compiler* compiler, Bytecode bytecode) {
     INSERT_ARRAY(compiler->compiledBytecode, bytecode, Bytecode);
@@ -59,8 +71,25 @@ static size_t addConstantToPool(Compiler* compiler, Constant constant) {
     return compiler->constantPool.used - 1;
 }
 
+/**
+ * Given an identifier, find its index in the constant pool, or throw error if it doesn't exist.
+ *
+ * TODO: this method is terribly inefficient as it iterates through the entire table. We should keep a hash table
+ * of (identifier -> index in table) on the side and discard it after compilation is done.
+ */
+static size_t findIdentifierInPool(Compiler* compiler, const char* identifier) {
+    for (size_t i = 0; i < compiler->constantPool.size; i++) {
+        // If its a string AND its equal to the identifier
+        if (compiler->constantPool.values[i].type == CONST_TYPE_STRING && strcmp(compiler->constantPool.values[i].as.string, identifier)) {
+            return i;
+        }
+    }
+    errorAndExit("Error: identifier '%s' referenced before declaration.", identifier);
+}
+
 /* VISITOR FUNCTIONS */
 
+// Visit the two expression on left and write, emit bytecode to add them
 static void visitAdditiveExpression(Compiler* compiler, AdditiveExpression* additiveExpression) {
     visitExpression(compiler, additiveExpression->leftExpression);
     visitExpression(compiler, additiveExpression->rightExpression);
@@ -80,10 +109,15 @@ static void visitPrimaryExpression(Compiler* compiler, PrimaryExpression* primar
     visitLiteral(compiler, primaryExpression->literal);
 }
 
+// Visit the expression. (Should be executed only for its side-effects)
 static void visitExpressionStatement(Compiler* compiler, ExpressionStatement* expressionStatement) {
     visitExpression(compiler, expressionStatement->expression);
 }
 
+/**
+ * Visit the expression after the val declaration, save the variable identifier to constant pool,
+ * emit instruction to set identifier = val
+ */
 static void visitValDeclarationStatement(Compiler* compiler, ValDeclarationStatement* valDeclarationStatement) {
     visitExpression(compiler, valDeclarationStatement->expression);
 
@@ -93,11 +127,13 @@ static void visitValDeclarationStatement(Compiler* compiler, ValDeclarationState
     emitBytecode(compiler, BYTECODE_CONSTANT_1(OP_SET_VAL, constantIndex));
 }
 
+// Visit expression following print, then emit bytecode to print that expression
 static void visitPrintStatement(Compiler* compiler, PrintStatement* printStatement) {
     visitExpression(compiler, printStatement->expression);
     emitBytecode(compiler, BYTECODE(OP_PRINT));
 }
 
+// Add number to constant pool and emit bytecode to load it onto the stack
 static void visitNumberLiteral(Compiler* compiler, NumberLiteral* numberLiteral) {
     double number = tokenTodouble(numberLiteral->token);
     Constant constant = DOUBLE_CONST(number);
@@ -107,11 +143,23 @@ static void visitNumberLiteral(Compiler* compiler, NumberLiteral* numberLiteral)
     emitBytecode(compiler, bytecode);
 }
 
+static void visitIdentifierLiteral(Compiler* compiler, IdentifierLiteral* identifierLiteral) {
+    // Find address of this identifier in the constant pool
+    char* identifierNameNullTerminated = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
+    size_t index = findIdentifierInPool(compiler, identifierNameNullTerminated);
+
+    // Generate bytecode to get the global variable
+    Bytecode getGlobal = BYTECODE_CONSTANT_1(OP_GET_VAL, index);
+    emitBytecode(compiler, getGlobal);
+}
+
 static void visitLiteral(Compiler* compiler, Literal* literal) {
     switch (literal->type) {
         case NUMBER_LITERAL:
             visitNumberLiteral(compiler, literal->as.numberLiteral);
             break;
+        case IDENTIFIER_LITERAL:
+            visitIdentifierLiteral(compiler, literal->as.identifierLiteral);
         default:
             fprintf(stderr, "Unimplemented literal type %d.", literal->type);
             exit(EXIT_FAILURE);
