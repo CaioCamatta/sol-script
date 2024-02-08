@@ -155,6 +155,19 @@ static Expression* primaryExpression(ASTParser* parser) {
             return expression;
             break;
         }
+        case TOKEN_IDENTIFIER: {
+            Literal* tempLiteral = identifierLiteral(parser);
+
+            Expression* expression = allocateASTNode(Expression);
+            expression->type = PRIMARY_EXPRESSION;
+
+            PrimaryExpression* primaryExpression = allocateASTNode(PrimaryExpression);
+            primaryExpression->literal = tempLiteral;
+
+            expression->as.primaryExpression = primaryExpression;
+
+            return expression;
+        }
         case TOKEN_TRUE:
         case TOKEN_FALSE: {
             Literal* tempLiteral = booleanLiteral(parser);
