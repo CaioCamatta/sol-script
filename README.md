@@ -45,7 +45,7 @@ Delta's lexical grammar is inspired by a number of languages
 
 ## V1 Project Tracker
 
-The following features are necessary an official V1 release, in rough order:
+The following features are necessary a proper v1.0 release, in rough order:
 
  - [x] Design the lexical grammar
  - [x] Design the syntax grammar
@@ -79,7 +79,6 @@ The following features are necessary an official V1 release, in rough order:
  - [ ] (maybe) Add benchmark tests
  - [ ] (maybe) Profile execution and find opportunities for optimization
  - [ ] (maybe) Implement [NaN boxing](https://piotrduperas.com/posts/nan-boxing)
- - [ ] ... 
 
 
 ## Language Design
@@ -162,125 +161,125 @@ This grammar is primarily inspired by the [ANSI C grammar](https://slebok.github
 
 ```
 source: 
-	statement* EOF
+  statement* EOF
 
 statement: 
-	declaration
-	block-statement
-	iteration-statement
-	selection-statement
-	return-statement
-	expression-statement
-	assignment-statement
-	print-statement
+  declaration
+  block-statement
+  iteration-statement
+  selection-statement
+  return-statement
+  expression-statement
+  assignment-statement
+  print-statement
 
 declaration:
-	var-declaration
-	val-declaration
+  var-declaration
+  val-declaration
 
 var-declaration:
-	"var" identifier ( "=" expression )?  ";"
+  "var" identifier ( "=" expression )?  ";"
 
 val-declaration:
-	"val" identifier "=" expression ";"
+  "val" identifier "=" expression ";"
 
 block-statement:
-	"{" statement* "}" ";"
-	block-expression
+  "{" statement* "}" ";"
+  block-expression
 
 iteration-statement:
-	"while" "(" expression ")" block-statement
+  "while" "(" expression ")" block-statement
 
 selection-statement:
-	"if" "(" expression ")" statement ( "else" statement )?
+  "if" "(" expression ")" statement ( "else" statement )?
 
 return-statement:
-	"return" ( expression )? ";"
-	
+  "return" ( expression )? ";"
+  
 expression-statement:
-	expression ";"
+  expression ";"
 
 assignment-statement:
-	postfix-expression "=" expression
+  postfix-expression "=" expression
 
 print-statement:
-	"print" expression ";"
+  "print" expression ";"
 
 
 expression:
-	struct-expression
-	function-expression
-	block-expression
-	logical-or-expression
+  struct-expression
+  function-expression
+  block-expression
+  logical-or-expression
 
 
 
 struct-expression:
-	"struct" "{" struct-declaration-list "}"
+  "struct" "{" struct-declaration-list "}"
 
 struct-declaration-list:
-	struct-declaration
-	struct-declaration-list "," struct-declaration
-	
+  struct-declaration
+  struct-declaration-list "," struct-declaration
+  
 struct-declaration:
-	identifier ":" expression
-	"prototype" ":" identifier
+  identifier ":" expression
+  "prototype" ":" identifier
 
 
 
 function-expression:
-	"(" (parameter-list)? ")" "=>" "{" statement "}"
-	
+  "(" (parameter-list)? ")" "=>" "{" statement "}"
+  
 parameter-list:
-	identifier ( "," identifier )*
+  identifier ( "," identifier )*
 
 argument-list:
-	expression ( "," expression )*
+  expression ( "," expression )*
 
 
 
 block-expression:
-	"{" statement* expression "}"
+  "{" statement* expression "}"
 
 
 
 logical-or-expression:
-	logical-and-expression ( "or" logical-and-expression )*
+  logical-and-expression ( "or" logical-and-expression )*
 
 logical-and-expression:
-	equality-expression ( "and" equality-expression )*
+  equality-expression ( "and" equality-expression )*
 
 equality-expression: 
-	comparison-expression ( ("!=" | "==") comparison-expression) )*
+  comparison-expression ( ("!=" | "==") comparison-expression) )*
 
 comparison-expression:
-	additive-expression ( ( ">" | ">=" | "<" | "<=" ) additive-expression )*
+  additive-expression ( ( ">" | ">=" | "<" | "<=" ) additive-expression )*
 
 additive-expression:
-	multiplicative-expression ( ( "-" | "+" ) multiplicative-expression )* 
-	
+  multiplicative-expression ( ( "-" | "+" ) multiplicative-expression )* 
+  
 multiplicative-expression:
-	unary-expression ( ( "/" | "*" ) unary-expression )* 
+  unary-expression ( ( "/" | "*" ) unary-expression )* 
 
 unary-expression:
-	( "!"* | "-"* )? postfix-expression
+  ( "!"* | "-"* )? postfix-expression
 
 postfix-expression:
-	primary-expression
-	postfix-expression "." identifier  
+  primary-expression
+  postfix-expression "." identifier  
 
 primary-expression:
-	number-literal
-	string-literal
-	identifier
-	( expression )
-	"true"
-	"false"
-	"null"
-	"this"
+  number-literal
+  string-literal
+  identifier
+  ( expression )
+  "true"
+  "false"
+  "null"
+  "this"
 
 call-expression:
-	unary-expression
+  unary-expression
 	
 
 number-literal      # terminal
