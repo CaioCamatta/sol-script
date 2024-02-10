@@ -84,6 +84,10 @@ The following features are necessary an official V1 release, in rough order:
 
 ## Language Design
 
+The following diagram gives a high-level overview of Delta's internals.
+
+Delta has four main components: scanner, parser, compiler, and virtual machine. The scanner reads user code and outputs tokens. The parser consumes tokens and produces and abstract syntax tree (AST). The compiler traverses the AST and produces bytecode. The VM executes bytecode and keeps a stack of Values.
+
 ![Architecture](./architecture.png)
 
 ### Lexical Grammar
