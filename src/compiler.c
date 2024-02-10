@@ -162,7 +162,7 @@ static void visitIdentifierLiteral(Compiler* compiler, IdentifierLiteral* identi
     char* identifierNameNullTerminated = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
     Constant tempConstant = (Constant){
         .type = CONST_TYPE_STRING,
-        .as = identifierNameNullTerminated};
+        .as = {identifierNameNullTerminated}};
     size_t index = findConstantInPool(compiler, tempConstant);
     if (index == -1) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
 
