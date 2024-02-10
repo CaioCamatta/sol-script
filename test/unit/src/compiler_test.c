@@ -201,7 +201,7 @@ int test_compiler_variableDeclarationAndPrint() {
     return SUCCESS_RETURN_CODE;  // Assuming SUCCESS_RETURN_CODE is defined as part of your testing framework
 }
 
-int test_addConstantToPool_NoDuplicates() {
+int test_addConstantToPool_noDuplicates() {
     Source source = (Source){
         .rootStatements = {
             createBasicValDeclarationStatement(),
