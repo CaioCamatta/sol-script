@@ -2,62 +2,100 @@
 
 Delta is a stack-based, prototype-based, interpreted, GC-ed programming language developed in C.
 
+```
+// Basic val declaration
+val a = 1;
+
+// Objects
+var uniqueNumberGenerator = struct {
+    currNumber: 0;
+
+	// Print N new unique numbers and return the last unique one.
+    printNewNumbers: (var count) => {
+		while (count > 0){
+			print count;
+			this.currNumber = this.currNumber +1;
+			count = count - 1;
+		}
+		this.currNumber; // In a block expression, no 'return' keyword is necessary
+	};
+}
+
+// Print '0' and '1'.
+uniqueNumberGenerator.printNewNumbers(2);
+```
+
+## Motivation
+
+Prototype based
+- Why? 
+	- Personal reasons: Easier to implement, 
+	- Why would u want prototype-based in general? Easy composition, more freedom. However you usually end up to faking a class systen
+
+
+## Inspiration
+
+I took some inspiration from [Lox's lexical grammar](https://craftinginterpreters.com/appendix-i.html), the [C lexical grammar](https://learn.microsoft.com/en-us/cpp/c-language/lexical-grammar?view=msvc-170) ("punctuators" etc), and [Scala's lexical syntax](https://www.scala-lang.org/files/archive/spec/2.12/01-lexical-syntax.html#identifiers). The grammar will evolve as I develop the language.
+
+Inspired by Scala (some of the syntax and functional aspects), JavaScript (prototypes), the JVM (compilation, etc) and Python (CPython), and Lox 
+
+## Real example 
+
+```
+
+### Example 
+
+Delta has a debug module that shows the tokens parsed, the AST, and the compiled code. Here's an example for the statement.
+
+## V1 Project Tracker
+
+The following features are necessary an official V1 release, in rough order:
+
+ - [x] Design the lexical grammar
+ - [x] Design the syntax grammar
+ - [x] Add build configuration using make
+ - [x] Add unit testing framework ([MinUnit](https://jera.com/techinfo/jtns/jtn002))
+ - [x] Add REPL / interactive shell
+ - [x] Implement and test hash table utility
+ - [x] Implement and test array utility
+ - [X] Implement robust debugging module for all parts of the system.
+ - [x] Implement full scanner for the lexical grammar
+ - [x] Implement minimal parser, compiler, and VM for end-to-end test.
+ - [x] Add constant pool (similar to [Java's](https://blogs.oracle.com/javamagazine/post/java-class-file-constant-pool))
+ - [X] Add support for variable declaration and access
+ - [X] Implement print statements
+ - [X] Implement additive expression
+ - [] Implement all other "simple" expressions, i.e. excluding call-expressions
+ - [] Implement selection statement (`if`s)
+ - [] Implement the rest of the parser for the whole syntax grammar
+ - [] Add conditional debugging/logging for tests that fail
+ - [] Implement functions and returns
+ - [] Implement assignment statements
+ - [] Add CLI argument to enable or disable debugging logs in the REPL.
+ - [] Improve error logs; print line and column
+ - [] Implement block statements and expressions
+ - [] Implement iteration statement (loops)
+ - [] Add Panic Mode error recovery; stop crashing the compiler on every error.
+ - [] Implement objects / structs
+ - [] Add garbage collector
+ - [] Implement closures
+ - [] (maybe) Add native functions
+ - [] (maybe) Add benchmark tests
+ - [] (maybe) Profile execution and find opportunities for optimization
+ - [] (maybe) Implement [NaN boxing](https://piotrduperas.com/posts/nan-boxing)
+ - [] ... 
+
+Some design decisions:
+- Parser is simple and easy to learn, move 
+- Run time performance is more pressing than compilation time.
+- Statement, Expression, and Literal
+
+
 ## Language Design
 
 ![Architecture](./architecture.png)
 
-### Example 
-
-Delta has a debug module that shows the tokens parsed, the AST, and the compiled code. Here's an example for the statement `print 2+3-4;`.
-
-```
-% ./delta   
-> print 2+3-4;
-Tokens:
-  TOKEN_PRINT(lexeme="print", line=1, column=6)
-  TOKEN_NUMBER(lexeme="2", line=1, column=8)
-  TOKEN_PLUS(lexeme="+", line=1, column=9)
-  TOKEN_NUMBER(lexeme="3", line=1, column=10)
-  TOKEN_MINUS(lexeme="-", line=1, column=11)
-  TOKEN_NUMBER(lexeme="4", line=1, column=12)
-  TOKEN_SEMICOLON(lexeme=";", line=1, column=13)
-  TOKEN_EOF(lexeme="", line=2, column=2)
-
-AST
-Source(numberOfStatements=1)
-|   PrintStatement
-|   |   AdditiveExpression(punctuator="-")
-|   |   |   (left)
-|   |   |   |   AdditiveExpression(punctuator="+")
-|   |   |   |   |   (left)
-|   |   |   |   |   |   PrimaryExpression
-|   |   |   |   |   |   |   NumberLiteral(token="2")
-|   |   |   |   |   (right)
-|   |   |   |   |   |   PrimaryExpression
-|   |   |   |   |   |   |   NumberLiteral(token="3")
-|   |   |   (right)
-|   |   |   |   PrimaryExpression
-|   |   |   |   |   NumberLiteral(token="4")
-
-Started compiling.
-Done compiling in 0.00001 seconds.
-
-Compiled code:
-Constant Pool 
- #0 (double) 2.000000
- #1 (double) 3.000000
- #2 (double) 4.000000
-Bytecode
- [ LOAD_CONSTANT #0 ]
- [ LOAD_CONSTANT #1 ]
- [ ADD ]
- [ LOAD_CONSTANT #2 ]
- [ PRINT ]
-
-4.000000
-```
-
-### 1. Scanner
+### Lexical Grammar
 
 The scanner is a regular language that turns characters into tokens. For example, the "val" becomes "TOKEN_VAL".
 
@@ -108,7 +146,20 @@ punctuator: one of
     ( ) { } . * + - ! % < > = <= >= == != || && ; ,
 ```
 
-### 2. Parser
+#### Example
+For the statement `print 2+3-4;`, the scanner would parse the following tokens:
+```
+TOKEN_PRINT(lexeme="print", line=1, column=6)
+TOKEN_NUMBER(lexeme="2", line=1, column=8)
+TOKEN_PLUS(lexeme="+", line=1, column=9)
+TOKEN_NUMBER(lexeme="3", line=1, column=10)
+TOKEN_MINUS(lexeme="-", line=1, column=11)
+TOKEN_NUMBER(lexeme="4", line=1, column=12)
+TOKEN_SEMICOLON(lexeme=";", line=1, column=13)
+TOKEN_EOF(lexeme="", line=2, column=2)
+``````
+
+### Syntactical Grammar
 
 The syntactical grammar implemented by the Parser _should_ be parsable a look-ahead, left-to-right grammar with 1 token of look-ahead (aka LALR(1)). A program (`source`) is a series of `statement`s. Statements have side effects (or they aren't useful). `expression`s and `literal`s are the other two main "types". Expressions are evaluated to a value.
 
@@ -242,7 +293,73 @@ string-literal      # terminal
 identifier-literal  # terminal
 ```
 
+#### Example
+For the statement `print 2+3-4;`, the scanner would parse the following Abstract Syntax Tree:
+
+```
+Source(numberOfStatements=1)
+|   PrintStatement
+|   |   AdditiveExpression(punctuator="-")
+|   |   |   (left)
+|   |   |   |   AdditiveExpression(punctuator="+")
+|   |   |   |   |   (left)
+|   |   |   |   |   |   PrimaryExpression
+|   |   |   |   |   |   |   NumberLiteral(token="2")
+|   |   |   |   |   (right)
+|   |   |   |   |   |   PrimaryExpression
+|   |   |   |   |   |   |   NumberLiteral(token="3")
+|   |   |   (right)
+|   |   |   |   PrimaryExpression
+|   |   |   |   |   NumberLiteral(token="4")
+```
+
+### Compiled code
+
+Delta's compiled code is heavily inspired by [java `.class` files](https://en.wikipedia.org/wiki/Java_class_file). Delta. It's has two parts:
+- An array of bytecode
+- A pool of constants
+
+Bytecode may contains operands.
+
+The pool of constants is necessary so the compiler can pass constants (such as strings for variable names) to the VM.
+
+#### Example
+For the statement `print 2+3-4;`, the compiler would produce the following constants and bytecode:
+```
+Constant Pool 
+ #0 (double) 2.000000
+ #1 (double) 3.000000
+ #2 (double) 4.000000
+
+Bytecode
+ [ LOAD_CONSTANT #0 ]
+ [ LOAD_CONSTANT #1 ]
+ [ ADD ]
+ [ LOAD_CONSTANT #2 ]
+ [ PRINT ]
+```
+
+### The Virtual Machine
+
+The Delta Virtual Machine* is heaviliy inspired by the [Lox VM](https://craftinginterpreters.com/a-virtual-machine.html) and the [JVM](https://docs.oracle.com/javase/specs/jvms/se8/html/), and to some extend, the [CPython VM](https://leanpub.com/insidethepythonvirtualmachine/read). It transates 
+
+*For those new to programming languages, a "virtual machine" here is not the same as a "Windows virtual machine". A programming language VM translates bytecode down to low-level code or machine code. 
+
+Instruction Set (work-in-progress):
+```
+OP_LOAD_CONSTANT,  // load a constant from the compiled constant pool onto the stack
+OP_SET_VAL,        // set local variable; expects an identifier at the top of the stack, and a value right below it
+OP_GET_VAL,        // read local variable; expects an identifier at the top of the stack
+OP_TRUE,           // put Value true on the stack
+OP_FALSE,          // put Value false on the stack
+OP_ADD,            // add two numbers at the top of the stack, replace them with the result Value
+OP_PRINT           // print value at the top of the stack
+```
+
+A runtime `Value` could be a number, string, object, etc.
+
 ## Development
+Delta is a "toy" programming language. Its main advantage over "real" languages, if any, its simplicity and the ease with which one can learn its internals. Learning this codebase should be exceptionally easy. Hence, comments and documentation should be extensive.
 
 ### Project structure
 
