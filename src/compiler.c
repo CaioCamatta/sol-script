@@ -137,6 +137,10 @@ static void visitValDeclarationStatement(Compiler* compiler, ValDeclarationState
 
     Constant constant = STRING_CONST(copyStringToHeap(valDeclarationStatement->identifier->token.start,
                                                       valDeclarationStatement->identifier->token.length));
+
+    // TODO: Remove duplicated check; addConstantToPool already runs findConstantInPool.
+    if (findConstantInPool(compiler, constant) != -1) errorAndExit("Error: val \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
+
     size_t constantIndex = addConstantToPool(compiler, constant);
     emitBytecode(compiler, BYTECODE_CONSTANT_1(OP_SET_VAL, constantIndex));
 }
@@ -166,9 +170,9 @@ static void visitIdentifierLiteral(Compiler* compiler, IdentifierLiteral* identi
     size_t index = findConstantInPool(compiler, tempConstant);
     if (index == -1) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
 
-    // Generate bytecode to get the global variable
-    Bytecode getGlobal = BYTECODE_CONSTANT_1(OP_GET_VAL, index);
-    emitBytecode(compiler, getGlobal);
+    // Generate bytecode to get the variable
+    Bytecode bytecodeToGetVariable = BYTECODE_CONSTANT_1(OP_GET_VAL, index);
+    emitBytecode(compiler, bytecodeToGetVariable);
 }
 
 static void visitLiteral(Compiler* compiler, Literal* literal) {
