@@ -551,3 +551,54 @@ int test_parser_nestedParenthesesExpression() {
 
     return SUCCESS_RETURN_CODE;
 }
+
+int test_parser_variableDeclarationAndReading() {
+    // Manually create tokens array
+    Token tokensArray[] = {
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "x"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_NUMBER, "10"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_PRINT, "print"),
+        createToken(TOKEN_IDENTIFIER, "x"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    // Manually initialize TokenArray
+    TokenArray tokens;
+    INIT_ARRAY(tokens, Token);
+    for (int i = 0; i < sizeof(tokensArray) / sizeof(Token); ++i) {
+        INSERT_ARRAY(tokens, tokensArray[i], Token);
+    }
+
+    // Parse the manually created tokens
+    ASTParser parser;
+    Source* source = parseASTFromTokens(&parser, &tokens);
+
+    // Assertions to validate the AST structure
+    ASSERT(source->numberOfStatements == 2);
+    ASSERT(source->rootStatements[0]->type == VAL_DECLARATION_STATEMENT);
+    ASSERT(source->rootStatements[1]->type == PRINT_STATEMENT);
+
+    // Check that the indentifier is 'x'
+    ValDeclarationStatement* valDecl = source->rootStatements[0]->as.valDeclarationStatement;
+    IdentifierLiteral* idLiteral = valDecl->identifier;
+    ASSERT(strncmp(idLiteral->token.start, "x", idLiteral->token.length) == 0);
+
+    // Check that the number is correct
+    NumberLiteral* numberLiteral = valDecl->expression->as.primaryExpression->literal->as.numberLiteral;
+    char numberStr[10];
+    snprintf(numberStr, sizeof(numberStr), "%.*s", numberLiteral->token.length, numberLiteral->token.start);
+    ASSERT(strcmp(numberStr, "10") == 0);
+
+    // Check that 'x' is in the print statemetn
+    IdentifierLiteral* printIdLiteral = source->rootStatements[1]->as.printStatement->expression->as.primaryExpression->literal->as.identifierLiteral;
+    ASSERT(strncmp(printIdLiteral->token.start, "x", printIdLiteral->token.length) == 0);
+
+    // Cleanup
+    freeSource(source);
+    FREE_ARRAY(tokens);
+
+    return SUCCESS_RETURN_CODE;
+}

@@ -31,6 +31,8 @@ void freeSource(Source* source) {
 // Print error at current token, halt execution
 static void errorAtCurrent(ASTParser* parser, const char* message) {
     fprintf(stderr, "Error at line %d, column %d: %s", parser->current->lineNo, parser->current->colNo, message);
+    // TODO: Change this so we instead of exiting, we track that there are errors and move to the
+    // next statement. Then after all statements are parsed we report the errors. This is a better UX.
     exit(EXIT_FAILURE);
 }
 
