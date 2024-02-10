@@ -66,7 +66,8 @@
     "value.h": "c",
     "colors.h": "c",
     "hash_table.h": "c",
-    "vm.h": "c"
+    "vm.h": "c",
+    "typeinfo": "c"
   },
   "C_Cpp.errorSquiggles": "enabled"
 }
