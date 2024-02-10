@@ -21,6 +21,7 @@ static void all_tests() {
     RUN_TEST(test_compiler);
     RUN_TEST(test_compiler_print);
     RUN_TEST(test_compiler_valDeclaration);
+    RUN_TEST(test_compiler_variableDeclarationAndPrint);
 
     RUN_TEST(test_vm_addition);
     RUN_TEST(test_vm_print);
