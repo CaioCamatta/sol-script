@@ -1,8 +1,81 @@
 #include "compiler.h"
 
+#include <string.h>
+
 #include "../minunit.h"
 #include "debug.h"
 #include "syntax.h"
+
+// -------------------------------------------------------------------------------
+// ---------------------- Macros to facilitate creating AST ----------------------
+// -------------------------------------------------------------------------------
+
+#define NUMBER_LITERAL(numberAsString)                                                                           \
+    &(Literal) {                                                                                                 \
+        .type = NUMBER_LITERAL,                                                                                  \
+        .as.numberLiteral = &(NumberLiteral) {                                                                   \
+            .token = (Token) { .type = TOKEN_NUMBER, .start = numberAsString, .length = strlen(numberAsString) } \
+        }                                                                                                        \
+    }
+
+#define IDENTIFIER_LITERAL(name)                                                                 \
+    &(Literal) {                                                                                 \
+        .type = IDENTIFIER_LITERAL,                                                              \
+        .as.identifierLiteral = &(IdentifierLiteral) {                                           \
+            .token = (Token) { .type = TOKEN_IDENTIFIER, .start = name, .length = strlen(name) } \
+        }                                                                                        \
+    }
+
+#define PRIMARY_EXPRESSION(literalInput)               \
+    &(Expression) {                                    \
+        .type = PRIMARY_EXPRESSION,                    \
+        .as.primaryExpression = &(PrimaryExpression) { \
+            .literal = literalInput                    \
+        }                                              \
+    }
+
+#define ADDITIVE_EXPRESSION(left, operatorToken, right)  \
+    &(Expression) {                                      \
+        .type = ADDITIVE_EXPRESSION,                     \
+        .as.additiveExpression = &(AdditiveExpression) { \
+            .leftExpression = left,                      \
+            .rightExpression = right,                    \
+            .punctuator = operatorToken                  \
+        }                                                \
+    }
+
+#define PRINT_STATEMENT(expressionInput)         \
+    &(Statement) {                               \
+        .type = PRINT_STATEMENT,                 \
+        .as.printStatement = &(PrintStatement) { \
+            .expression = expressionInput        \
+        }                                        \
+    }
+
+#define VAL_DECLARATION_STATEMENT(identifierName, expressionInput)                                                      \
+    &(Statement) {                                                                                                      \
+        .type = VAL_DECLARATION_STATEMENT,                                                                              \
+        .as.valDeclarationStatement = &(ValDeclarationStatement) {                                                      \
+            .identifier = &(IdentifierLiteral){                                                                         \
+                .token = (Token){.type = TOKEN_IDENTIFIER, .start = identifierName, .length = strlen(identifierName)}}, \
+            .expression = expressionInput                                                                               \
+        }                                                                                                               \
+    }
+
+#define EXPRESSION_STATEMENT(expressionInput)              \
+    &(Statement) {                                         \
+        .type = EXPRESSION_STATEMENT,                      \
+        .as.expressionStatement = &(ExpressionStatement) { \
+            .expression = expressionInput                  \
+        }                                                  \
+    }
+
+#define TOKEN_PLUS() \
+    (Token) { .type = TOKEN_PLUS, .start = "+", .length = 1 }
+
+// ------------------------------------------------------------------------
+// ---------------------------- Test utilities ----------------------------
+// ------------------------------------------------------------------------
 
 // Compare two bytecode arrays. Returns 1 if equal, 0 if not
 static int compareTypesInBytecodeArrays(BytecodeArray expected, BytecodeArray actual) {
@@ -19,67 +92,21 @@ static int compareTypesInBytecodeArrays(BytecodeArray expected, BytecodeArray ac
     return 1;
 }
 
-// Create statement for 'val a = 42;'
-#define createBasicValDeclarationStatement()                                                      \
-    &(Statement) {                                                                                \
-        .type = VAL_DECLARATION_STATEMENT,                                                        \
-        .as.valDeclarationStatement = &(ValDeclarationStatement) {                                \
-            .identifier = &(IdentifierLiteral){                                                   \
-                .token = (Token){                                                                 \
-                    .type = TOKEN_IDENTIFIER,                                                     \
-                    .start = "x",                                                                 \
-                    .length = 1}},                                                                \
-            .expression = &(Expression) {                                                         \
-                .type = PRIMARY_EXPRESSION, .as.primaryExpression = &(PrimaryExpression) {        \
-                    .literal = &(Literal) {                                                       \
-                        .type = NUMBER_LITERAL, .as.numberLiteral = &(NumberLiteral) {            \
-                            .token = (Token) { .type = TOKEN_NUMBER, .start = "42", .length = 2 } \
-                        }                                                                         \
-                    }                                                                             \
-                }                                                                                 \
-            }                                                                                     \
-        }                                                                                         \
-    }
+// -------------------------------------------------------------------------
+// --------------------------------- Tests ---------------------------------
+// -------------------------------------------------------------------------
 
 // Test basic arithmetic expression
 int test_compiler() {
     Compiler compiler;
 
     Source testSource = {
-        .rootStatements = {&(Statement){
-            .type = EXPRESSION_STATEMENT,
-            .as.expressionStatement = &(ExpressionStatement){
-                .expression = &(Expression){
-                    .type = ADDITIVE_EXPRESSION,
-                    .as.additiveExpression = &(AdditiveExpression){
-                        .leftExpression = &(Expression){
-                            .type = PRIMARY_EXPRESSION,
-                            .as.primaryExpression = &(PrimaryExpression){
-                                .literal = &(Literal){
-                                    .type = NUMBER_LITERAL,
-                                    .as.numberLiteral = &(NumberLiteral){
-                                        .token = {.type = TOKEN_NUMBER, .start = "5", .length = 1},
-                                    },
-                                },
-                            },
-                        },
-                        .rightExpression = &(Expression){
-                            .type = PRIMARY_EXPRESSION,
-                            .as.primaryExpression = &(PrimaryExpression){
-                                .literal = &(Literal){
-                                    .type = NUMBER_LITERAL,
-                                    .as.numberLiteral = &(NumberLiteral){
-                                        .token = {.type = TOKEN_NUMBER, .start = "7", .length = 1},
-                                    },
-                                },
-                            },
-                        },
-                        .punctuator = (Token){.type = TOKEN_PLUS, .start = "+", .length = 1},
-                    },
-                },
-            },
-
-        }},
+        .rootStatements = {
+            EXPRESSION_STATEMENT(
+                ADDITIVE_EXPRESSION(
+                    PRIMARY_EXPRESSION(NUMBER_LITERAL("5")),
+                    TOKEN_PLUS(),
+                    PRIMARY_EXPRESSION(NUMBER_LITERAL("7"))))},
         .numberOfStatements = 1,
     };
 
@@ -114,16 +141,8 @@ int test_compiler_print() {
 
     // Set up a source structure with a print statement
     Source testSource = {
-        .rootStatements = {&(Statement){
-            .type = PRINT_STATEMENT,
-            .as.printStatement = &(PrintStatement){
-                .expression = &(Expression){
-                    .type = PRIMARY_EXPRESSION,
-                    .as.primaryExpression = &(PrimaryExpression){
-                        .literal = &(Literal){
-                            .type = NUMBER_LITERAL,
-                            .as.numberLiteral = &(NumberLiteral){
-                                .token = (Token){.type = TOKEN_NUMBER, .start = "42", .length = 2}}}}}}}},
+        .rootStatements = {
+            PRINT_STATEMENT(PRIMARY_EXPRESSION(NUMBER_LITERAL("42")))},
         .numberOfStatements = 1,
     };
 
@@ -152,7 +171,8 @@ int test_compiler_valDeclaration() {
 
     // Setup a source structure with a val declaration statement
     Source testSource = {
-        .rootStatements = {createBasicValDeclarationStatement()},
+        .rootStatements = {
+            VAL_DECLARATION_STATEMENT("x", PRIMARY_EXPRESSION(NUMBER_LITERAL("42")))},
         .numberOfStatements = 1,
     };
 
@@ -177,8 +197,8 @@ int test_compiler_variableDeclarationAndPrint() {
     // print x;
     Source testSource = {
         .rootStatements = {
-            createBasicValDeclarationStatement(),
-            &(Statement){.type = PRINT_STATEMENT, .as.printStatement = &(PrintStatement){.expression = &(Expression){.type = PRIMARY_EXPRESSION, .as.primaryExpression = &(PrimaryExpression){.literal = &(Literal){.type = IDENTIFIER_LITERAL, .as.identifierLiteral = &(IdentifierLiteral){.token = (Token){.type = TOKEN_IDENTIFIER, .start = "x", .length = 1}}}}}}}},
+            VAL_DECLARATION_STATEMENT("x", PRIMARY_EXPRESSION(NUMBER_LITERAL("42"))),
+            PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("x")))},
         .numberOfStatements = 2,
     };
 
@@ -204,17 +224,18 @@ int test_compiler_variableDeclarationAndPrint() {
 int test_addConstantToPool_noDuplicates() {
     Source source = (Source){
         .rootStatements = {
-            createBasicValDeclarationStatement(),
-            createBasicValDeclarationStatement()},
-        .numberOfStatements = 2,
+            VAL_DECLARATION_STATEMENT("x", PRIMARY_EXPRESSION(NUMBER_LITERAL("42"))),
+            PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("x"))),
+            VAL_DECLARATION_STATEMENT("y", PRIMARY_EXPRESSION(NUMBER_LITERAL("42")))},
+        .numberOfStatements = 3,
     };
 
     Compiler compiler;
     initCompiler(&compiler, &source);
     CompiledCode compiledCode = compile(&compiler);
 
-    // Assert the constants were not added twice; there should be one for '42' and one for 'x'.
-    ASSERT(compiledCode.constantPool.used == 2);
+    // Assert the constants were not added twice; there should be one for '42', one for 'x', one for 'y'.
+    ASSERT(compiledCode.constantPool.used == 3);
 
     // Cleanup
     FREE_ARRAY(compiler.compiledBytecode);
