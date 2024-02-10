@@ -78,7 +78,7 @@ static size_t addConstantToPool(Compiler* compiler, Constant constant) {
  * of (identifier -> index in table) on the side and discard it after compilation is done.
  */
 static size_t findIdentifierInPool(Compiler* compiler, const char* identifier) {
-    for (size_t i = 0; i < compiler->constantPool.size; i++) {
+    for (size_t i = 0; i < compiler->constantPool.used; i++) {
         // If its a string AND its equal to the identifier
         if (compiler->constantPool.values[i].type == CONST_TYPE_STRING && strcmp(compiler->constantPool.values[i].as.string, identifier)) {
             return i;
@@ -105,7 +105,6 @@ static void visitAdditiveExpression(Compiler* compiler, AdditiveExpression* addi
 }
 
 static void visitPrimaryExpression(Compiler* compiler, PrimaryExpression* primaryExpression) {
-    // TODO: expand so it handles other types (like strings)
     visitLiteral(compiler, primaryExpression->literal);
 }
 
