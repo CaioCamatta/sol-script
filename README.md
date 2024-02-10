@@ -1,6 +1,6 @@
 # The Delta Programming Language
 
-**Important** Delta is a work in progress.
+**Important:** Delta is a work in progress.
 
 Delta is a stack-based, prototype-based, interpreted, GC-ed programming language with an ahead-of-time compiler. It is implemented in C.
 
@@ -61,30 +61,25 @@ The following features are necessary an official V1 release, in rough order:
  - [X] Add support for variable declaration and access
  - [X] Implement print statements
  - [X] Implement additive expression
- - [] Implement all other "simple" expressions, i.e. excluding call-expressions
- - [] Implement selection statement (`if`s)
- - [] Implement the rest of the parser for the whole syntax grammar
- - [] Add conditional debugging/logging for tests that fail
- - [] Implement functions and returns
- - [] Implement assignment statements
- - [] Add CLI argument to enable or disable debugging logs in the REPL.
- - [] Improve error logs; print line and column
- - [] Implement block statements and expressions
- - [] Implement iteration statement (loops)
- - [] Add Panic Mode error recovery; stop crashing the compiler on every error.
- - [] Implement objects / structs
- - [] Add garbage collector
- - [] Implement closures
- - [] (maybe) Add native functions
- - [] (maybe) Add benchmark tests
- - [] (maybe) Profile execution and find opportunities for optimization
- - [] (maybe) Implement [NaN boxing](https://piotrduperas.com/posts/nan-boxing)
- - [] ... 
-
-Some design decisions:
-- Parser is simple and easy to learn, move 
-- Run time performance is more pressing than compilation time.
-- Statement, Expression, and Literal
+ - [ ] Implement all other "simple" expressions, i.e. excluding call-expressions
+ - [ ] Implement selection statement (`if`s)
+ - [ ] Implement the rest of the parser for the whole syntax grammar
+ - [ ] Add conditional debugging/logging for tests that fail
+ - [ ] Implement functions and returns
+ - [ ] Implement assignment statements
+ - [ ] Add CLI argument to enable or disable debugging logs in the REPL.
+ - [ ] Improve error logs; print line and column
+ - [ ] Implement block statements and expressions
+ - [ ] Implement iteration statement (loops)
+ - [ ] Add Panic Mode error recovery; stop crashing the compiler on every error.
+ - [ ] Implement objects / structs
+ - [ ] Add garbage collector
+ - [ ] Implement closures
+ - [ ] (maybe) Add native functions
+ - [ ] (maybe) Add benchmark tests
+ - [ ] (maybe) Profile execution and find opportunities for optimization
+ - [ ] (maybe) Implement [NaN boxing](https://piotrduperas.com/posts/nan-boxing)
+ - [ ] ... 
 
 
 ## Language Design
@@ -355,7 +350,12 @@ OP_PRINT           // print value at the top of the stack
 A runtime `Value` could be a number, string, object, etc.
 
 ## Development
+
+### Philosophy
+
 Delta is a "toy" programming language. Its main advantage over "real" languages, if any, its simplicity and the ease with which one can learn its internals. Learning this codebase should be exceptionally easy. Hence, comments and documentation should be extensive.
+
+Additionally, run time performance is more critical than compilation time performance. Inneficiencies in the scanner, parser, and compiler are acceptable.
 
 ### Project structure
 
