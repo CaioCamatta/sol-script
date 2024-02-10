@@ -1,1 +1,2 @@
-print 4 + 3;
+val a = 2;
+print a;

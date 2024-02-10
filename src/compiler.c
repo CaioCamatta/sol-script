@@ -29,6 +29,18 @@ static void visitLiteral(Compiler* compiler, Literal* literal);
 
 /* UTILITIES */
 
+/**
+ * Print error and crash.
+ *
+ * TODO: make it so we don't crash completely. It should be simple to print and error, move to compiling the next statement,
+ * then after all statements have been compiled print all errors and exit the program.
+ */
+#define errorAndExit(...)             \
+    {                                 \
+        fprintf(stderr, __VA_ARGS__); \
+        exit(EXIT_FAILURE);           \
+    }
+
 // Add bytecode to the compiled program.
 static void emitBytecode(Compiler* compiler, Bytecode bytecode) {
     INSERT_ARRAY(compiler->compiledBytecode, bytecode, Bytecode);
@@ -51,16 +63,48 @@ char* copyStringToHeap(const char* chars, int length) {
 }
 
 /**
+ * Given a new constant, try to find its index in the constant pool. Returns -1 if not in pool or the index.
+ *
+ * TODO: this method is terribly inefficient as it iterates through the entire table. We should keep a hash table
+ * of (number -> index in table) on the side and discard it after compilation is done.
+ */
+static size_t findConstantInPool(Compiler* compiler, Constant constant) {
+    for (size_t i = 0; i < compiler->constantPool.used; i++) {
+        // Skip if its not the same type
+        if (constant.type != compiler->constantPool.values[i].type) continue;
+
+        // Check if value is the same
+        switch (compiler->constantPool.values[i].type) {
+            case CONST_TYPE_STRING:
+                if (strcmp(constant.as.string, compiler->constantPool.values[i].as.string) == 0) return i;
+                break;
+
+            case CONST_TYPE_DOUBLE:
+                if (constant.as.number == compiler->constantPool.values[i].as.number) return i;
+                break;
+        }
+    }
+    return -1;
+}
+
+/**
  * Add a constant to the compiler's constant pool, returns index in the pool.
- * These constants go alongwise the bytecode in the compiled code.
+ * If the constant is already in the pool, the index of the existing one is returned.
+ * (These constants go alongwise the bytecode in the compiled code.)
  * */
 static size_t addConstantToPool(Compiler* compiler, Constant constant) {
+    // Check if its already there
+    size_t maybeIndexInPool = findConstantInPool(compiler, constant);
+    if (maybeIndexInPool != -1) return maybeIndexInPool;
+
+    // If not, insert and return index
     INSERT_ARRAY(compiler->constantPool, constant, Constant);
     return compiler->constantPool.used - 1;
 }
 
 /* VISITOR FUNCTIONS */
 
+// Visit the two expression on left and write, emit bytecode to add them
 static void visitAdditiveExpression(Compiler* compiler, AdditiveExpression* additiveExpression) {
     visitExpression(compiler, additiveExpression->leftExpression);
     visitExpression(compiler, additiveExpression->rightExpression);
@@ -76,28 +120,38 @@ static void visitAdditiveExpression(Compiler* compiler, AdditiveExpression* addi
 }
 
 static void visitPrimaryExpression(Compiler* compiler, PrimaryExpression* primaryExpression) {
-    // TODO: expand so it handles other types (like strings)
     visitLiteral(compiler, primaryExpression->literal);
 }
 
+// Visit the expression. (Should be executed only for its side-effects)
 static void visitExpressionStatement(Compiler* compiler, ExpressionStatement* expressionStatement) {
     visitExpression(compiler, expressionStatement->expression);
 }
 
+/**
+ * Visit the expression after the val declaration, save the variable identifier to constant pool,
+ * emit instruction to set identifier = val
+ */
 static void visitValDeclarationStatement(Compiler* compiler, ValDeclarationStatement* valDeclarationStatement) {
     visitExpression(compiler, valDeclarationStatement->expression);
 
     Constant constant = STRING_CONST(copyStringToHeap(valDeclarationStatement->identifier->token.start,
                                                       valDeclarationStatement->identifier->token.length));
+
+    // TODO: Remove duplicated check; addConstantToPool already runs findConstantInPool.
+    if (findConstantInPool(compiler, constant) != -1) errorAndExit("Error: val \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
+
     size_t constantIndex = addConstantToPool(compiler, constant);
     emitBytecode(compiler, BYTECODE_CONSTANT_1(OP_SET_VAL, constantIndex));
 }
 
+// Visit expression following print, then emit bytecode to print that expression
 static void visitPrintStatement(Compiler* compiler, PrintStatement* printStatement) {
     visitExpression(compiler, printStatement->expression);
     emitBytecode(compiler, BYTECODE(OP_PRINT));
 }
 
+// Add number to constant pool and emit bytecode to load it onto the stack
 static void visitNumberLiteral(Compiler* compiler, NumberLiteral* numberLiteral) {
     double number = tokenTodouble(numberLiteral->token);
     Constant constant = DOUBLE_CONST(number);
@@ -107,10 +161,27 @@ static void visitNumberLiteral(Compiler* compiler, NumberLiteral* numberLiteral)
     emitBytecode(compiler, bytecode);
 }
 
+static void visitIdentifierLiteral(Compiler* compiler, IdentifierLiteral* identifierLiteral) {
+    // Find address of this identifier in the constant pool
+    char* identifierNameNullTerminated = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
+    Constant tempConstant = (Constant){
+        .type = CONST_TYPE_STRING,
+        .as = {identifierNameNullTerminated}};
+    size_t index = findConstantInPool(compiler, tempConstant);
+    if (index == -1) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
+
+    // Generate bytecode to get the variable
+    Bytecode bytecodeToGetVariable = BYTECODE_CONSTANT_1(OP_GET_VAL, index);
+    emitBytecode(compiler, bytecodeToGetVariable);
+}
+
 static void visitLiteral(Compiler* compiler, Literal* literal) {
     switch (literal->type) {
         case NUMBER_LITERAL:
             visitNumberLiteral(compiler, literal->as.numberLiteral);
+            break;
+        case IDENTIFIER_LITERAL:
+            visitIdentifierLiteral(compiler, literal->as.identifierLiteral);
             break;
         default:
             fprintf(stderr, "Unimplemented literal type %d.", literal->type);

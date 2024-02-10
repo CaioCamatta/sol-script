@@ -21,6 +21,8 @@ static void all_tests() {
     RUN_TEST(test_compiler);
     RUN_TEST(test_compiler_print);
     RUN_TEST(test_compiler_valDeclaration);
+    RUN_TEST(test_compiler_variableDeclarationAndPrint);
+    RUN_TEST(test_addConstantToPool_noDuplicates);
 
     RUN_TEST(test_vm_addition);
     RUN_TEST(test_vm_print);
@@ -38,6 +40,7 @@ static void all_tests() {
     RUN_TEST(test_parser_booleanLiteral);
     RUN_TEST(test_parser_complexExpression);
     RUN_TEST(test_parser_nestedParenthesesExpression);
+    RUN_TEST(test_parser_variableDeclarationAndReading);
 }
 
 int main(int argc, char **argv) {

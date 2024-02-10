@@ -19,6 +19,28 @@ static int compareTypesInBytecodeArrays(BytecodeArray expected, BytecodeArray ac
     return 1;
 }
 
+// Create statement for 'val a = 42;'
+#define createBasicValDeclarationStatement()                                                      \
+    &(Statement) {                                                                                \
+        .type = VAL_DECLARATION_STATEMENT,                                                        \
+        .as.valDeclarationStatement = &(ValDeclarationStatement) {                                \
+            .identifier = &(IdentifierLiteral){                                                   \
+                .token = (Token){                                                                 \
+                    .type = TOKEN_IDENTIFIER,                                                     \
+                    .start = "x",                                                                 \
+                    .length = 1}},                                                                \
+            .expression = &(Expression) {                                                         \
+                .type = PRIMARY_EXPRESSION, .as.primaryExpression = &(PrimaryExpression) {        \
+                    .literal = &(Literal) {                                                       \
+                        .type = NUMBER_LITERAL, .as.numberLiteral = &(NumberLiteral) {            \
+                            .token = (Token) { .type = TOKEN_NUMBER, .start = "42", .length = 2 } \
+                        }                                                                         \
+                    }                                                                             \
+                }                                                                                 \
+            }                                                                                     \
+        }                                                                                         \
+    }
+
 // Test basic arithmetic expression
 int test_compiler() {
     Compiler compiler;
@@ -130,12 +152,7 @@ int test_compiler_valDeclaration() {
 
     // Setup a source structure with a val declaration statement
     Source testSource = {
-        .rootStatements = {&(Statement){
-            .type = VAL_DECLARATION_STATEMENT,
-            .as.valDeclarationStatement = &(ValDeclarationStatement){
-                .identifier = &(IdentifierLiteral){
-                    .token = (Token){.type = TOKEN_IDENTIFIER, .start = "x", .length = 1}},
-                .expression = &(Expression){.type = PRIMARY_EXPRESSION, .as.primaryExpression = &(PrimaryExpression){.literal = &(Literal){.type = NUMBER_LITERAL, .as.numberLiteral = &(NumberLiteral){.token = (Token){.type = TOKEN_NUMBER, .start = "42", .length = 2}}}}}}}},
+        .rootStatements = {createBasicValDeclarationStatement()},
         .numberOfStatements = 1,
     };
 
@@ -151,6 +168,57 @@ int test_compiler_valDeclaration() {
 
     FREE_ARRAY(compiledCode.bytecodeArray);
     FREE_ARRAY(compiledCode.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_variableDeclarationAndPrint() {
+    // val x = 42;
+    // print x;
+    Source testSource = {
+        .rootStatements = {
+            createBasicValDeclarationStatement(),
+            &(Statement){.type = PRINT_STATEMENT, .as.printStatement = &(PrintStatement){.expression = &(Expression){.type = PRIMARY_EXPRESSION, .as.primaryExpression = &(PrimaryExpression){.literal = &(Literal){.type = IDENTIFIER_LITERAL, .as.identifierLiteral = &(IdentifierLiteral){.token = (Token){.type = TOKEN_IDENTIFIER, .start = "x", .length = 1}}}}}}}},
+        .numberOfStatements = 2,
+    };
+
+    Compiler compiler;
+    initCompiler(&compiler, &testSource);
+    CompiledCode compiledCode = compile(&compiler);
+
+    ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);  // load 42 into stack
+    ASSERT(compiledCode.bytecodeArray.values[1].type == OP_SET_VAL);        // assign top of stack to variable 'x'
+    ASSERT(compiledCode.bytecodeArray.values[2].type == OP_GET_VAL);        // get variable 'x'
+    ASSERT(compiledCode.bytecodeArray.values[3].type == OP_PRINT);          // print top of stack
+
+    ASSERT(compiledCode.constantPool.values[0].type == CONST_TYPE_DOUBLE);  // 42
+    ASSERT(compiledCode.constantPool.values[0].as.number == 42);
+    ASSERT(compiledCode.constantPool.values[1].type == CONST_TYPE_STRING);  // x
+
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
+
+    return SUCCESS_RETURN_CODE;  // Assuming SUCCESS_RETURN_CODE is defined as part of your testing framework
+}
+
+int test_addConstantToPool_noDuplicates() {
+    Source source = (Source){
+        .rootStatements = {
+            createBasicValDeclarationStatement(),
+            createBasicValDeclarationStatement()},
+        .numberOfStatements = 2,
+    };
+
+    Compiler compiler;
+    initCompiler(&compiler, &source);
+    CompiledCode compiledCode = compile(&compiler);
+
+    // Assert the constants were not added twice; there should be one for '42' and one for 'x'.
+    ASSERT(compiledCode.constantPool.used == 2);
+
+    // Cleanup
+    FREE_ARRAY(compiler.compiledBytecode);
+    FREE_ARRAY(compiler.constantPool);
 
     return SUCCESS_RETURN_CODE;
 }

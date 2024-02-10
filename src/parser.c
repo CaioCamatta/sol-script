@@ -31,6 +31,8 @@ void freeSource(Source* source) {
 // Print error at current token, halt execution
 static void errorAtCurrent(ASTParser* parser, const char* message) {
     fprintf(stderr, "Error at line %d, column %d: %s", parser->current->lineNo, parser->current->colNo, message);
+    // TODO: Change this so we instead of exiting, we track that there are errors and move to the
+    // next statement. Then after all statements are parsed we report the errors. This is a better UX.
     exit(EXIT_FAILURE);
 }
 
@@ -154,6 +156,19 @@ static Expression* primaryExpression(ASTParser* parser) {
 
             return expression;
             break;
+        }
+        case TOKEN_IDENTIFIER: {
+            Literal* tempLiteral = identifierLiteral(parser);
+
+            Expression* expression = allocateASTNode(Expression);
+            expression->type = PRIMARY_EXPRESSION;
+
+            PrimaryExpression* primaryExpression = allocateASTNode(PrimaryExpression);
+            primaryExpression->literal = tempLiteral;
+
+            expression->as.primaryExpression = primaryExpression;
+
+            return expression;
         }
         case TOKEN_TRUE:
         case TOKEN_FALSE: {
