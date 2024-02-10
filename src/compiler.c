@@ -80,7 +80,7 @@ static size_t addConstantToPool(Compiler* compiler, Constant constant) {
 static size_t findIdentifierInPool(Compiler* compiler, const char* identifier) {
     for (size_t i = 0; i < compiler->constantPool.used; i++) {
         // If its a string AND its equal to the identifier
-        if (compiler->constantPool.values[i].type == CONST_TYPE_STRING && strcmp(compiler->constantPool.values[i].as.string, identifier)) {
+        if (compiler->constantPool.values[i].type == CONST_TYPE_STRING && strcmp(compiler->constantPool.values[i].as.string, identifier) == 0) {
             return i;
         }
     }
@@ -159,6 +159,7 @@ static void visitLiteral(Compiler* compiler, Literal* literal) {
             break;
         case IDENTIFIER_LITERAL:
             visitIdentifierLiteral(compiler, literal->as.identifierLiteral);
+            break;
         default:
             fprintf(stderr, "Unimplemented literal type %d.", literal->type);
             exit(EXIT_FAILURE);
