@@ -63,28 +63,43 @@ char* copyStringToHeap(const char* chars, int length) {
 }
 
 /**
- * Add a constant to the compiler's constant pool, returns index in the pool.
- * These constants go alongwise the bytecode in the compiled code.
- * */
-static size_t addConstantToPool(Compiler* compiler, Constant constant) {
-    INSERT_ARRAY(compiler->constantPool, constant, Constant);
-    return compiler->constantPool.used - 1;
+ * Given a new constant, try to find its index in the constant pool. Returns -1 if not in pool or the index.
+ *
+ * TODO: this method is terribly inefficient as it iterates through the entire table. We should keep a hash table
+ * of (number -> index in table) on the side and discard it after compilation is done.
+ */
+static size_t findConstantInPool(Compiler* compiler, Constant constant) {
+    for (size_t i = 0; i < compiler->constantPool.used; i++) {
+        // Skip if its not the same type
+        if (constant.type != compiler->constantPool.values[i].type) continue;
+
+        // Check if value is the same
+        switch (compiler->constantPool.values[i].type) {
+            case CONST_TYPE_STRING:
+                if (strcmp(constant.as.string, compiler->constantPool.values[i].as.string) == 0) return i;
+                break;
+
+            case CONST_TYPE_DOUBLE:
+                if (constant.as.number == compiler->constantPool.values[i].as.number) return i;
+                break;
+        }
+    }
+    return -1;
 }
 
 /**
- * Given an identifier, find its index in the constant pool, or throw error if it doesn't exist.
- *
- * TODO: this method is terribly inefficient as it iterates through the entire table. We should keep a hash table
- * of (identifier -> index in table) on the side and discard it after compilation is done.
- */
-static size_t findIdentifierInPool(Compiler* compiler, const char* identifier) {
-    for (size_t i = 0; i < compiler->constantPool.used; i++) {
-        // If its a string AND its equal to the identifier
-        if (compiler->constantPool.values[i].type == CONST_TYPE_STRING && strcmp(compiler->constantPool.values[i].as.string, identifier) == 0) {
-            return i;
-        }
-    }
-    errorAndExit("Error: identifier '%s' referenced before declaration.", identifier);
+ * Add a constant to the compiler's constant pool, returns index in the pool.
+ * If the constant is already in the pool, the index of the existing one is returned.
+ * (These constants go alongwise the bytecode in the compiled code.)
+ * */
+static size_t addConstantToPool(Compiler* compiler, Constant constant) {
+    // Check if its already there
+    size_t maybeIndexInPool = findConstantInPool(compiler, constant);
+    if (maybeIndexInPool != -1) return maybeIndexInPool;
+
+    // If not, insert and return index
+    INSERT_ARRAY(compiler->constantPool, constant, Constant);
+    return compiler->constantPool.used - 1;
 }
 
 /* VISITOR FUNCTIONS */
@@ -145,7 +160,11 @@ static void visitNumberLiteral(Compiler* compiler, NumberLiteral* numberLiteral)
 static void visitIdentifierLiteral(Compiler* compiler, IdentifierLiteral* identifierLiteral) {
     // Find address of this identifier in the constant pool
     char* identifierNameNullTerminated = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
-    size_t index = findIdentifierInPool(compiler, identifierNameNullTerminated);
+    Constant tempConstant = (Constant){
+        .type = CONST_TYPE_STRING,
+        .as = identifierNameNullTerminated};
+    size_t index = findConstantInPool(compiler, tempConstant);
+    if (index == -1) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
 
     // Generate bytecode to get the global variable
     Bytecode getGlobal = BYTECODE_CONSTANT_1(OP_GET_VAL, index);
