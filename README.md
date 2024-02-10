@@ -1,24 +1,27 @@
-# Delta-lang
+# The Delta Programming Language
 
-Delta is a stack-based, prototype-based, interpreted, GC-ed programming language developed in C.
+**Important** Delta is a work in progress.
 
+Delta is a stack-based, prototype-based, interpreted, GC-ed programming language with an ahead-of-time compiler. It is implemented in C.
+
+## Example program
 ```
 // Basic val declaration
 val a = 1;
 
-// Objects
+// Example object
 var uniqueNumberGenerator = struct {
-    currNumber: 0;
+  currNumber: 0;
 
-	// Print N new unique numbers and return the last unique one.
-    printNewNumbers: (var count) => {
-		while (count > 0){
-			print count;
-			this.currNumber = this.currNumber +1;
-			count = count - 1;
-		}
-		this.currNumber; // In a block expression, no 'return' keyword is necessary
-	};
+  // Print N new unique numbers and return the last unique one.
+  printNewNumbers: (var count) => {
+    while (count > 0){
+      print count;
+      this.currNumber = this.currNumber +1;
+      count = count - 1;
+    }
+    this.currNumber; // In a block expression, no 'return' keyword is necessary
+  };
 }
 
 // Print '0' and '1'.
@@ -27,25 +30,18 @@ uniqueNumberGenerator.printNewNumbers(2);
 
 ## Motivation
 
-Prototype based
-- Why? 
-	- Personal reasons: Easier to implement, 
-	- Why would u want prototype-based in general? Easy composition, more freedom. However you usually end up to faking a class systen
+After finishing the book [Crafting Interpreters](https://craftinginterpreters.com/) and implementing the language Lox, I decided I wanted to create my own language, from start to finish. I had also just read [The C Programming Language](https://en.wikipedia.org/wiki/The_C_Programming_Language) and was motivated to work on another C project.
 
 
-## Inspiration
+###  Inspiration
 
-I took some inspiration from [Lox's lexical grammar](https://craftinginterpreters.com/appendix-i.html), the [C lexical grammar](https://learn.microsoft.com/en-us/cpp/c-language/lexical-grammar?view=msvc-170) ("punctuators" etc), and [Scala's lexical syntax](https://www.scala-lang.org/files/archive/spec/2.12/01-lexical-syntax.html#identifiers). The grammar will evolve as I develop the language.
+Delta's lexical grammar is inspired by a number of languages
+- C: the [C lexical grammar](https://learn.microsoft.com/en-us/cpp/c-language/lexical-grammar?view=msvc-170). 
+- Scala: some of the [lexical grammar](https://www.scala-lang.org/files/archive/spec/2.12/01-lexical-syntax.html) and syntax, such as [block expressions](https://www.scala-lang.org/files/archive/spec/2.11/06-expressions.html#blocks), and functional aspects. 
+- Python: some of the design decisions
+- JavaScript: prototypes!
+- Lox: Delta's internals are similar to Lox's in many ways.
 
-Inspired by Scala (some of the syntax and functional aspects), JavaScript (prototypes), the JVM (compilation, etc) and Python (CPython), and Lox 
-
-## Real example 
-
-```
-
-### Example 
-
-Delta has a debug module that shows the tokens parsed, the AST, and the compiled code. Here's an example for the statement.
 
 ## V1 Project Tracker
 
