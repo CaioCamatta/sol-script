@@ -1,5 +1,5 @@
-#ifndef delta_hash_table_h
-#define delta_hash_table_h
+#ifndef sol_script_hash_table_h
+#define sol_script_hash_table_h
 
 #include <stdbool.h>
 

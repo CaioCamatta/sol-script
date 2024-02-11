@@ -1,10 +1,10 @@
-#ifndef delta_tree_parser_h
-#define delta_tree_parser_h
+#ifndef sol_script_tree_parser_h
+#define sol_script_tree_parser_h
 
 #include "array.h"
 #include "token.h"
 
-// These are the types of syntax nodes Delta has. We use it
+// These are the types of syntax nodes SolScript has. We use it
 typedef enum {
     STATEMENT,
     EXPRESSION,

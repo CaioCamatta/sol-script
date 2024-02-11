@@ -1,5 +1,5 @@
-#ifndef delta_bytecode_h
-#define delta_bytecode_h
+#ifndef sol_script_bytecode_h
+#define sol_script_bytecode_h
 
 #include <stddef.h>
 
@@ -82,7 +82,7 @@ typedef struct {
 // --------------------------------- Compiled Code ----------------------------------
 
 /**
- * Delta's compiled code consists of a constant pool and the bytecode.
+ * SolScript's compiled code consists of a constant pool and the bytecode.
  * This is all the information the VM needs to run.
  */
 typedef struct {

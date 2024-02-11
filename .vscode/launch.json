@@ -5,7 +5,7 @@
       "name": "Build & Debug Main",
       "type": "lldb",
       "request": "launch",
-      "program": "${workspaceFolder}/delta",
+      "program": "${workspaceFolder}/sol",
       "args": ["${input:testFile}"],
       "cwd": "${workspaceFolder}",
       "preLaunchTask": "Make debuggable program"
@@ -23,7 +23,7 @@
     {
       "id": "testFile",
       "type": "promptString",
-      "description": "Deltalang '.d' file to debug.",
+      "description": "SolScript '.ss' file to debug.",
       "default": "./code.d"
     }
   ]

@@ -1,5 +1,5 @@
-#ifndef delta_array_h
-#define delta_array_h
+#ifndef sol_script_array_h
+#define sol_script_array_h
 
 #include <stdio.h>
 #include <stdlib.h>

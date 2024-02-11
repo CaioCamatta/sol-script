@@ -1,8 +1,8 @@
-# The Delta Programming Language
+# The SolScript Programming Language
 
-**Important:** Delta is a work in progress.
+**Important:** SolScript is a work in progress.
 
-Delta is a stack-based, prototype-based, interpreted, GC-ed programming language with an ahead-of-time compiler. It is implemented in C.
+SolScript is a stack-based, prototype-based, interpreted, GC-ed programming language with an ahead-of-time compiler. It is implemented in C.
 
 ## Example program
 ```
@@ -35,12 +35,12 @@ After finishing the book [Crafting Interpreters](https://craftinginterpreters.co
 
 ###  Inspiration
 
-Delta's lexical grammar is inspired by a number of languages
+SolScript's lexical grammar is inspired by a number of languages
 - C: the [C lexical grammar](https://learn.microsoft.com/en-us/cpp/c-language/lexical-grammar?view=msvc-170). 
 - Scala: some of the [lexical grammar](https://www.scala-lang.org/files/archive/spec/2.12/01-lexical-syntax.html) and syntax, such as [block expressions](https://www.scala-lang.org/files/archive/spec/2.11/06-expressions.html#blocks), and functional aspects. 
 - Python: some of the design decisions
 - JavaScript: prototypes!
-- Lox: Delta's internals are similar to Lox's in many ways.
+- Lox: SolScript's internals are similar to Lox's in many ways.
 
 
 ## V1 Project Tracker
@@ -83,9 +83,9 @@ The following features are necessary a proper v1.0 release, in rough order:
 
 ## Language Design
 
-The following diagram gives a high-level overview of Delta's internals.
+The following diagram gives a high-level overview of SolScript's internals.
 
-Delta has four main components: scanner, parser, compiler, and virtual machine. The scanner reads user code and outputs tokens. The parser consumes tokens and produces and abstract syntax tree (AST). The compiler traverses the AST and produces bytecode. The VM executes bytecode and keeps a stack of Values.
+SolScript has four main components: scanner, parser, compiler, and virtual machine. The scanner reads user code and outputs tokens. The parser consumes tokens and produces and abstract syntax tree (AST). The compiler traverses the AST and produces bytecode. The VM executes bytecode and keeps a stack of Values.
 
 ![Architecture](./architecture.png)
 
@@ -93,7 +93,7 @@ Delta has four main components: scanner, parser, compiler, and virtual machine. 
 
 The scanner is a regular language that turns characters into tokens. For example, the "val" becomes "TOKEN_VAL".
 
-The following is Delta's lexical grammar. It's insipired by [Lox's lexical grammar](https://craftinginterpreters.com/appendix-i.html), the [C lexical grammar](https://learn.microsoft.com/en-us/cpp/c-language/lexical-grammar?view=msvc-170) , and [Scala's lexical syntax](https://www.scala-lang.org/files/archive/spec/2.12/01-lexical-syntax.html#identifiers).
+The following is SolScript's lexical grammar. It's insipired by [Lox's lexical grammar](https://craftinginterpreters.com/appendix-i.html), the [C lexical grammar](https://learn.microsoft.com/en-us/cpp/c-language/lexical-grammar?view=msvc-170) , and [Scala's lexical syntax](https://www.scala-lang.org/files/archive/spec/2.12/01-lexical-syntax.html#identifiers).
 
 ```
 token:
@@ -309,7 +309,7 @@ Source(numberOfStatements=1)
 
 ### Compiled code
 
-Delta's compiled code is heavily inspired by [java `.class` files](https://en.wikipedia.org/wiki/Java_class_file). Delta. It's has two parts:
+SolScript's compiled code is heavily inspired by [java `.class` files](https://en.wikipedia.org/wiki/Java_class_file). SolScript. It's has two parts:
 - An array of bytecode
 - A pool of constants
 
@@ -335,7 +335,7 @@ Bytecode
 
 ### The Virtual Machine
 
-The Delta Virtual Machine* is heaviliy inspired by the [Lox VM](https://craftinginterpreters.com/a-virtual-machine.html) and the [JVM](https://docs.oracle.com/javase/specs/jvms/se8/html/), and to some extend, the [CPython VM](https://leanpub.com/insidethepythonvirtualmachine/read). It transates 
+The SolScript Virtual Machine* is heaviliy inspired by the [Lox VM](https://craftinginterpreters.com/a-virtual-machine.html) and the [JVM](https://docs.oracle.com/javase/specs/jvms/se8/html/), and to some extend, the [CPython VM](https://leanpub.com/insidethepythonvirtualmachine/read). It transates 
 
 *For those new to programming languages, a "virtual machine" here is not the same as a "Windows virtual machine". A programming language VM translates bytecode down to low-level code or machine code. 
 
@@ -356,7 +356,7 @@ A runtime `Value` could be a number, string, object, etc.
 
 ### Philosophy
 
-Delta is a "toy" programming language. Its main advantage over "real" languages, if any, its simplicity and the ease with which one can learn its internals. Learning this codebase should be exceptionally easy. Hence, comments and documentation should be extensive.
+SolScript is a "toy" programming language. Its main advantage over "real" languages, if any, its simplicity and the ease with which one can learn its internals. Learning this codebase should be exceptionally easy. Hence, comments and documentation should be extensive.
 
 Additionally, run time performance is more critical than compilation time performance. Inneficiencies in the scanner, parser, and compiler are acceptable.
 
@@ -370,4 +370,4 @@ Additionally, run time performance is more critical than compilation time perfor
 
 `test/unit/src/util/` - unit tests for the utilities C code
 
-`test/delta/` - tests for the Delta language
+`test/sol/` - tests written in SolScript

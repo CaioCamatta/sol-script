@@ -1,5 +1,5 @@
-#ifndef delta_scanner_h
-#define delta_scanner_h
+#ifndef sol_script_scanner_h
+#define sol_script_scanner_h
 
 #include "array.h"
 #include "token.h"
@@ -38,7 +38,7 @@ TokenArray scanTokens(Scanner* scanner);
 TokenArray scanTokensFromString(Scanner* scanner, const char* sourceCode);
 
 /**
- * Scan the next Token following the Delta lexical Grammar.
+ * Scan the next Token following the SolScript lexical Grammar.
  *
  * Throws exceptions in case of lexical errors.
  *
