@@ -24,7 +24,7 @@
       "id": "testFile",
       "type": "promptString",
       "description": "SolScript '.ss' file to debug.",
-      "default": "./code.d"
+      "default": "./code.sol"
     }
   ]
 }
