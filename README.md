@@ -1,8 +1,10 @@
-# The SolScript Programming Language
+# SolScript
 
-**Important:** SolScript is a work in progress.
+SolScript is an interpreted, stack-based, prototype-based, garbage-collected programming language.
 
-SolScript is a stack-based, prototype-based, interpreted, GC-ed programming language with an ahead-of-time compiler. It is implemented in C.
+**Important:** SolScript is a [work in progress](https://github.com/CaioCamatta/sol-script/tree/caiocamatta/pre-OSS-documentation-update?tab=readme-ov-file#v1.0-release-tracker).
+
+To try SolScript, clone the repo, run `make`, and start a REPL via ``./sol`. You can also execute `.sol` code via `./sol program.sol`.
 
 ## Example program
 ```
@@ -30,7 +32,7 @@ uniqueNumberGenerator.printNewNumbers(2);
 
 ## Motivation
 
-After finishing the book [Crafting Interpreters](https://craftinginterpreters.com/) and implementing the language Lox, I decided I wanted to create my own language, from start to finish. I had also just read [The C Programming Language](https://en.wikipedia.org/wiki/The_C_Programming_Language) and was motivated to work on another C project.
+After finishing the book [Crafting Interpreters](https://craftinginterpreters.com/) and implementing the language Lox, I decided I wanted to create my own language. I had also just read [The C Programming Language](https://en.wikipedia.org/wiki/The_C_Programming_Language) and was motivated to work on another C project.
 
 
 ###  Inspiration
@@ -41,45 +43,6 @@ SolScript's lexical grammar is inspired by a number of languages
 - Python: some of the design decisions
 - JavaScript: prototypes!
 - Lox: SolScript's internals are similar to Lox's in many ways.
-
-
-## V1 Project Tracker
-
-The following features are necessary a proper v1.0 release, in rough order:
-
- - [x] Design the lexical grammar
- - [x] Design the syntax grammar
- - [x] Add build configuration using make
- - [x] Add unit testing framework ([MinUnit](https://jera.com/techinfo/jtns/jtn002))
- - [x] Add REPL / interactive shell
- - [x] Implement and test hash table utility
- - [x] Implement and test array utility
- - [X] Implement robust debugging module for all parts of the system.
- - [x] Implement full scanner for the lexical grammar
- - [x] Implement minimal parser, compiler, and VM for end-to-end test.
- - [x] Add constant pool (similar to [Java's](https://blogs.oracle.com/javamagazine/post/java-class-file-constant-pool))
- - [X] Add support for variable declaration and access
- - [X] Implement print statements
- - [X] Implement additive expression
- - [ ] Implement all other "simple" expressions, i.e. excluding call-expressions
- - [ ] Implement selection statement (`if`s)
- - [ ] Implement the rest of the parser for the whole syntax grammar
- - [ ] Add conditional debugging/logging for tests that fail
- - [ ] Implement functions and returns
- - [ ] Implement assignment statements
- - [ ] Add CLI argument to enable or disable debugging logs in the REPL.
- - [ ] Improve error logs; print line and column
- - [ ] Implement block statements and expressions
- - [ ] Implement iteration statement (loops)
- - [ ] Add Panic Mode error recovery; stop crashing the compiler on every error.
- - [ ] Implement objects / structs
- - [ ] Add garbage collector
- - [ ] Implement closures
- - [ ] (maybe) Add native functions
- - [ ] (maybe) Add benchmark tests
- - [ ] (maybe) Profile execution and find opportunities for optimization
- - [ ] (maybe) Implement [NaN boxing](https://piotrduperas.com/posts/nan-boxing)
-
 
 ## Language Design
 
@@ -93,7 +56,7 @@ SolScript has four main components: scanner, parser, compiler, and virtual machi
 
 The scanner is a regular language that turns characters into tokens. For example, the "val" becomes "TOKEN_VAL".
 
-The following is SolScript's lexical grammar. It's insipired by [Lox's lexical grammar](https://craftinginterpreters.com/appendix-i.html), the [C lexical grammar](https://learn.microsoft.com/en-us/cpp/c-language/lexical-grammar?view=msvc-170) , and [Scala's lexical syntax](https://www.scala-lang.org/files/archive/spec/2.12/01-lexical-syntax.html#identifiers).
+The following is SolScript's lexical grammar. It's insipired by the [C lexical grammar](https://learn.microsoft.com/en-us/cpp/c-language/lexical-grammar?view=msvc-170), and [Scala lexical expressions](https://www.scala-lang.org/files/archive/spec/2.11/06-expressions.html#blocks).
 
 ```
 token:
@@ -371,3 +334,41 @@ Additionally, run time performance is more critical than compilation time perfor
 `test/unit/src/util/` - unit tests for the utilities C code
 
 `test/sol/` - tests written in SolScript
+
+
+## v1.0 Release Tracker
+
+The following features are necessary a proper v1.0 release, in rough order:
+
+ - [x] Design the lexical grammar
+ - [x] Design the syntax grammar
+ - [x] Add build configuration using make
+ - [x] Add unit testing framework ([MinUnit](https://jera.com/techinfo/jtns/jtn002))
+ - [x] Add REPL / interactive shell
+ - [x] Implement and test hash table utility
+ - [x] Implement and test array utility
+ - [X] Implement robust debugging module for all parts of the system.
+ - [x] Implement full scanner for the lexical grammar
+ - [x] Implement minimal parser, compiler, and VM for end-to-end test.
+ - [x] Add constant pool (similar to [Java's](https://blogs.oracle.com/javamagazine/post/java-class-file-constant-pool))
+ - [X] Add support for variable declaration and access
+ - [X] Implement print statements
+ - [X] Implement additive expression
+ - [ ] Implement all other "simple" expressions, i.e. excluding call-expressions
+ - [ ] Implement selection statement (`if`s)
+ - [ ] Implement the rest of the parser for the whole syntax grammar
+ - [ ] Add conditional debugging/logging for tests that fail
+ - [ ] Implement functions and returns
+ - [ ] Implement assignment statements
+ - [ ] Add CLI argument to enable or disable debugging logs in the REPL.
+ - [ ] Improve error logs; print line and column
+ - [ ] Implement block statements and expressions
+ - [ ] Implement iteration statement (loops)
+ - [ ] Add Panic Mode error recovery; stop crashing the compiler on every error.
+ - [ ] Implement objects / structs
+ - [ ] Add garbage collector
+ - [ ] Implement closures
+ - [ ] (maybe) Add native functions
+ - [ ] (maybe) Add benchmark tests
+ - [ ] (maybe) Profile execution and find opportunities for optimization
+ - [ ] (maybe) Implement [NaN boxing](https://piotrduperas.com/posts/nan-boxing)
