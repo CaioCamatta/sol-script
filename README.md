@@ -2,7 +2,8 @@
 
 SolScript is an interpreted, stack-based, prototype-based, garbage-collected programming language.
 
-To try it, clone the repo, run `make`, and start a REPL via `./sol`. You can also execute `.sol` code via `./sol program.sol`.
+To get started, clone the repository, run `make` to build the project, and run `./sol` to start the REPL. To execute a SolScript program, use `./sol program.sol`.
+
 
 **Important:** SolScript is a [work in progress](https://github.com/CaioCamatta/sol-script?tab=readme-ov-file#v10-release-tracker).
 
@@ -33,17 +34,7 @@ uniqueNumberGenerator.printNewNumbers(2);
 
 ## Motivation
 
-After finishing the book [Crafting Interpreters](https://craftinginterpreters.com/) and implementing the language Lox, I decided I wanted to create my own language. I had also just read [The C Programming Language](https://en.wikipedia.org/wiki/The_C_Programming_Language) and was motivated to work on another C project.
-
-
-###  Inspiration
-
-SolScript's lexical grammar is inspired by a number of languages
-- C: the [C lexical grammar](https://learn.microsoft.com/en-us/cpp/c-language/lexical-grammar?view=msvc-170). 
-- Scala: some of the [lexical grammar](https://www.scala-lang.org/files/archive/spec/2.12/01-lexical-syntax.html) and syntax, such as [block expressions](https://www.scala-lang.org/files/archive/spec/2.11/06-expressions.html#blocks), and functional aspects. 
-- Python: some of the design decisions
-- JavaScript: prototypes!
-- Lox: SolScript's internals are similar to Lox's in many ways.
+SolScript is a toy programming language and a passion project. After finishing the book [Crafting Interpreters](https://craftinginterpreters.com/) and implementing the language Lox, I decided to create my own language. I had also just read [The C Programming Language](https://en.wikipedia.org/wiki/The_C_Programming_Language) and was motivated to work on another C project.
 
 ## Language Design
 
@@ -57,7 +48,7 @@ SolScript has four main components: scanner, parser, compiler, and virtual machi
 
 The scanner is a regular language that turns characters into tokens. For example, "val" becomes a `TOKEN_VAL`.
 
-The following is SolScript's lexical grammar. It's insipired by the [C lexical grammar](https://learn.microsoft.com/en-us/cpp/c-language/lexical-grammar?view=msvc-170), and [Scala lexical expressions](https://www.scala-lang.org/files/archive/spec/2.11/06-expressions.html#blocks).
+The following is SolScript's lexical grammar. It's inspired by the [C lexical grammar](https://learn.microsoft.com/en-us/cpp/c-language/lexical-grammar?view=msvc-170), and [Scala lexical expressions](https://www.scala-lang.org/files/archive/spec/2.11/06-expressions.html#blocks).
 
 ```
 token:
@@ -273,7 +264,7 @@ Source(numberOfStatements=1)
 
 ### Compiled code
 
-SolScript's compiled code is heavily inspired by [java .class files](https://en.wikipedia.org/wiki/Java_class_file). SolScript. It's has two parts:
+SolScript's compiled code is heavily inspired by [java .class files](https://en.wikipedia.org/wiki/Java_class_file). SolScript. It has two parts:
 - An array of bytecode. Bytecode have optional operands.
 - A pool of constants
 
@@ -297,7 +288,7 @@ Bytecode
 
 ### The Virtual Machine
 
-The SolScript Virtual Machine* is heaviliy inspired by the [Lox VM](https://craftinginterpreters.com/a-virtual-machine.html) and the [JVM](https://docs.oracle.com/javase/specs/jvms/se8/html/), and to some extend, the [CPython VM](https://leanpub.com/insidethepythonvirtualmachine/read). It transates 
+The SolScript Virtual Machine* is heavily inspired by the [Lox VM](https://craftinginterpreters.com/a-virtual-machine.html) and the [JVM](https://docs.oracle.com/javase/specs/jvms/se8/html/), and to some extent, the [CPython VM](https://leanpub.com/insidethepythonvirtualmachine/read). 
 
 *For those new to programming languages, a "virtual machine" here is not the same as a "Windows virtual machine". A programming language VM translates bytecode down to low-level code or machine code. 
 
@@ -320,7 +311,7 @@ A runtime `Value` could be a number, string, object, etc.
 
 SolScript is a "toy" programming language. Its main advantage over "real" languages, if any, its simplicity and the ease with which one can learn its internals. Learning this codebase should be exceptionally easy. Hence, comments and documentation should be extensive.
 
-Additionally, run time performance is more critical than compilation time performance. Inneficiencies in the scanner, parser, and compiler are acceptable.
+Additionally, run time performance is more critical than compilation time performance. Inefficiencies in the scanner, parser, and compiler are acceptable.
 
 ### Project structure
 
