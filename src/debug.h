@@ -1,5 +1,5 @@
-#ifndef delta_debug_h
-#define delta_debug_h
+#ifndef sol_script_debug_h
+#define sol_script_debug_h
 
 #include "array.h"
 #include "bytecode.h"

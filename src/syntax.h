@@ -1,5 +1,5 @@
-#ifndef delta_syntax_h
-#define delta_syntax_h
+#ifndef sol_script_syntax_h
+#define sol_script_syntax_h
 
 #include "token.h"
 #include "util/array.h"

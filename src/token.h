@@ -1,5 +1,5 @@
-#ifndef delta_token_h
-#define delta_token_h
+#ifndef sol_script_token_h
+#define sol_script_token_h
 
 // If modifying this enum, you should also update `tokenTypeToString`.
 typedef enum {

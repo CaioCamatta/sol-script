@@ -17,7 +17,7 @@ SRC_UTIL_FILES := $(patsubst $(UTIL_DIR)/%.c, $(OBJ_DIR)/%.o, $(UTIL_FILES))
 OBJ_FILES := $(SRC_OBJ_FILES) $(SRC_UTIL_FILES)
 
 # Main executable
-MAIN_EXEC := delta
+MAIN_EXEC := sol
 
 # Unit test files
 UNIT_TEST_SRC_FILES := $(wildcard $(UNIT_TEST_DIR)/*.c)

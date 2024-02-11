@@ -1,5 +1,5 @@
-#ifndef delta_vm_h
-#define delta_vm_h
+#ifndef sol_script_vm_h
+#define sol_script_vm_h
 
 #include "array.h"
 #include "bytecode.h"

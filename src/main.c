@@ -95,7 +95,7 @@ int main(int argc, const char* argv[]) {
     } else if (argc == 2) {
         executeFile(argv[1]);
     } else {
-        fprintf(stderr, "Usage: delta [path]\n");
+        fprintf(stderr, "Usage: sol [path]\n");
         exit(1);
     }
 

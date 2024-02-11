@@ -1,5 +1,5 @@
-#ifndef delta_file_h
-#define delta_file_h
+#ifndef sol_script_file_h
+#define sol_script_file_h
 
 /**
  * Read file as a string

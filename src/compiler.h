@@ -1,5 +1,5 @@
-#ifndef delta_compiler_h
-#define delta_compiler_h
+#ifndef sol_script_compiler_h
+#define sol_script_compiler_h
 
 #include "bytecode.h"
 #include "syntax.h"

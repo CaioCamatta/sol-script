@@ -1,13 +1,13 @@
-#ifndef delta_value_h
-#define delta_value_h
+#ifndef sol_script_value_h
+#define sol_script_value_h
 
 #include <stdbool.h>
 #include <stdint.h>
 
 /**
- * The stack holds Values. A Value represents any Delta type like booleans, numbers, strings, etc.
+ * The stack holds Values. A Value represents any SolScript type like booleans, numbers, strings, etc.
  *
- * TODO: one of the highest leverage optimizations for Delta is to use NaN boxing instead of tagged union.
+ * TODO: one of the highest leverage optimizations for SolScript is to use NaN boxing instead of tagged union.
  */
 typedef enum {
     TYPE_DOUBLE,
