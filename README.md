@@ -4,7 +4,7 @@ SolScript is an interpreted, stack-based, prototype-based, garbage-collected pro
 
 **Important:** SolScript is a [work in progress](https://github.com/CaioCamatta/sol-script/tree/caiocamatta/pre-OSS-documentation-update?tab=readme-ov-file#v1.0-release-tracker).
 
-To try SolScript, clone the repo, run `make`, and start a REPL via ``./sol`. You can also execute `.sol` code via `./sol program.sol`.
+To try SolScript, clone the repo, run `make`, and start a REPL via `./sol`. You can also execute `.sol` code via `./sol program.sol`.
 
 ## Example program
 ```
