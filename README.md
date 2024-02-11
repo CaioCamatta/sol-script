@@ -2,13 +2,14 @@
 
 SolScript is an interpreted, stack-based, prototype-based, garbage-collected programming language.
 
-**Important:** SolScript is a [work in progress](https://github.com/CaioCamatta/sol-script/tree/caiocamatta/pre-OSS-documentation-update?tab=readme-ov-file#v1.0-release-tracker).
+To try it, clone the repo, run `make`, and start a REPL via `./sol`. You can also execute `.sol` code via `./sol program.sol`.
 
-To try SolScript, clone the repo, run `make`, and start a REPL via `./sol`. You can also execute `.sol` code via `./sol program.sol`.
+**Important:** SolScript is a [work in progress](https://github.com/CaioCamatta/sol-script?tab=readme-ov-file#v10-release-tracker).
+
 
 ## Example program
 ```
-// Basic val declaration
+// Constant declaration declaration
 val a = 1;
 
 // Example object
@@ -26,7 +27,7 @@ var uniqueNumberGenerator = struct {
   };
 }
 
-// Print '0' and '1'.
+// Prints '0' and '1'.
 uniqueNumberGenerator.printNewNumbers(2);
 ```
 
@@ -54,7 +55,7 @@ SolScript has four main components: scanner, parser, compiler, and virtual machi
 
 ### Lexical Grammar
 
-The scanner is a regular language that turns characters into tokens. For example, the "val" becomes "TOKEN_VAL".
+The scanner is a regular language that turns characters into tokens. For example, "val" becomes a `TOKEN_VAL`.
 
 The following is SolScript's lexical grammar. It's insipired by the [C lexical grammar](https://learn.microsoft.com/en-us/cpp/c-language/lexical-grammar?view=msvc-170), and [Scala lexical expressions](https://www.scala-lang.org/files/archive/spec/2.11/06-expressions.html#blocks).
 
@@ -118,9 +119,9 @@ TOKEN_EOF(lexeme="", line=2, column=2)
 
 ### Syntactical Grammar
 
-The syntactical grammar implemented by the Parser _should_ be parsable a look-ahead, left-to-right grammar with 1 token of look-ahead (aka LALR(1)). A program (`source`) is a series of `statement`s. Statements have side effects (or they aren't useful). `expression`s and `literal`s are the other two main "types". Expressions are evaluated to a value.
+The syntactical grammar _should_ and LALR(1) grammar, i.e. it can be parsed by a left-to-right parser with 1 token of look-ahead. In SolScript, a program Source is a series of Statements. Statements use Expressions and Literals. Expressions are evaluated to a Value at run time.
 
-This grammar is primarily inspired by the [ANSI C grammar](https://slebok.github.io/zoo/c/c90/sdf/extracted/index.html#Statement) and Scala.
+This grammar is primarily inspired by the [ANSI C grammar](https://slebok.github.io/zoo/c/c90/sdf/extracted/index.html#Statement), [Lox](https://craftinginterpreters.com/) and Scala.
 
 ```
 source: 
@@ -272,13 +273,11 @@ Source(numberOfStatements=1)
 
 ### Compiled code
 
-SolScript's compiled code is heavily inspired by [java `.class` files](https://en.wikipedia.org/wiki/Java_class_file). SolScript. It's has two parts:
-- An array of bytecode
+SolScript's compiled code is heavily inspired by [java .class files](https://en.wikipedia.org/wiki/Java_class_file). SolScript. It's has two parts:
+- An array of bytecode. Bytecode have optional operands.
 - A pool of constants
 
-Bytecode may contains operands.
-
-The pool of constants is necessary so the compiler can pass constants (such as strings for variable names) to the VM.
+The constant pool is necessary so the compiler can pass constants, such as strings for variable names, to the VM.
 
 #### Example
 For the statement `print 2+3-4;`, the compiler would produce the following constants and bytecode:
