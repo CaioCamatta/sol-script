@@ -306,3 +306,30 @@ void printCompiledCode(CompiledCode compiledCode) {
     printBytecodeArray(compiledCode.bytecodeArray);
     printf("\n");
 }
+
+// ---------------------------------------------------------------------------
+// ----------------------------------- VM ------------------------------------
+// ---------------------------------------------------------------------------
+
+void printStack(const Value* topOfStack, const Value* bottomOfStack) {
+    printf("[ ");
+    while (topOfStack != bottomOfStack) {
+        Value val = *topOfStack;
+        switch (val.type) {
+            case TYPE_BOOLEAN:
+                printf("{ %s }", val.as.booleanVal ? "true" : "false");
+                break;
+            case TYPE_DOUBLE:
+                printf("{ %.5f }", val.as.doubleVal);
+                break;
+            case TYPE_NULL:
+                printf("{ NULL }");
+                break;
+            case TYPE_STRING:
+                printf("{ %.5s }", val.as.stringVal);
+                break;
+        }
+        topOfStack--;
+    }
+    printf(" ]");
+}
