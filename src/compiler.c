@@ -104,18 +104,101 @@ static size_t addConstantToPool(Compiler* compiler, Constant constant) {
 
 /* VISITOR FUNCTIONS */
 
-// Visit the two expression on left and write, emit bytecode to add them
 static void visitAdditiveExpression(Compiler* compiler, AdditiveExpression* additiveExpression) {
     visitExpression(compiler, additiveExpression->leftExpression);
     visitExpression(compiler, additiveExpression->rightExpression);
 
     switch (additiveExpression->punctuator.type) {
         case TOKEN_PLUS:
-            emitBytecode(compiler, BYTECODE(OP_ADD));
+            emitBytecode(compiler, BYTECODE(OP_BINARY_ADD));
             break;
+        case TOKEN_MINUS:
+            emitBytecode(compiler, BYTECODE(OP_BINARY_SUBTRACT));
+            break;
+    }
+}
 
-        default:
+static void visitMultiplicativeExpression(Compiler* compiler, MultiplicativeExpression* multiplicativeExpression) {
+    visitExpression(compiler, multiplicativeExpression->leftExpression);
+    visitExpression(compiler, multiplicativeExpression->rightExpression);
+
+    switch (multiplicativeExpression->punctuator.type) {
+        case TOKEN_STAR:
+            emitBytecode(compiler, BYTECODE(OP_BINARY_MULTIPLY));
             break;
+        case TOKEN_SLASH:
+            emitBytecode(compiler, BYTECODE(OP_BINARY_DIVIDE));
+            break;
+    }
+}
+
+static void visitEqualityExpression(Compiler* compiler, EqualityExpression* equalityExpression) {
+    visitExpression(compiler, equalityExpression->leftExpression);
+    visitExpression(compiler, equalityExpression->rightExpression);
+
+    switch (equalityExpression->punctuator.type) {
+        case TOKEN_EQUAL_EQUAL:
+            emitBytecode(compiler, BYTECODE(OP_BINARY_EQUAL));
+            break;
+        case TOKEN_EXCLAMATION_EQUAL:
+            emitBytecode(compiler, BYTECODE(OP_BINARY_NOT_EQUAL));
+            break;
+    }
+}
+
+static void visitLogicalOrExpression(Compiler* compiler, LogicalOrExpression* logicalOrExpression) {
+    visitExpression(compiler, logicalOrExpression->leftExpression);
+    visitExpression(compiler, logicalOrExpression->rightExpression);
+    emitBytecode(compiler, BYTECODE(OP_BINARY_LOGICAL_OR));
+}
+
+static void visitLogicalAndExpression(Compiler* compiler, LogicalAndExpression* logicalAndExpression) {
+    visitExpression(compiler, logicalAndExpression->leftExpression);
+    visitExpression(compiler, logicalAndExpression->rightExpression);
+    emitBytecode(compiler, BYTECODE(OP_BINARY_LOGICAL_AND));
+}
+
+static void visitMultiplicativeExpression(Compiler* compiler, MultiplicativeExpression* multiplicativeExpression) {
+    visitExpression(compiler, multiplicativeExpression->leftExpression);
+    visitExpression(compiler, multiplicativeExpression->rightExpression);
+
+    switch (multiplicativeExpression->punctuator.type) {
+        case TOKEN_STAR:
+            emitBytecode(compiler, BYTECODE(OP_BINARY_MULTIPLY));
+            break;
+        case TOKEN_SLASH:
+            emitBytecode(compiler, BYTECODE(OP_BINARY_DIVIDE));
+            break;
+    }
+}
+
+// Visit the two expression on left and write, emit bytecode to add them
+static void visitComparisonExpression(Compiler* compiler, ComparisonExpression* comparisonExpression) {
+    visitExpression(compiler, comparisonExpression->leftExpression);
+    visitExpression(compiler, comparisonExpression->rightExpression);
+
+    switch (comparisonExpression->punctuator.type) {
+        case TOKEN_GREATER:
+            emitBytecode(compiler, BYTECODE(OP_BINARY_GT));
+            break;
+        case TOKEN_GREATER_EQUAL:
+            emitBytecode(compiler, BYTECODE(OP_BINARY_GTE));
+            break;
+        case TOKEN_LESSER:
+            emitBytecode(compiler, BYTECODE(OP_BINARY_LT));
+            break;
+        case TOKEN_LESSER_EQUAL:
+            emitBytecode(compiler, BYTECODE(OP_BINARY_LTE));
+            break;
+    }
+}
+
+static void visitUnaryExpression(Compiler* compiler, UnaryExpression* unaryExpression) {
+    visitExpression(compiler, unaryExpression->rightExpression);
+    if (unaryExpression->punctuator.type == TOKEN_MINUS) {
+        emitBytecode(compiler, BYTECODE(OP_UNARY_NEGATE));
+    } else if (unaryExpression->punctuator.type == TOKEN_EXCLAMATION) {
+        emitBytecode(compiler, BYTECODE(OP_UNARY_NOT));
     }
 }
 
@@ -195,7 +278,12 @@ static void visitExpression(Compiler* compiler, Expression* expression) {
         case ADDITIVE_EXPRESSION:
             visitAdditiveExpression(compiler, expression->as.additiveExpression);
             break;
-
+        case MULTIPLICATIVE_EXPRESSION:
+            visitMultiplicativeExpression(compiler, expression->as.multiplicativeExpression);
+            break;
+        case UNARY_EXPRESSION:
+            visitUnaryExpression(compiler, expression->as.unaryExpression);
+            break;
         case PRIMARY_EXPRESSION:
             visitPrimaryExpression(compiler, expression->as.primaryExpression);
             break;
