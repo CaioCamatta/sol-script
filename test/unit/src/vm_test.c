@@ -37,7 +37,7 @@ int test_vm_addition() {
     INSERT_ARRAY(code.constantPool, DOUBLE_CONST(2.0), Constant);  // put Constant in index 1
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 1), Bytecode);
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_ADD), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_ADD), Bytecode);
 
     // Initialize VM with the bytecode
     VM vm;

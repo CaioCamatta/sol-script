@@ -115,6 +115,8 @@ static void visitAdditiveExpression(Compiler* compiler, AdditiveExpression* addi
         case TOKEN_MINUS:
             emitBytecode(compiler, BYTECODE(OP_BINARY_SUBTRACT));
             break;
+        default:
+            break;
     }
 }
 
@@ -128,6 +130,8 @@ static void visitMultiplicativeExpression(Compiler* compiler, MultiplicativeExpr
             break;
         case TOKEN_SLASH:
             emitBytecode(compiler, BYTECODE(OP_BINARY_DIVIDE));
+            break;
+        default:
             break;
     }
 }
@@ -143,6 +147,8 @@ static void visitEqualityExpression(Compiler* compiler, EqualityExpression* equa
         case TOKEN_EXCLAMATION_EQUAL:
             emitBytecode(compiler, BYTECODE(OP_BINARY_NOT_EQUAL));
             break;
+        default:
+            break;
     }
 }
 
@@ -156,20 +162,6 @@ static void visitLogicalAndExpression(Compiler* compiler, LogicalAndExpression* 
     visitExpression(compiler, logicalAndExpression->leftExpression);
     visitExpression(compiler, logicalAndExpression->rightExpression);
     emitBytecode(compiler, BYTECODE(OP_BINARY_LOGICAL_AND));
-}
-
-static void visitMultiplicativeExpression(Compiler* compiler, MultiplicativeExpression* multiplicativeExpression) {
-    visitExpression(compiler, multiplicativeExpression->leftExpression);
-    visitExpression(compiler, multiplicativeExpression->rightExpression);
-
-    switch (multiplicativeExpression->punctuator.type) {
-        case TOKEN_STAR:
-            emitBytecode(compiler, BYTECODE(OP_BINARY_MULTIPLY));
-            break;
-        case TOKEN_SLASH:
-            emitBytecode(compiler, BYTECODE(OP_BINARY_DIVIDE));
-            break;
-    }
 }
 
 // Visit the two expression on left and write, emit bytecode to add them
@@ -189,6 +181,8 @@ static void visitComparisonExpression(Compiler* compiler, ComparisonExpression* 
             break;
         case TOKEN_LESSER_EQUAL:
             emitBytecode(compiler, BYTECODE(OP_BINARY_LTE));
+            break;
+        default:
             break;
     }
 }
@@ -286,6 +280,18 @@ static void visitExpression(Compiler* compiler, Expression* expression) {
             break;
         case PRIMARY_EXPRESSION:
             visitPrimaryExpression(compiler, expression->as.primaryExpression);
+            break;
+        case EQUALITY_EXPRESSION:
+            visitEqualityExpression(compiler, expression->as.equalityExpression);
+            break;
+        case LOGICAL_OR_EXPRESSION:
+            visitLogicalOrExpression(compiler, expression->as.logicalOrExpression);
+            break;
+        case LOGICAL_AND_EXPRESSION:
+            visitLogicalAndExpression(compiler, expression->as.logicalAndExpression);
+            break;
+        case COMPARISON_EXPRESSION:
+            visitComparisonExpression(compiler, expression->as.comparisonExpression);
             break;
         default:
             fprintf(stderr, "Unimplemented expression type %d.", expression->type);

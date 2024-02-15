@@ -118,7 +118,7 @@ int test_compiler() {
     Bytecode expectedBytecode[] = {
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_LOAD_CONSTANT},
-        {.type = OP_ADD},
+        {.type = OP_BINARY_ADD},
     };
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 3};
 
