@@ -45,4 +45,9 @@ typedef struct {
         .type = TYPE_STRING, .as = {.stringVal = stringValArg } \
     }
 
+#define IS_DOUBLE(value) ((value).type == TYPE_DOUBLE)
+#define IS_NULL(value) ((value).type == TYPE_NULL)
+#define IS_BOOLEAN(value) ((value).type == TYPE_BOOLEAN)
+#define IS_STRING(value) ((value).type == TYPE_STRING)
+
 #endif
