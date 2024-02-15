@@ -2,5 +2,6 @@
 #define sol_script_config_h
 
 #define DEBUG_COMPILER 1
+// #define DEBUG_VM
 
 #endif
