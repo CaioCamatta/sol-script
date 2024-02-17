@@ -105,17 +105,18 @@ static void printValue(Value value) {
         push(vm, BOOL_VAL((operand1.as.doubleVal operation operand2.as.doubleVal) == 1)); \
     } while (false)
 
-/* Null and false are falsey. Everything else is truthy */
-static bool isFalsey(Value value) {
-    return IS_NULL(value) || (IS_BOOLEAN(value) && !(value.as.booleanVal));
+/* Null, false, and the number 0 are falsey. Everything else is truthy */
+static bool isFalsey(
+    Value value) {
+    return IS_NULL(value) || (IS_BOOLEAN(value) && !(value.as.booleanVal)) || (IS_DOUBLE(value) && (value.as.doubleVal == 0));
 }
 
 // Apply an operation to two booleans (converting if needed), push boolean to stack
-#define BINARY_TRUTHY_OP(operation)                                          \
-    do {                                                                     \
-        Value operand1 = pop(vm);                                            \
-        Value operand2 = pop(vm);                                            \
-        push(vm, BOOL_VAL(isFalsey(operand1) operation isFalsey(operand2))); \
+#define BINARY_TRUTHY_OP(operation)                                            \
+    do {                                                                       \
+        Value operand1 = pop(vm);                                              \
+        Value operand2 = pop(vm);                                              \
+        push(vm, BOOL_VAL(!isFalsey(operand1) operation !isFalsey(operand2))); \
     } while (false)
 
 /**

@@ -1,1 +1,1 @@
-print 2 == 3;
+print false || 0;
