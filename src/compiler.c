@@ -238,6 +238,20 @@ static void visitNumberLiteral(Compiler* compiler, NumberLiteral* numberLiteral)
     emitBytecode(compiler, bytecode);
 }
 
+static void visitBooleanLiteral(Compiler* compiler, BooleanLiteral* booleanLiteral) {
+    switch (booleanLiteral->token.type) {
+        case TOKEN_FALSE:
+            emitBytecode(compiler, BYTECODE(OP_FALSE));
+            break;
+        case TOKEN_TRUE:
+            emitBytecode(compiler, BYTECODE(OP_TRUE));
+            break;
+        default:
+            errorAndExit("Error: failed to parse boolean from token '%.*s'.", booleanLiteral->token.length, booleanLiteral->token.start);
+            return;
+    }
+}
+
 static void visitIdentifierLiteral(Compiler* compiler, IdentifierLiteral* identifierLiteral) {
     // Find address of this identifier in the constant pool
     char* identifierNameNullTerminated = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
@@ -259,6 +273,9 @@ static void visitLiteral(Compiler* compiler, Literal* literal) {
             break;
         case IDENTIFIER_LITERAL:
             visitIdentifierLiteral(compiler, literal->as.identifierLiteral);
+            break;
+        case BOOLEAN_LITERAL:
+            visitBooleanLiteral(compiler, literal->as.booleanLiteral);
             break;
         default:
             fprintf(stderr, "Unimplemented literal type %d.", literal->type);

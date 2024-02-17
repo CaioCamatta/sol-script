@@ -35,9 +35,9 @@ typedef struct {
         .type = TYPE_NULL \
     }
 
-#define BOOL_VAL(doubleValArg)                                    \
-    (Value) {                                                     \
-        .type = TYPE_BOOLEAN, .as = {.booleanVal = doubleValArg } \
+#define BOOL_VAL(boolValArg)                                    \
+    (Value) {                                                   \
+        .type = TYPE_BOOLEAN, .as = {.booleanVal = boolValArg } \
     }
 
 #define STRING_VAL(stringValArg)                                \

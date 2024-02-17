@@ -74,6 +74,10 @@ static void printValue(Value value) {
             printf("%f", value.as.doubleVal);
             break;
 
+        case TYPE_BOOLEAN:
+            printf("%s", value.as.doubleVal ? "true" : "false");
+            break;
+
         default:
             break;
     };
@@ -135,7 +139,14 @@ void step(VM* vm) {
         case OP_PRINT: {
             Value value = pop(vm);
             printValue(value);
-
+            break;
+        }
+        case OP_TRUE: {
+            push(vm, BOOL_VAL(true));
+            break;
+        }
+        case OP_FALSE: {
+            push(vm, BOOL_VAL(false));
             break;
         }
         case OP_UNARY_NEGATE: {
