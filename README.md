@@ -299,7 +299,7 @@ OP_SET_VAL,        // set local variable; expects an identifier at the top of th
 OP_GET_VAL,        // read local variable; expects an identifier at the top of the stack
 OP_TRUE,           // put Value true on the stack
 OP_FALSE,          // put Value false on the stack
-OP_ADD,            // add two numbers at the top of the stack, replace them with the result Value
+OP_BINARY_ADD,            // add two numbers at the top of the stack, replace them with the result Value
 OP_PRINT           // print value at the top of the stack
 ```
 

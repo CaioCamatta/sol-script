@@ -75,7 +75,7 @@ static void printValue(Value value) {
             break;
 
         case TYPE_BOOLEAN:
-            printf("%s", value.as.doubleVal ? "true" : "false");
+            printf("%s", value.as.booleanVal ? "true" : "false");
             break;
 
         default:
@@ -83,7 +83,7 @@ static void printValue(Value value) {
     };
 }
 
-// For doubles/numbers only
+// Apply an operation to two doubles, push double to stack
 #define BINARY_NUMBER_OP(operation)                                                  \
     do {                                                                             \
         if (!IS_DOUBLE(peek(vm, 0)) || !IS_DOUBLE(peek(vm, 1))) {                    \
@@ -94,12 +94,23 @@ static void printValue(Value value) {
         push(vm, DOUBLE_VAL(operand1.as.doubleVal operation operand2.as.doubleVal)); \
     } while (false)
 
+// Apply an operation to two doubles, push boolean to stack
+#define BINARY_NUMBER_OP_TRUTHY(operation)                                                \
+    do {                                                                                  \
+        if (!IS_DOUBLE(peek(vm, 0)) || !IS_DOUBLE(peek(vm, 1))) {                         \
+            runtimeError(vm, "Operands must be numbers.");                                \
+        }                                                                                 \
+        Value operand1 = pop(vm);                                                         \
+        Value operand2 = pop(vm);                                                         \
+        push(vm, BOOL_VAL((operand1.as.doubleVal operation operand2.as.doubleVal) == 1)); \
+    } while (false)
+
 /* Null and false are falsey. Everything else is truthy */
 static bool isFalsey(Value value) {
     return IS_NULL(value) || (IS_BOOLEAN(value) && !(value.as.booleanVal));
 }
 
-// For any value that has a truthy values
+// Apply an operation to two booleans (converting if needed), push boolean to stack
 #define BINARY_TRUTHY_OP(operation)                                          \
     do {                                                                     \
         Value operand1 = pop(vm);                                            \
@@ -185,19 +196,19 @@ void step(VM* vm) {
             break;
         }
         case OP_BINARY_GT: {
-            BINARY_NUMBER_OP(>);
+            BINARY_NUMBER_OP_TRUTHY(>);
             break;
         }
         case OP_BINARY_GTE: {
-            BINARY_NUMBER_OP(>=);
+            BINARY_NUMBER_OP_TRUTHY(>=);
             break;
         }
         case OP_BINARY_LT: {
-            BINARY_NUMBER_OP(<);
+            BINARY_NUMBER_OP_TRUTHY(<);
             break;
         }
         case OP_BINARY_LTE: {
-            BINARY_NUMBER_OP(<=);
+            BINARY_NUMBER_OP_TRUTHY(<=);
             break;
         }
         case OP_BINARY_LOGICAL_AND: {
@@ -209,11 +220,11 @@ void step(VM* vm) {
             break;
         }
         case OP_BINARY_EQUAL: {
-            BINARY_TRUTHY_OP(==);
+            BINARY_NUMBER_OP_TRUTHY(==);
             break;
         }
         case OP_BINARY_NOT_EQUAL: {
-            BINARY_TRUTHY_OP(!=);
+            BINARY_NUMBER_OP_TRUTHY(!=);
             break;
         }
         default:

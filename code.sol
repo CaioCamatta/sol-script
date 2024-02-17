@@ -1,2 +1,1 @@
-val a = 2;
-print a;
+print 2 == 3;
