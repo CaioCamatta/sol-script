@@ -294,46 +294,46 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
                 printf(" [ FALSE ]\n");
                 break;
             case OP_UNARY_NEGATE:
-                printf(" [ UNARY_NEGATE ]");
+                printf(" [ UNARY_NEGATE ]\n");
                 break;
             case OP_UNARY_NOT:
-                printf(" [ UNARY_NOT ]");
+                printf(" [ UNARY_NOT ]\n");
                 break;
             case OP_BINARY_ADD:
-                printf(" [ BINARY_ADD ]");
+                printf(" [ BINARY_ADD ]\n");
                 break;
             case OP_BINARY_SUBTRACT:
-                printf(" [ BINARY_SUBTRACT ]");
+                printf(" [ BINARY_SUBTRACT ]\n");
                 break;
             case OP_BINARY_MULTIPLY:
-                printf(" [ BINARY_MULTIPLY ]");
+                printf(" [ BINARY_MULTIPLY ]\n");
                 break;
             case OP_BINARY_DIVIDE:
-                printf(" [ BINARY_DIVIDE ]");
+                printf(" [ BINARY_DIVIDE ]\n");
                 break;
             case OP_BINARY_GT:
-                printf(" [ BINARY_GT ]");
+                printf(" [ BINARY_GT ]\n");
                 break;
             case OP_BINARY_GTE:
-                printf(" [ BINARY_GTE ]");
+                printf(" [ BINARY_GTE ]\n");
                 break;
             case OP_BINARY_LT:
-                printf(" [ BINARY_LT ]");
+                printf(" [ BINARY_LT ]\n");
                 break;
             case OP_BINARY_LTE:
-                printf(" [ BINARY_LTE ]");
+                printf(" [ BINARY_LTE ]\n");
                 break;
             case OP_BINARY_LOGICAL_AND:
-                printf(" [ BINARY_LOGICAL_AND ]");
+                printf(" [ BINARY_LOGICAL_AND ]\n");
                 break;
             case OP_BINARY_LOGICAL_OR:
-                printf(" [ BINARY_LOGICAL_OR ]");
+                printf(" [ BINARY_LOGICAL_OR ]\n");
                 break;
             case OP_BINARY_EQUAL:
-                printf(" [ BINARY_EQUAL ]");
+                printf(" [ BINARY_EQUAL ]\n");
                 break;
             case OP_BINARY_NOT_EQUAL:
-                printf(" [ BINARY_NOT_EQUAL ]");
+                printf(" [ BINARY_NOT_EQUAL ]\n");
                 break;
         }
     }
