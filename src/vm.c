@@ -87,7 +87,7 @@ static void printValue(Value value) {
 #define BINARY_NUMBER_OP(operation)                                                  \
     do {                                                                             \
         if (!IS_DOUBLE(peek(vm, 0)) || !IS_DOUBLE(peek(vm, 1))) {                    \
-            runtimeError(vm, "Operands must be numbers.");                           \
+            runtimeError(vm, "Operands of arithmetic expression must be numbers.");  \
         }                                                                            \
         Value operand2 = pop(vm);                                                    \
         Value operand1 = pop(vm);                                                    \
@@ -221,11 +221,11 @@ void step(VM* vm) {
             break;
         }
         case OP_BINARY_EQUAL: {
-            BINARY_NUMBER_OP_TRUTHY(==);
+            BINARY_TRUTHY_OP(==);
             break;
         }
         case OP_BINARY_NOT_EQUAL: {
-            BINARY_NUMBER_OP_TRUTHY(!=);
+            BINARY_TRUTHY_OP(!=);
             break;
         }
         default:
