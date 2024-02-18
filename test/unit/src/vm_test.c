@@ -108,7 +108,7 @@ int test_vm_print() {
     return SUCCESS_RETURN_CODE;
 }
 
-int test_vm_setAndGetGlobal() {
+int test_vm_set_and_get_global() {
     CompiledCode code = (CompiledCode){
         .constantPool = (ConstantPool){},
         .bytecodeArray = (BytecodeArray){}};
@@ -138,6 +138,134 @@ int test_vm_setAndGetGlobal() {
     Value expected_result = DOUBLE_VAL(42.0);
     Value actual_result = popVmStack(&vm);
     ASSERT(compareValues(actual_result, expected_result));
+
+    // Clean up
+    FREE_ARRAY(code.bytecodeArray);
+    FREE_ARRAY(code.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_vm_binary_equal() {
+    CompiledCode code = (CompiledCode){
+        .constantPool = (ConstantPool){},
+        .bytecodeArray = (BytecodeArray){}};
+    INIT_ARRAY(code.bytecodeArray, Bytecode);
+    INIT_ARRAY(code.constantPool, Constant);
+
+    // Test case: 1 == 1; should push true
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(1.0), Constant);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_EQUAL), Bytecode);
+
+    // Test case: 1 != 1; should push false
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_NOT_EQUAL), Bytecode);
+
+    VM vm;
+    initVM(&vm, code);
+    run(&vm);
+
+    // Check results
+    Value result_not_equal = popVmStack(&vm);  // Should be false
+    Value result_equal = popVmStack(&vm);      // Should be true
+
+    ASSERT(result_equal.type == TYPE_BOOLEAN && result_equal.as.booleanVal == true);
+    ASSERT(result_not_equal.type == TYPE_BOOLEAN && result_not_equal.as.booleanVal == false);
+
+    // Clean up
+    FREE_ARRAY(code.bytecodeArray);
+    FREE_ARRAY(code.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_vm_comparison_operations() {
+    CompiledCode code = (CompiledCode){
+        .constantPool = (ConstantPool){},
+        .bytecodeArray = (BytecodeArray){}};
+    INIT_ARRAY(code.bytecodeArray, Bytecode);
+    INIT_ARRAY(code.constantPool, Constant);
+
+    // Preparing constants: 1.0 and 2.0 for comparison tests
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(1.0), Constant);  // Index 0
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(2.0), Constant);  // Index 1
+
+    // Test case: 1 < 2; should push true
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 1), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_LT), Bytecode);
+
+    // Test case: 1 <= 2; should push true
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 1), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_LTE), Bytecode);
+
+    // Test case: 2 > 1; should push true
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 1), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_GT), Bytecode);
+
+    // Test case: 2 >= 1; should push true
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 1), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_GTE), Bytecode);
+
+    VM vm;
+    initVM(&vm, code);
+    run(&vm);
+
+    // Check results
+    Value result_gte = popVmStack(&vm);
+    Value result_gt = popVmStack(&vm);
+    Value result_lte = popVmStack(&vm);
+    Value result_lt = popVmStack(&vm);
+
+    ASSERT(result_lt.type == TYPE_BOOLEAN && result_lt.as.booleanVal == true);
+    ASSERT(result_lte.type == TYPE_BOOLEAN && result_lte.as.booleanVal == true);
+    ASSERT(result_gt.type == TYPE_BOOLEAN && result_gt.as.booleanVal == true);
+    ASSERT(result_gte.type == TYPE_BOOLEAN && result_gte.as.booleanVal == true);
+
+    // Clean up
+    FREE_ARRAY(code.bytecodeArray);
+    FREE_ARRAY(code.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_vm_logical_operations() {
+    CompiledCode code = (CompiledCode){
+        .constantPool = (ConstantPool){},
+        .bytecodeArray = (BytecodeArray){}};
+    INIT_ARRAY(code.bytecodeArray, Bytecode);
+    INIT_ARRAY(code.constantPool, Constant);
+
+    // Preparing constants: true (1.0 as true) and false (0.0 as false) for logical tests
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(1.0), Constant);  // Index 0 as true
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(0.0), Constant);  // Index 1 as false
+
+    // Test case: true && false; should push false
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);  // true
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 1), Bytecode);  // false
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_LOGICAL_AND), Bytecode);
+
+    // Test case: false || true; should push true
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 1), Bytecode);  // false
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);  // true
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_LOGICAL_OR), Bytecode);
+
+    VM vm;
+    initVM(&vm, code);
+    run(&vm);
+
+    // Check results
+    Value result_or = popVmStack(&vm);   // Should be true
+    Value result_and = popVmStack(&vm);  // Should be false
+
+    ASSERT(result_and.type == TYPE_BOOLEAN && result_and.as.booleanVal == false);
+    ASSERT(result_or.type == TYPE_BOOLEAN && result_or.as.booleanVal == true);
 
     // Clean up
     FREE_ARRAY(code.bytecodeArray);

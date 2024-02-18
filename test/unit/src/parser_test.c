@@ -28,7 +28,7 @@ static Token createToken(TokenType type, const char* lexeme) {
 }
 
 // Test for parsing a val declaration with a simple expression
-int test_parser_simpleExpression() {
+int test_parser_simple_expression() {
     // Create a mock token array for the expression "val result = 1 + 2"
     Token tokensArray[] = {
         createToken(TOKEN_VAL, "val"),
@@ -87,7 +87,7 @@ int test_parser_simpleExpression() {
     return SUCCESS_RETURN_CODE;
 }
 
-int test_parser_printStatement() {
+int test_parser_print_statement() {
     TokenType types[] = {TOKEN_PRINT, TOKEN_NUMBER, TOKEN_PLUS, TOKEN_NUMBER, TOKEN_SEMICOLON, TOKEN_EOF};
     TokenArray tokens = createTokenArray(types, 6);
 
@@ -120,7 +120,7 @@ int test_parser_errorHandling() {
 }
 
 // Example function to test parsing of a logical OR expression, including detailed assertions
-int test_parser_logicalOrExpression() {
+int test_parser_logical_or_expression() {
     Token tokensArray[] = {
         createToken(TOKEN_TRUE, "true"),
         createToken(TOKEN_OR_OR, "||"),
@@ -164,7 +164,7 @@ int test_parser_logicalOrExpression() {
 }
 
 // Test for parsing a logical AND expression
-int test_parser_logicalAndExpression() {
+int test_parser_logical_and_expression() {
     Token tokensArray[] = {
         createToken(TOKEN_FALSE, "false"),
         createToken(TOKEN_AND_AND, "&&"),
@@ -207,7 +207,7 @@ int test_parser_logicalAndExpression() {
 }
 
 // Test for parsing an Equality Expression
-int test_parser_equalityExpression() {
+int test_parser_equality_expression() {
     Token tokensArray[] = {
         createToken(TOKEN_NUMBER, "5"),
         createToken(TOKEN_EQUAL_EQUAL, "=="),
@@ -249,7 +249,7 @@ int test_parser_equalityExpression() {
     return SUCCESS_RETURN_CODE;
 }
 
-int test_parser_comparisonExpression() {
+int test_parser_comparison_expression() {
     Token tokensArray[] = {
         createToken(TOKEN_NUMBER, "10"),
         createToken(TOKEN_GREATER, ">"),
@@ -291,7 +291,7 @@ int test_parser_comparisonExpression() {
     return SUCCESS_RETURN_CODE;
 }
 
-int test_parser_multiplicativeExpression() {
+int test_parser_multiplicative_expression() {
     Token tokensArray[] = {
         createToken(TOKEN_NUMBER, "3"),
         createToken(TOKEN_STAR, "*"),
@@ -333,7 +333,7 @@ int test_parser_multiplicativeExpression() {
     return SUCCESS_RETURN_CODE;
 }
 
-int test_parser_unaryExpression() {
+int test_parser_unary_expression() {
     Token tokensArray[] = {
         createToken(TOKEN_MINUS, "-"),
         createToken(TOKEN_NUMBER, "1"),
@@ -369,7 +369,7 @@ int test_parser_unaryExpression() {
     return SUCCESS_RETURN_CODE;
 }
 
-int test_parser_booleanLiteral() {
+int test_parser_boolean_literal() {
     Token tokensArray[] = {
         createToken(TOKEN_TRUE, "true"),
         createToken(TOKEN_SEMICOLON, ";"),
@@ -402,7 +402,7 @@ int test_parser_booleanLiteral() {
 }
 
 // Test for parsing a complex expression combining various types of expressions and literals
-int test_parser_complexExpression() {
+int test_parser_complex_expression() {
     // val result = 10 + (2 * 3) / (4 - 2) && true || false;
     Token tokensArray[] = {
         createToken(TOKEN_VAL, "val"),
@@ -503,7 +503,7 @@ int test_parser_complexExpression() {
     return SUCCESS_RETURN_CODE;
 }
 
-int test_parser_nestedParenthesesExpression() {
+int test_parser_nested_parentheses_expression() {
     // (1 + (2 * 3));
     Token tokensArray[] = {
         createToken(TOKEN_LEFT_PAREN, "("),
@@ -552,7 +552,7 @@ int test_parser_nestedParenthesesExpression() {
     return SUCCESS_RETURN_CODE;
 }
 
-int test_parser_variableDeclarationAndReading() {
+int test_parser_variable_declaration_and_reading() {
     // Manually create tokens array
     Token tokensArray[] = {
         createToken(TOKEN_VAL, "val"),

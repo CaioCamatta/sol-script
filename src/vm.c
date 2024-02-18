@@ -89,8 +89,8 @@ static void printValue(Value value) {
         if (!IS_DOUBLE(peek(vm, 0)) || !IS_DOUBLE(peek(vm, 1))) {                    \
             runtimeError(vm, "Operands must be numbers.");                           \
         }                                                                            \
-        Value operand1 = pop(vm);                                                    \
         Value operand2 = pop(vm);                                                    \
+        Value operand1 = pop(vm);                                                    \
         push(vm, DOUBLE_VAL(operand1.as.doubleVal operation operand2.as.doubleVal)); \
     } while (false)
 
@@ -100,8 +100,8 @@ static void printValue(Value value) {
         if (!IS_DOUBLE(peek(vm, 0)) || !IS_DOUBLE(peek(vm, 1))) {                         \
             runtimeError(vm, "Operands must be numbers.");                                \
         }                                                                                 \
-        Value operand1 = pop(vm);                                                         \
         Value operand2 = pop(vm);                                                         \
+        Value operand1 = pop(vm);                                                         \
         push(vm, BOOL_VAL((operand1.as.doubleVal operation operand2.as.doubleVal) == 1)); \
     } while (false)
 
@@ -114,8 +114,8 @@ static bool isFalsey(
 // Apply an operation to two booleans (converting if needed), push boolean to stack
 #define BINARY_TRUTHY_OP(operation)                                            \
     do {                                                                       \
-        Value operand1 = pop(vm);                                              \
         Value operand2 = pop(vm);                                              \
+        Value operand1 = pop(vm);                                              \
         push(vm, BOOL_VAL(!isFalsey(operand1) operation !isFalsey(operand2))); \
     } while (false)
 

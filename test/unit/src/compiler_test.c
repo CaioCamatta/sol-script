@@ -166,7 +166,7 @@ int test_compiler_print() {
     return SUCCESS_RETURN_CODE;
 }
 
-int test_compiler_valDeclaration() {
+int test_compiler_val_declaration() {
     Compiler compiler;
 
     // Setup a source structure with a val declaration statement
@@ -192,7 +192,7 @@ int test_compiler_valDeclaration() {
     return SUCCESS_RETURN_CODE;
 }
 
-int test_compiler_variableDeclarationAndPrint() {
+int test_compiler_variable_declaration_and_printing() {
     // val x = 42;
     // print x;
     Source testSource = {
@@ -221,7 +221,7 @@ int test_compiler_variableDeclarationAndPrint() {
     return SUCCESS_RETURN_CODE;  // Assuming SUCCESS_RETURN_CODE is defined as part of your testing framework
 }
 
-int test_addConstantToPool_noDuplicates() {
+int test_add_constant_to_pool_no_duplicates() {
     Source source = (Source){
         .rootStatements = {
             VAL_DECLARATION_STATEMENT("x", PRIMARY_EXPRESSION(NUMBER_LITERAL("42"))),
