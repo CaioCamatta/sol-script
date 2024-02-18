@@ -44,6 +44,9 @@ static void all_tests() {
     RUN_TEST(test_vm_binary_equal);
     RUN_TEST(test_vm_comparison_operations);
     RUN_TEST(test_vm_logical_operations);
+    RUN_TEST(test_vm_boolean_truthiness);
+    RUN_TEST(test_vm_unary_not);
+    RUN_TEST(test_vm_unary_negation);
 }
 
 int main(int argc, char **argv) {

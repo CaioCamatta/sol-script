@@ -248,6 +248,4 @@ void run(VM* vm) {
     while (vm->IP != lastInstruction) {
         step(vm);
     }
-
-    printf("\n");
 }

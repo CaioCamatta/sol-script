@@ -98,7 +98,7 @@ int test_vm_print() {
     // Assertions
     // Check if the buffer contains the expected output
     char expectedOutput[128];
-    sprintf(expectedOutput, "%f\n", numberToPrint.as.number);
+    sprintf(expectedOutput, "%f", numberToPrint.as.number);
     ASSERT(strcmp(buffer, expectedOutput) == 0);
 
     // Clean up
@@ -270,6 +270,104 @@ int test_vm_logical_operations() {
     // Clean up
     FREE_ARRAY(code.bytecodeArray);
     FREE_ARRAY(code.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_vm_boolean_truthiness() {
+    CompiledCode code = (CompiledCode){
+        .constantPool = (ConstantPool){},
+        .bytecodeArray = (BytecodeArray){}};
+    INIT_ARRAY(code.bytecodeArray, Bytecode);
+    INIT_ARRAY(code.constantPool, Constant);
+
+    // Preparing constants
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(0.0), Constant);  // Index 0
+
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);  // Pushes 0.0
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_FALSE), Bytecode);                        // Pushes false
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_LOGICAL_OR), Bytecode);            // Should evaluate to false
+
+    VM vm;
+    initVM(&vm, code);
+    run(&vm);
+
+    // Check result
+    Value result = popVmStack(&vm);  // Should be false
+
+    ASSERT(result.type == TYPE_BOOLEAN && result.as.booleanVal == false);
+
+    // Clean up
+    FREE_ARRAY(code.bytecodeArray);
+    FREE_ARRAY(code.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_vm_unary_negation() {
+    CompiledCode code = {0};
+    INIT_ARRAY(code.bytecodeArray, Bytecode);
+    INIT_ARRAY(code.constantPool, Constant);
+
+    // Insert constant - The number to be negated
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(5.0), Constant);  // Index 0, value 5.0
+
+    // Load constant onto stack
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_UNARY_NEGATE), Bytecode);
+
+    // Initialize VM and run the code
+    VM vm;
+    initVM(&vm, code);
+    run(&vm);
+
+    // Pop result from stack and check if it is the negated value
+    Value result = popVmStack(&vm);
+
+    // Assert the result is as expected (-5.0)
+    ASSERT(result.type == TYPE_DOUBLE && result.as.doubleVal == -5.0);
+
+    // Clean up
+    FREE_ARRAY(code.bytecodeArray);
+    FREE_ARRAY(code.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_vm_unary_not() {
+    CompiledCode codeTrue = {0}, codeFalse = {0};
+    INIT_ARRAY(codeTrue.bytecodeArray, Bytecode);
+    INIT_ARRAY(codeFalse.bytecodeArray, Bytecode);
+
+    // Test case for true: NOT true -> should push false
+    INSERT_ARRAY(codeTrue.bytecodeArray, BYTECODE(OP_TRUE), Bytecode);
+    INSERT_ARRAY(codeTrue.bytecodeArray, BYTECODE(OP_UNARY_NOT), Bytecode);
+
+    // Test case for false: NOT false -> should push true
+    INSERT_ARRAY(codeFalse.bytecodeArray, BYTECODE(OP_FALSE), Bytecode);
+    INSERT_ARRAY(codeFalse.bytecodeArray, BYTECODE(OP_UNARY_NOT), Bytecode);
+
+    // Initialize VM and run the code for true
+    VM vmTrue;
+    initVM(&vmTrue, codeTrue);
+    run(&vmTrue);
+
+    // Pop result from stack and check if it is false
+    Value resultTrue = popVmStack(&vmTrue);  // Should be false
+    ASSERT(resultTrue.type == TYPE_BOOLEAN && resultTrue.as.booleanVal == false);
+
+    // Initialize VM and run the code for false
+    VM vmFalse;
+    initVM(&vmFalse, codeFalse);
+    run(&vmFalse);
+
+    // Pop result from stack and check if it is true
+    Value resultFalse = popVmStack(&vmFalse);  // Should be true
+    ASSERT(resultFalse.type == TYPE_BOOLEAN && resultFalse.as.booleanVal == true);
+
+    // Clean up
+    FREE_ARRAY(codeTrue.bytecodeArray);
+    FREE_ARRAY(codeFalse.bytecodeArray);
 
     return SUCCESS_RETURN_CODE;
 }
