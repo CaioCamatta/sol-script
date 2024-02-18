@@ -628,3 +628,24 @@ int test_compiler_unary_expressions() {
 
     return SUCCESS_RETURN_CODE;
 }
+
+int test_compiler_boolean_literal() {
+    Compiler compiler;
+
+    Source testSource = (Source){
+        .rootStatements = {
+            EXPRESSION_STATEMENT(PRIMARY_EXPRESSION(BOOLEAN_LITERAL(false)))},
+        .numberOfStatements = 1,
+    };
+
+    initCompiler(&compiler, &testSource);
+    CompiledCode compiledCodeFalse = compile(&compiler);
+
+    ASSERT(compiledCodeFalse.bytecodeArray.used == 1);
+    ASSERT(compiledCodeFalse.bytecodeArray.values[0].type == OP_FALSE);
+
+    FREE_ARRAY(compiledCodeFalse.bytecodeArray);
+    FREE_ARRAY(compiledCodeFalse.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
