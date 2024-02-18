@@ -1,2 +1,2 @@
-val a = 2;
-print a;
+// Example code
+print false || 0;

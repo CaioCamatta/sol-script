@@ -55,6 +55,7 @@ static void repl() {
             vm.compiledCode.bytecodeArray.used++;
         }
         run(&vm);
+        printf("\n");
 
         FREE_ARRAY(tokens);
         freeSource(source);
@@ -87,6 +88,7 @@ static void executeFile(const char* path) {
     VM vm;
     initVM(&vm, compiledCode);
     run(&vm);
+    printf("\n");
 }
 
 int main(int argc, const char* argv[]) {

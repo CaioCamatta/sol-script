@@ -35,14 +35,19 @@ typedef struct {
         .type = TYPE_NULL \
     }
 
-#define BOOL_VAL(doubleValArg)                                    \
-    (Value) {                                                     \
-        .type = TYPE_BOOLEAN, .as = {.booleanVal = doubleValArg } \
+#define BOOL_VAL(boolValArg)                                    \
+    (Value) {                                                   \
+        .type = TYPE_BOOLEAN, .as = {.booleanVal = boolValArg } \
     }
 
 #define STRING_VAL(stringValArg)                                \
     (Value) {                                                   \
         .type = TYPE_STRING, .as = {.stringVal = stringValArg } \
     }
+
+#define IS_DOUBLE(value) ((value).type == TYPE_DOUBLE)
+#define IS_NULL(value) ((value).type == TYPE_NULL)
+#define IS_BOOLEAN(value) ((value).type == TYPE_BOOLEAN)
+#define IS_STRING(value) ((value).type == TYPE_STRING)
 
 #endif

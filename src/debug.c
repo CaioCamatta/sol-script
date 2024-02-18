@@ -275,9 +275,6 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
 
     for (int i = 0; i < bytecodeArray.used; i++) {
         switch (bytecodeArray.values[i].type) {
-            case OP_ADD:
-                printf(" [ ADD ]\n");
-                break;
             case OP_LOAD_CONSTANT:
                 printf(" [ LOAD_CONSTANT #%zu ]\n", bytecodeArray.values[i].maybeConstantIndex);
                 break;
@@ -296,6 +293,48 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
             case OP_FALSE:
                 printf(" [ FALSE ]\n");
                 break;
+            case OP_UNARY_NEGATE:
+                printf(" [ UNARY_NEGATE ]\n");
+                break;
+            case OP_UNARY_NOT:
+                printf(" [ UNARY_NOT ]\n");
+                break;
+            case OP_BINARY_ADD:
+                printf(" [ BINARY_ADD ]\n");
+                break;
+            case OP_BINARY_SUBTRACT:
+                printf(" [ BINARY_SUBTRACT ]\n");
+                break;
+            case OP_BINARY_MULTIPLY:
+                printf(" [ BINARY_MULTIPLY ]\n");
+                break;
+            case OP_BINARY_DIVIDE:
+                printf(" [ BINARY_DIVIDE ]\n");
+                break;
+            case OP_BINARY_GT:
+                printf(" [ BINARY_GT ]\n");
+                break;
+            case OP_BINARY_GTE:
+                printf(" [ BINARY_GTE ]\n");
+                break;
+            case OP_BINARY_LT:
+                printf(" [ BINARY_LT ]\n");
+                break;
+            case OP_BINARY_LTE:
+                printf(" [ BINARY_LTE ]\n");
+                break;
+            case OP_BINARY_LOGICAL_AND:
+                printf(" [ BINARY_LOGICAL_AND ]\n");
+                break;
+            case OP_BINARY_LOGICAL_OR:
+                printf(" [ BINARY_LOGICAL_OR ]\n");
+                break;
+            case OP_BINARY_EQUAL:
+                printf(" [ BINARY_EQUAL ]\n");
+                break;
+            case OP_BINARY_NOT_EQUAL:
+                printf(" [ BINARY_NOT_EQUAL ]\n");
+                break;
         }
     }
 }
@@ -305,4 +344,32 @@ void printCompiledCode(CompiledCode compiledCode) {
     printConstantPool(compiledCode.constantPool);
     printBytecodeArray(compiledCode.bytecodeArray);
     printf("\n");
+}
+
+// ---------------------------------------------------------------------------
+// ----------------------------------- VM ------------------------------------
+// ---------------------------------------------------------------------------
+
+// Print VM stack. The top of the stack will be on the left.
+void printStack(const Value* topOfStack, const Value* bottomOfStack) {
+    printf("Stack: [ ");
+    while (topOfStack != bottomOfStack) {
+        topOfStack--;
+        Value val = *topOfStack;
+        switch (val.type) {
+            case TYPE_BOOLEAN:
+                printf(KGRY "{" RESET " %s " KGRY "} " RESET, val.as.booleanVal ? "true" : "false");
+                break;
+            case TYPE_DOUBLE:
+                printf(KGRY "{" RESET " %.5f " KGRY "} " RESET, val.as.doubleVal);
+                break;
+            case TYPE_NULL:
+                printf(KGRY "{" RESET " NULL " KGRY "} " RESET);
+                break;
+            case TYPE_STRING:
+                printf(KGRY "{" RESET " %.5s " KGRY "} " RESET, val.as.stringVal);
+                break;
+        }
+    }
+    printf("]\n");
 }

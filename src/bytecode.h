@@ -6,14 +6,36 @@
 #include "value.h"
 
 // --------------------------------- Bytecode ----------------------------------
+/**
+ * Note: I decided to explode the binary operations into one bytecode per operation (like in the JVM)
+ * instead of one general OP_BINARY + operands to keep the opcode semantics clear.
+ * TODO: benchmark OP_BINARY(op) instead of OP_BINARY*
+ */
 typedef enum {
     OP_LOAD_CONSTANT,  // load a constant from the compiled constant pool onto the stack
     OP_SET_VAL,        // expects an identifier at the top of the stack, and a value right below it
     OP_GET_VAL,        // expects an identifier at the top of the stack
     OP_TRUE,           // put Value true on the stack
     OP_FALSE,          // put Value false on the stack
-    OP_ADD,            // add two numbers at the top of the stack, replace them with the result Value
-    OP_PRINT           // print value at the top of the stack
+    OP_PRINT,          // print value at the top of the stack
+
+    // Unary operations
+    OP_UNARY_NEGATE,  // -stack[-1]
+    OP_UNARY_NOT,     // !stack[-1]
+
+    // Binary operations.
+    OP_BINARY_ADD,          // stack[-2] + stack[-1]
+    OP_BINARY_SUBTRACT,     // stack[-2] - stack[-1]
+    OP_BINARY_MULTIPLY,     // stack[-2] * stack[-1]
+    OP_BINARY_DIVIDE,       // stack[-2] / STACK[-1]
+    OP_BINARY_GT,           // stack[-2] > STACK[-1]
+    OP_BINARY_GTE,          // stack[-2] >= STACK[-1]
+    OP_BINARY_LT,           // stack[-2] < STACK[-1]
+    OP_BINARY_LTE,          // stack[-2] <= STACK[-1]
+    OP_BINARY_LOGICAL_AND,  // stack[-2] && STACK[-1]
+    OP_BINARY_LOGICAL_OR,   // stack[-2] || STACK[-1]
+    OP_BINARY_EQUAL,        // stack[-2] == STACK[-1]
+    OP_BINARY_NOT_EQUAL     // stack[-2] != STACK[-1]
 } Opcode;
 
 // Create simple bytecode with no operands or constants

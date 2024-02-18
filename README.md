@@ -292,16 +292,7 @@ The SolScript Virtual Machine* is heavily inspired by the [Lox VM](https://craft
 
 *For those new to programming languages, a "virtual machine" here is not the same as a "Windows virtual machine". A programming language VM translates bytecode down to low-level code or machine code. 
 
-Instruction Set (work-in-progress):
-```
-OP_LOAD_CONSTANT,  // load a constant from the compiled constant pool onto the stack
-OP_SET_VAL,        // set local variable; expects an identifier at the top of the stack, and a value right below it
-OP_GET_VAL,        // read local variable; expects an identifier at the top of the stack
-OP_TRUE,           // put Value true on the stack
-OP_FALSE,          // put Value false on the stack
-OP_ADD,            // add two numbers at the top of the stack, replace them with the result Value
-OP_PRINT           // print value at the top of the stack
-```
+See [bytecode.h](./src/bytecode.h) for the complete Instruction Set.
 
 A runtime `Value` could be a number, string, object, etc.
 
@@ -344,7 +335,8 @@ The following features are necessary a proper v1.0 release, in rough order:
  - [X] Add support for variable declaration and access
  - [X] Implement print statements
  - [X] Implement additive expression
- - [ ] Implement all other "simple" expressions, i.e. excluding call-expressions
+ - [X] Implement all other "simple" expressions, i.e. excluding call-expressions
+ - [ ] Implement string literals
  - [ ] Implement selection statement (`if`s)
  - [ ] Implement the rest of the parser for the whole syntax grammar
  - [ ] Add conditional debugging/logging for tests that fail

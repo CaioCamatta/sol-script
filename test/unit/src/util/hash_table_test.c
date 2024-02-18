@@ -16,7 +16,7 @@ int test_hashTable_init() {
 }
 
 // Hash table insert and get test
-int test_hashTable_insertAndGet() {
+int test_hashTable_insert_and_get() {
     HashTable table;
     initHashTable(&table);
 

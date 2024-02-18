@@ -193,8 +193,9 @@ static Expression* primaryExpression(ASTParser* parser) {
             break;
         }
         default: {
-            errorAtCurrent(parser, "Expected a primary expression.");
-            return NULL;
+            advance(parser);
+            Expression* expr = expression(parser);
+            return expr;
             break;
         }
     }
@@ -344,10 +345,9 @@ static Expression* logicalOrExpression(ASTParser* parser) {
         logicalOrExpression->leftExpression = leftExpression;
         logicalOrExpression->rightExpression = rightExpression;
 
-        Expression* expression = allocateASTNode(Expression);
-        expression->type = LOGICAL_OR_EXPRESSION;
-        expression->as.logicalOrExpression = logicalOrExpression;
-        return expression;
+        leftExpression = allocateASTNode(Expression);
+        leftExpression->type = LOGICAL_OR_EXPRESSION;
+        leftExpression->as.logicalOrExpression = logicalOrExpression;
     }
     return leftExpression;
 }

@@ -14,4 +14,6 @@ void printAST(const Source* source);
 
 void printCompiledCode(CompiledCode compiledCode);
 
+void printStack(const Value* topOfStack, const Value* bottomOfStack);
+
 #endif
