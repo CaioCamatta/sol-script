@@ -245,6 +245,10 @@ void run(VM* vm) {
     // Find the last instruction so we know when to stop executing
     Bytecode* lastInstruction = &(vm->compiledCode.bytecodeArray.values[vm->compiledCode.bytecodeArray.used]);
 
+#ifdef DEBUG_VM
+    printf("Started executing VM.\n");
+#endif
+
     while (vm->IP != lastInstruction) {
         step(vm);
     }

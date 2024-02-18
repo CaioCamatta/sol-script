@@ -350,25 +350,26 @@ void printCompiledCode(CompiledCode compiledCode) {
 // ----------------------------------- VM ------------------------------------
 // ---------------------------------------------------------------------------
 
+// Print VM stack. The top of the stack will be on the left.
 void printStack(const Value* topOfStack, const Value* bottomOfStack) {
-    printf("[ ");
+    printf("Stack: [ ");
     while (topOfStack != bottomOfStack) {
+        topOfStack--;
         Value val = *topOfStack;
         switch (val.type) {
             case TYPE_BOOLEAN:
-                printf("{ %s }", val.as.booleanVal ? "true" : "false");
+                printf(KGRY "{" RESET " %s " KGRY "} " RESET, val.as.booleanVal ? "true" : "false");
                 break;
             case TYPE_DOUBLE:
-                printf("{ %.5f }", val.as.doubleVal);
+                printf(KGRY "{" RESET " %.5f " KGRY "} " RESET, val.as.doubleVal);
                 break;
             case TYPE_NULL:
-                printf("{ NULL }");
+                printf(KGRY "{" RESET " NULL " KGRY "} " RESET);
                 break;
             case TYPE_STRING:
-                printf("{ %.5s }", val.as.stringVal);
+                printf(KGRY "{" RESET " %.5s " KGRY "} " RESET, val.as.stringVal);
                 break;
         }
-        topOfStack--;
     }
-    printf(" ]");
+    printf("]\n");
 }
