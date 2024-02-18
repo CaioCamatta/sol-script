@@ -23,6 +23,12 @@ static void all_tests() {
     RUN_TEST(test_compiler_val_declaration);
     RUN_TEST(test_compiler_variable_declaration_and_printing);
     RUN_TEST(test_add_constant_to_pool_no_duplicates);
+    RUN_TEST(test_compiler_binary_equal);
+    RUN_TEST(test_compiler_binary_not_equal);
+    RUN_TEST(test_compiler_comparison_operations);
+    RUN_TEST(test_compiler_logical_and_or_operations);
+    RUN_TEST(test_compiler_multiplicative_expressions);
+    RUN_TEST(test_compiler_unary_expressions);
 
     // RUN_TEST(test_parser_errorHandling);
     RUN_TEST(test_parser_simple_expression);
