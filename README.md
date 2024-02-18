@@ -335,7 +335,7 @@ The following features are necessary a proper v1.0 release, in rough order:
  - [X] Add support for variable declaration and access
  - [X] Implement print statements
  - [X] Implement additive expression
- - [ ] Implement all other "simple" expressions, i.e. excluding call-expressions
+ - [X] Implement all other "simple" expressions, i.e. excluding call-expressions
  - [ ] Implement string literals
  - [ ] Implement selection statement (`if`s)
  - [ ] Implement the rest of the parser for the whole syntax grammar
