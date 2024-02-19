@@ -1,2 +1,2 @@
 // Example code
-print false || 0;
+val d = "a";
