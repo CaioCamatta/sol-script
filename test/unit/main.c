@@ -30,6 +30,7 @@ static void all_tests() {
     RUN_TEST(test_compiler_multiplicative_expressions);
     RUN_TEST(test_compiler_unary_expressions);
     RUN_TEST(test_compiler_boolean_literal);
+    RUN_TEST(test_compiler_string_literal);
 
     // RUN_TEST(test_parser_errorHandling);
     RUN_TEST(test_parser_simple_expression);

@@ -29,6 +29,14 @@
         }                                                                                        \
     }
 
+#define STRING_LITERAL(str)                                                                \
+    &(Literal) {                                                                           \
+        .type = STRING_LITERAL,                                                            \
+        .as.stringLiteral = &(StringLiteral) {                                             \
+            .token = (Token) { .type = TOKEN_STRING, .start = str, .length = strlen(str) } \
+        }                                                                                  \
+    }
+
 #define BOOLEAN_LITERAL(value)                              \
     &(Literal) {                                            \
         .type = BOOLEAN_LITERAL,                            \
@@ -646,6 +654,33 @@ int test_compiler_boolean_literal() {
 
     FREE_ARRAY(compiledCodeFalse.bytecodeArray);
     FREE_ARRAY(compiledCodeFalse.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_string_literal() {
+    Compiler compiler;
+
+    // Define a source with a string literal
+    Source testSource = {
+        .rootStatements = {
+            EXPRESSION_STATEMENT(
+                PRIMARY_EXPRESSION(STRING_LITERAL("\"Hello, World!\"")))},
+        .numberOfStatements = 1,
+    };
+
+    // Initialize and compile
+    initCompiler(&compiler, &testSource);
+    CompiledCode compiledCode = compile(&compiler);
+
+    // Assertions to ensure string literal was correctly recognized, added to the constant pool, and properly loaded
+    ASSERT(compiledCode.constantPool.used == 1);                                          // Ensure constant pool has entries
+    ASSERT(strcmp(compiledCode.constantPool.values[0].as.string, "Hello, World!") == 0);  // Check string content
+    ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);                // Check bytecode to load string
+
+    // Cleanup
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
 
     return SUCCESS_RETURN_CODE;
 }
