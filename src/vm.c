@@ -63,6 +63,7 @@ Value bytecodeConstantToValue(VM* vm, size_t constantIndex) {
         case CONST_TYPE_DOUBLE:
             return (Value){.type = TYPE_DOUBLE, .as = {.doubleVal = constant.as.number}};
         case CONST_TYPE_STRING:
+        case CONST_TYPE_IDENTIFIER:
             return (Value){.type = TYPE_STRING, .as = {.stringVal = constant.as.string}};
     }
 }
@@ -73,12 +74,14 @@ static void printValue(Value value) {
         case TYPE_DOUBLE:
             printf("%f", value.as.doubleVal);
             break;
-
         case TYPE_BOOLEAN:
             printf("%s", value.as.booleanVal ? "true" : "false");
             break;
-
-        default:
+        case TYPE_NULL:
+            printf("null");
+            break;
+        case TYPE_STRING:
+            printf("%s", value.as.stringVal);
             break;
     };
 }

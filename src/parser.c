@@ -87,12 +87,27 @@ static Expression* expression(ASTParser* parser);
  */
 static Literal* identifierLiteral(ASTParser* parser) {
     Token* identifier = consume(parser, TOKEN_IDENTIFIER, "Expected identifier.");
-    IdentifierLiteral* tempIdentifierLiteral = allocateASTNode(IdentifierLiteral);
-    tempIdentifierLiteral->token = *(identifier);
+    IdentifierLiteral* identifierLiteral = allocateASTNode(IdentifierLiteral);
+    identifierLiteral->token = *(identifier);
 
     Literal* literal = allocateASTNode(Literal);
     literal->type = IDENTIFIER_LITERAL;
-    literal->as.identifierLiteral = tempIdentifierLiteral;
+    literal->as.identifierLiteral = identifierLiteral;
+
+    return literal;
+}
+
+/**
+ * Terminal rule. Match string token.
+ */
+static Literal* stringLiteral(ASTParser* parser) {
+    Token* string = consume(parser, TOKEN_STRING, "Expected string.");
+    StringLiteral* stringLiteral = allocateASTNode(StringLiteral);
+    stringLiteral->token = *(string);
+
+    Literal* literal = allocateASTNode(Literal);
+    literal->type = STRING_LITERAL;
+    literal->as.stringLiteral = stringLiteral;
 
     return literal;
 }
@@ -169,6 +184,20 @@ static Expression* primaryExpression(ASTParser* parser) {
             expression->as.primaryExpression = primaryExpression;
 
             return expression;
+            break;
+        }
+        case TOKEN_STRING: {
+            Literal* tempLiteral = stringLiteral(parser);
+
+            Expression* expression = allocateASTNode(Expression);
+            expression->type = PRIMARY_EXPRESSION;
+
+            PrimaryExpression* primaryExpression = allocateASTNode(PrimaryExpression);
+            primaryExpression->literal = tempLiteral;
+
+            expression->as.primaryExpression = primaryExpression;
+            return expression;
+            break;
         }
         case TOKEN_TRUE:
         case TOKEN_FALSE: {

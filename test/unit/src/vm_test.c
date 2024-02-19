@@ -371,3 +371,41 @@ int test_vm_unary_not() {
 
     return SUCCESS_RETURN_CODE;
 }
+
+int test_vm_print_string_literal() {
+    // Setup the VM and bytecode for a simple program that prints "Hello, World!"
+    CompiledCode code = {.constantPool = {}, .bytecodeArray = {}};
+    INIT_ARRAY(code.bytecodeArray, Bytecode);
+    INIT_ARRAY(code.constantPool, Constant);
+
+    // Assuming you have a function to add a string to the constant pool and return its index
+    INSERT_ARRAY(code.constantPool, STRING_CONST("Hello, World!\0"), Constant);  // Index 0
+
+    // Assuming you have specific bytecode operations for loading a constant and printing
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);
+
+    // Initialize VM with the bytecode
+    VM vm;
+    initVM(&vm, code);
+
+    // Redirect stdout to a buffer to capture the output
+    char buffer[1024];
+    freopen("/dev/null", "a", stdout);  // Prevent actual printing to stdout
+    setbuf(stdout, buffer);
+
+    // Run the VM
+    run(&vm);
+
+    // Restore stdout
+    freopen("/dev/tty", "a", stdout);
+
+    // Check if the buffer contains the expected string
+    ASSERT(strcmp(buffer, "Hello, World!") == 0);
+
+    // Cleanup
+    FREE_ARRAY(code.bytecodeArray);
+    FREE_ARRAY(code.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}

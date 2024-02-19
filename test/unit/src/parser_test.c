@@ -102,23 +102,6 @@ int test_parser_print_statement() {
     return SUCCESS_RETURN_CODE;
 }
 
-// TODO: fill out this test
-int test_parser_errorHandling() {
-    TokenType types[] = {TOKEN_NUMBER, TOKEN_PLUS, TOKEN_EOF};
-    TokenArray tokens = createTokenArray(types, 3);
-
-    ASTParser parser;
-    initASTParser(&parser, tokens);
-
-    // You should set up an environment to catch the error or simulate it
-    // Then call parseAST and assert the expected behavior
-
-    FREE_ARRAY(tokens);
-    // Free other resources if necessary
-
-    return SUCCESS_RETURN_CODE;
-}
-
 // Example function to test parsing of a logical OR expression, including detailed assertions
 int test_parser_logical_or_expression() {
     Token tokensArray[] = {
@@ -595,6 +578,40 @@ int test_parser_variable_declaration_and_reading() {
     // Check that 'x' is in the print statemetn
     IdentifierLiteral* printIdLiteral = source->rootStatements[1]->as.printStatement->expression->as.primaryExpression->literal->as.identifierLiteral;
     ASSERT(strncmp(printIdLiteral->token.start, "x", printIdLiteral->token.length) == 0);
+
+    // Cleanup
+    freeSource(source);
+    FREE_ARRAY(tokens);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_string_literal() {
+    TokenType types[] = {TOKEN_STRING, TOKEN_SEMICOLON, TOKEN_EOF};
+    const char* lexemes[] = {"\"Hello, World!\"", ";", ""};
+
+    TokenArray tokens;
+    INIT_ARRAY(tokens, Token);
+
+    for (int i = 0; i < sizeof(types) / sizeof(TokenType); ++i) {
+        Token token = createToken(types[i], lexemes[i]);
+        INSERT_ARRAY(tokens, token, Token);
+    }
+
+    ASTParser parser;
+    Source* source = parseASTFromTokens(&parser, &tokens);
+
+    // Check that the AST correctly represents a string literal expression
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == EXPRESSION_STATEMENT);
+
+    Expression* expression = statement->as.expressionStatement->expression;
+    ASSERT(expression->type == PRIMARY_EXPRESSION);
+
+    PrimaryExpression* primaryExpression = expression->as.primaryExpression;
+    ASSERT(primaryExpression->literal->type == STRING_LITERAL);
+    ASSERT(strcmp(primaryExpression->literal->as.stringLiteral->token.start, "\"Hello, World!\"") == 0);
 
     // Cleanup
     freeSource(source);

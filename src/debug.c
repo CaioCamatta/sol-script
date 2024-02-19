@@ -242,7 +242,7 @@ static void printLiteral(const Literal* literal, int depth) {
             break;
 
         case STRING_LITERAL:
-            printf("StringLiteral" KGRY "(token=\"%.*s\")\n" RESET, literal->as.stringLiteral->token.length, literal->as.stringLiteral->token.start);
+            printf("StringLiteral" KGRY "(token=%.*s)\n" RESET, literal->as.stringLiteral->token.length, literal->as.stringLiteral->token.start);
             break;
 
             // Add cases for other literal types
@@ -263,8 +263,10 @@ static void printConstantPool(ConstantPool constantPool) {
                 printf("(double) %f\n", value.as.number);
                 break;
             case CONST_TYPE_STRING:
-                // Assuming a function to get string from string pool: getStringFromPool(index)
                 printf("(string) \"%s\"\n", value.as.string);
+                break;
+            case CONST_TYPE_IDENTIFIER:
+                printf("(identifier) \"%s\"\n", value.as.string);
                 break;
         }
     }
