@@ -73,12 +73,14 @@ static void printValue(Value value) {
         case TYPE_DOUBLE:
             printf("%f", value.as.doubleVal);
             break;
-
         case TYPE_BOOLEAN:
             printf("%s", value.as.booleanVal ? "true" : "false");
             break;
-
-        default:
+        case TYPE_NULL:
+            printf("null");
+            break;
+        case TYPE_STRING:
+            printf("%s", value.as.stringVal);
             break;
     };
 }

@@ -242,7 +242,7 @@ static void printLiteral(const Literal* literal, int depth) {
             break;
 
         case STRING_LITERAL:
-            printf("StringLiteral" KGRY "(token=\"%.*s\")\n" RESET, literal->as.stringLiteral->token.length, literal->as.stringLiteral->token.start);
+            printf("StringLiteral" KGRY "(token=%.*s)\n" RESET, literal->as.stringLiteral->token.length, literal->as.stringLiteral->token.start);
             break;
 
             // Add cases for other literal types
