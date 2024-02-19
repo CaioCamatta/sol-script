@@ -255,14 +255,26 @@ static void visitBooleanLiteral(Compiler* compiler, BooleanLiteral* booleanLiter
 static void visitIdentifierLiteral(Compiler* compiler, IdentifierLiteral* identifierLiteral) {
     // Find address of this identifier in the constant pool
     char* identifierNameNullTerminated = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
-    Constant tempConstant = (Constant){
+    Constant constant = (Constant){
         .type = CONST_TYPE_STRING,
         .as = {identifierNameNullTerminated}};
-    size_t index = findConstantInPool(compiler, tempConstant);
+    size_t index = findConstantInPool(compiler, constant);
     if (index == -1) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
 
     // Generate bytecode to get the variable
     Bytecode bytecodeToGetVariable = BYTECODE_CONSTANT_1(OP_GET_VAL, index);
+    emitBytecode(compiler, bytecodeToGetVariable);
+}
+
+static void visitStringLiteral(Compiler* compiler, StringLiteral* stringLiteral) {
+    // Remove "'s from left and right of the string
+    char* stringTrimmedAndNullTerminated = strndup(stringLiteral->token.start + 1, stringLiteral->token.length - 2);
+    Constant constant = (Constant){
+        .type = CONST_TYPE_STRING,
+        .as = {stringTrimmedAndNullTerminated}};
+    size_t constantIndex = addConstantToPool(compiler, constant);
+
+    Bytecode bytecodeToGetVariable = BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, constantIndex);
     emitBytecode(compiler, bytecodeToGetVariable);
 }
 
@@ -273,6 +285,9 @@ static void visitLiteral(Compiler* compiler, Literal* literal) {
             break;
         case IDENTIFIER_LITERAL:
             visitIdentifierLiteral(compiler, literal->as.identifierLiteral);
+            break;
+        case STRING_LITERAL:
+            visitStringLiteral(compiler, literal->as.stringLiteral);
             break;
         case BOOLEAN_LITERAL:
             visitBooleanLiteral(compiler, literal->as.booleanLiteral);
