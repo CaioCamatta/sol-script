@@ -102,23 +102,6 @@ int test_parser_print_statement() {
     return SUCCESS_RETURN_CODE;
 }
 
-// TODO: fill out this test
-int test_parser_errorHandling() {
-    TokenType types[] = {TOKEN_NUMBER, TOKEN_PLUS, TOKEN_EOF};
-    TokenArray tokens = createTokenArray(types, 3);
-
-    ASTParser parser;
-    initASTParser(&parser, tokens);
-
-    // You should set up an environment to catch the error or simulate it
-    // Then call parseAST and assert the expected behavior
-
-    FREE_ARRAY(tokens);
-    // Free other resources if necessary
-
-    return SUCCESS_RETURN_CODE;
-}
-
 // Example function to test parsing of a logical OR expression, including detailed assertions
 int test_parser_logical_or_expression() {
     Token tokensArray[] = {
