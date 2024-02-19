@@ -76,6 +76,7 @@ static size_t findConstantInPool(Compiler* compiler, Constant constant) {
         // Check if value is the same
         switch (compiler->constantPool.values[i].type) {
             case CONST_TYPE_STRING:
+            case CONST_TYPE_IDENTIFIER:
                 if (strcmp(constant.as.string, compiler->constantPool.values[i].as.string) == 0) return i;
                 break;
 
@@ -212,8 +213,8 @@ static void visitExpressionStatement(Compiler* compiler, ExpressionStatement* ex
 static void visitValDeclarationStatement(Compiler* compiler, ValDeclarationStatement* valDeclarationStatement) {
     visitExpression(compiler, valDeclarationStatement->expression);
 
-    Constant constant = STRING_CONST(copyStringToHeap(valDeclarationStatement->identifier->token.start,
-                                                      valDeclarationStatement->identifier->token.length));
+    Constant constant = IDENTIFIER_CONST(copyStringToHeap(valDeclarationStatement->identifier->token.start,
+                                                          valDeclarationStatement->identifier->token.length));
 
     // TODO: Remove duplicated check; addConstantToPool already runs findConstantInPool.
     if (findConstantInPool(compiler, constant) != -1) errorAndExit("Error: val \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);

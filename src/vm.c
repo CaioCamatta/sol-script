@@ -63,6 +63,7 @@ Value bytecodeConstantToValue(VM* vm, size_t constantIndex) {
         case CONST_TYPE_DOUBLE:
             return (Value){.type = TYPE_DOUBLE, .as = {.doubleVal = constant.as.number}};
         case CONST_TYPE_STRING:
+        case CONST_TYPE_IDENTIFIER:
             return (Value){.type = TYPE_STRING, .as = {.stringVal = constant.as.string}};
     }
 }

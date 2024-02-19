@@ -65,7 +65,8 @@ typedef struct {
 
 typedef enum {
     CONST_TYPE_STRING,
-    CONST_TYPE_DOUBLE  // TODO: stop putting doubles in constant pool; inline it in the bytecode
+    CONST_TYPE_IDENTIFIER,  // identifiers are similar to strings, but handled slightly different
+    CONST_TYPE_DOUBLE       // TODO: stop putting doubles in constant pool; inline it in the bytecode
 } ConstantType;
 
 typedef struct {
@@ -80,6 +81,12 @@ typedef struct {
     (Constant) {                                   \
         .type = CONST_TYPE_STRING,                 \
         .as = {.string = nullTerminatedStringArg}, \
+    }
+
+#define IDENTIFIER_CONST(nullTerminatedIdentifierArg)  \
+    (Constant) {                                       \
+        .type = CONST_TYPE_IDENTIFIER,                 \
+        .as = {.string = nullTerminatedIdentifierArg}, \
     }
 
 #define DOUBLE_CONST(numberArg)      \
