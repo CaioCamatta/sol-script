@@ -44,6 +44,7 @@ static void all_tests() {
     RUN_TEST(test_parser_complex_expression);
     RUN_TEST(test_parser_nested_parentheses_expression);
     RUN_TEST(test_parser_variable_declaration_and_reading);
+    RUN_TEST(test_parser_string_literal);
 
     RUN_TEST(test_vm_addition);
     RUN_TEST(test_vm_print);

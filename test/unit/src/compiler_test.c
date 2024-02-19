@@ -326,7 +326,7 @@ int test_compiler_variable_declaration_and_printing() {
 
     ASSERT(compiledCode.constantPool.values[0].type == CONST_TYPE_DOUBLE);  // 42
     ASSERT(compiledCode.constantPool.values[0].as.number == 42);
-    ASSERT(compiledCode.constantPool.values[1].type == CONST_TYPE_STRING);  // x
+    ASSERT(compiledCode.constantPool.values[1].type == CONST_TYPE_IDENTIFIER);  // x
 
     FREE_ARRAY(compiledCode.bytecodeArray);
     FREE_ARRAY(compiledCode.constantPool);

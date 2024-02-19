@@ -257,7 +257,7 @@ static void visitIdentifierLiteral(Compiler* compiler, IdentifierLiteral* identi
     // Find address of this identifier in the constant pool
     char* identifierNameNullTerminated = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
     Constant constant = (Constant){
-        .type = CONST_TYPE_STRING,
+        .type = CONST_TYPE_IDENTIFIER,
         .as = {identifierNameNullTerminated}};
     size_t index = findConstantInPool(compiler, constant);
     if (index == -1) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
