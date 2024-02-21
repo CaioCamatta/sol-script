@@ -487,6 +487,26 @@ static Statement* blockStatement(ASTParser* parser) {
 }
 
 /**
+ * selection-statement:
+ *  "if" "(" expression ")" statement ( "else" statement )?
+ */
+static Statement* selectionStatement(ASTParser* parser) {
+    consume(parser, TOKEN_IF, "Invalid State: Expected \"if\" in if statement.");
+    consume(parser, TOKEN_LEFT_PAREN, "Expected left parenthesis, \"(\", before the condition expression of an if-statement.");
+    Expression* conditionExpression = expression(parser);
+    consume(parser, TOKEN_RIGHT_PAREN, "Expected right parenthesis, \")\", after the condition expression of an if-statement.");
+
+    ExpressionStatement* exprStmt = allocateASTNode(ExpressionStatement);
+    exprStmt->expression = expr;
+
+    Statement* stmt = allocateASTNode(Statement);
+    stmt->type = EXPRESSION_STATEMENT;
+    stmt->as.expressionStatement = exprStmt;
+
+    return stmt;
+}
+
+/**
  * statement:
  *  declaration
  *  block-statement
@@ -515,8 +535,8 @@ static Statement* statement(ASTParser* parser) {
             return blockStatement(parser);
         // case TOKEN_WHILE:
         //     return iterationStatement(parser);
-        // case TOKEN_IF:
-        //     return selectionStatement(parser);
+        case TOKEN_IF:
+            return selectionStatement(parser);
         // case TOKEN_RETURN:
         //     return returnStatement(parser);
         default:

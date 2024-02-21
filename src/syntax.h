@@ -9,6 +9,7 @@ typedef struct ExpressionStatement ExpressionStatement;
 typedef struct PrintStatement PrintStatement;
 typedef struct BlockStatement BlockStatement;
 typedef struct ValDeclarationStatement ValDeclarationStatement;
+typedef struct SelectionStatement SelectionStatement;
 typedef struct LogicalOrExpression LogicalOrExpression;
 typedef struct LogicalAndExpression LogicalAndExpression;
 typedef struct EqualityExpression EqualityExpression;
@@ -57,6 +58,7 @@ typedef struct {
         ValDeclarationStatement *valDeclarationStatement;
         PrintStatement *printStatement;
         BlockStatement *blockStatement;
+        SelectionStatement *selectionStatement;
     } as;
 } Statement;
 
@@ -106,6 +108,10 @@ struct PrintStatement {
 struct ValDeclarationStatement {
     IdentifierLiteral *identifier;
     Expression *expression;
+};
+
+struct SelectionStatement {
+    Expression *conditionExpression;
 };
 
 struct LogicalOrExpression {
