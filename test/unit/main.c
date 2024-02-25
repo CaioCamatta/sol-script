@@ -35,6 +35,7 @@ static void all_tests() {
     RUN_TEST(test_parser_nested_parentheses_expression);
     RUN_TEST(test_parser_variable_declaration_and_reading);
     RUN_TEST(test_parser_string_literal);
+    RUN_TEST(test_parser_block_statement);
 
     // Compiler tests
     RUN_TEST(test_compiler);

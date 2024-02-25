@@ -619,3 +619,36 @@ int test_parser_string_literal() {
 
     return SUCCESS_RETURN_CODE;
 }
+
+int test_parser_block_statement() {
+    TokenType types[] = {TOKEN_LEFT_CURLY, TOKEN_VAL, TOKEN_IDENTIFIER, TOKEN_EQUAL, TOKEN_NUMBER, TOKEN_SEMICOLON, TOKEN_PRINT, TOKEN_IDENTIFIER, TOKEN_SEMICOLON, TOKEN_RIGHT_CURLY, TOKEN_EOF};
+    TokenArray tokens = createTokenArray(types, 11);
+
+    ASTParser parser;
+    initASTParser(&parser, tokens);
+    Source* source = parseAST(&parser);
+
+    ASSERT(source->numberOfStatements == 1);
+    ASSERT(source->rootStatements[0]->type == BLOCK_STATEMENT);
+    ASSERT(source->rootStatements[0]->as.blockStatement->statementArray.used == 2);  // val declaration and print statement
+
+    // Assert that the first statement is a val declaration
+    Statement* firstStmt = source->rootStatements[0]->as.blockStatement->statementArray.values[0];
+    ASSERT(firstStmt->type == VAL_DECLARATION_STATEMENT);
+    ValDeclarationStatement* valDeclStmt = firstStmt->as.valDeclarationStatement;
+    ASSERT(strcmp(valDeclStmt->identifier->token.start, "x") == 0);  // Assuming "x" is the identifier used
+    ASSERT(valDeclStmt->expression->type == PRIMARY_EXPRESSION);
+    NumberLiteral* numberLiteral = valDeclStmt->expression->as.primaryExpression->literal->as.numberLiteral;
+    ASSERT(strcmp(numberLiteral->token.start, "10") == 0);  // Assuming "10" is the number used
+
+    // Assert that the second statement is a print statement
+    Statement* secondStmt = source->rootStatements[0]->as.blockStatement->statementArray.values[1];
+    ASSERT(secondStmt->type == PRINT_STATEMENT);
+    PrintStatement* printStmt = secondStmt->as.printStatement;
+    ASSERT(printStmt->expression->type == PRIMARY_EXPRESSION);
+    IdentifierLiteral* identifierLiteral = printStmt->expression->as.primaryExpression->literal->as.identifierLiteral;
+    ASSERT(strcmp(identifierLiteral->token.start, "x") == 0);  // Assuming "x" is the identifier used
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
