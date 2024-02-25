@@ -138,6 +138,12 @@ static void printStatement(const Statement* statement, int depth) {
             printf("PrintStatement\n");
             printExpression(statement->as.printStatement->expression, depth + 1);
             break;
+        case BLOCK_STATEMENT:
+            printf("BlockStatement" KGRY "(numberOfStatements=%zu)\n" RESET, statement->as.blockStatement->statementArray.used);
+            for (int i = 0; i < statement->as.blockStatement->statementArray.used; ++i) {
+                printStatement(statement->as.blockStatement->statementArray.values[i], depth + 1);
+            }
+            break;
     }
 }
 

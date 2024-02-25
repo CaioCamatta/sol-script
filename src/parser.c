@@ -81,6 +81,7 @@ static bool match(ASTParser* parser, TokenType type) {
 
 // Forward declarations
 static Expression* expression(ASTParser* parser);
+static Statement* statement(ASTParser* parser);
 
 /**
  * Terminal rule. Match identifier token.
@@ -462,6 +463,29 @@ static Statement* expressionStatement(ASTParser* parser) {
     return stmt;
 }
 
+static Statement* blockStatement(ASTParser* parser) {
+    consume(parser, TOKEN_LEFT_CURLY, "Expected '{' before the start of a block.");
+    BlockStatement* blockStmt = allocateASTNode(BlockStatement);
+    INIT_ARRAY(blockStmt->statementArray, Statement*);
+
+    while (!check(parser, TOKEN_RIGHT_CURLY) && !check(parser, TOKEN_EOF)) {
+        Statement* statementNode = statement(parser);
+
+        if (statementNode != NULL) {
+            INSERT_ARRAY(blockStmt->statementArray, statementNode, Statement*);
+        } else {
+            errorAtCurrent(parser, "Error parsing statement.");
+        }
+    }
+    consume(parser, TOKEN_RIGHT_CURLY, "Unclosed block. Expected '}'.");
+
+    Statement* stmt = allocateASTNode(Statement);
+    stmt->type = BLOCK_STATEMENT;
+    stmt->as.blockStatement = blockStmt;
+
+    return stmt;
+}
+
 /**
  * statement:
  *  declaration
@@ -485,11 +509,10 @@ static Statement* statement(ASTParser* parser) {
         // case TOKEN_VAR:
         case TOKEN_VAL:
             return declaration(parser);
-        case TOKEN_PRINT: {
+        case TOKEN_PRINT:
             return printStatement(parser);
-        }
-        // case TOKEN_LEFT_CURLY:
-        //     return blockStatement(parser);
+        case TOKEN_LEFT_CURLY:
+            return blockStatement(parser);
         // case TOKEN_WHILE:
         //     return iterationStatement(parser);
         // case TOKEN_IF:

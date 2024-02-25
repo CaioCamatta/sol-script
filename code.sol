@@ -1,2 +1,2 @@
 // Example code
-val d = "a";
+{ print 1+1; }

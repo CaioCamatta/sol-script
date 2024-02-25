@@ -4,12 +4,6 @@
 #include "token.h"
 #include "util/array.h"
 
-typedef struct {
-    Statement *values;
-    size_t used;
-    size_t size;
-} StatementArray;
-
 // Forward declarations
 typedef struct ExpressionStatement ExpressionStatement;
 typedef struct PrintStatement PrintStatement;
@@ -94,8 +88,14 @@ struct ExpressionStatement {
     Expression *expression;
 };
 
+typedef struct {
+    Statement **values;
+    size_t used;
+    size_t size;
+} StatementArray;
+
 struct BlockStatement {
-    Statement *StatementArray;
+    StatementArray statementArray;
 };
 
 struct PrintStatement {
