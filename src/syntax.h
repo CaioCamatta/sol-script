@@ -4,9 +4,16 @@
 #include "token.h"
 #include "util/array.h"
 
+typedef struct {
+    Statement *values;
+    size_t used;
+    size_t size;
+} StatementArray;
+
 // Forward declarations
 typedef struct ExpressionStatement ExpressionStatement;
 typedef struct PrintStatement PrintStatement;
+typedef struct BlockStatement BlockStatement;
 typedef struct ValDeclarationStatement ValDeclarationStatement;
 typedef struct LogicalOrExpression LogicalOrExpression;
 typedef struct LogicalAndExpression LogicalAndExpression;
@@ -25,7 +32,8 @@ typedef struct StringLiteral StringLiteral;
 typedef enum {
     EXPRESSION_STATEMENT,
     VAL_DECLARATION_STATEMENT,
-    PRINT_STATEMENT
+    PRINT_STATEMENT,
+    BLOCK_STATEMENT
 } StatementType;
 
 typedef enum {
@@ -53,6 +61,7 @@ typedef struct {
         ExpressionStatement *expressionStatement;
         ValDeclarationStatement *valDeclarationStatement;
         PrintStatement *printStatement;
+        BlockStatement *blockStatement;
     } as;
 } Statement;
 
@@ -83,6 +92,10 @@ typedef struct {
 // --- Concrete productions ---
 struct ExpressionStatement {
     Expression *expression;
+};
+
+struct BlockStatement {
+    Statement *StatementArray;
 };
 
 struct PrintStatement {

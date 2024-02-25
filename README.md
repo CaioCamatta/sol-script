@@ -337,6 +337,7 @@ The following features are necessary a proper v1.0 release, in rough order:
  - [X] Implement additive expression
  - [X] Implement all other "simple" expressions, i.e. excluding call-expressions
  - [X] Implement string literals
+ - [ ] Implement block statements and expressions
  - [ ] Implement selection statement (`if`s)
  - [ ] Implement the rest of the parser for the whole syntax grammar
  - [ ] Add conditional debugging/logging for tests that fail
@@ -344,7 +345,6 @@ The following features are necessary a proper v1.0 release, in rough order:
  - [ ] Implement assignment statements
  - [ ] Add CLI argument to enable or disable debugging logs in the REPL.
  - [ ] Improve error logs; print line and column
- - [ ] Implement block statements and expressions
  - [ ] Implement iteration statement (loops)
  - [ ] Add Panic Mode error recovery; stop crashing the compiler on every error.
  - [ ] Implement objects / structs
