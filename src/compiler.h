@@ -8,14 +8,14 @@
 /**
  * Compiler struct to facilitate compiling an AST into bytecode.
  *
- * @param currentStackLevel tracks the height of the VM stack at this point of compilation, starting at zero. (The compiler
+ * @param currentStackHeight tracks the height of the VM stack at this point of compilation, starting at zero. (The compiler
  *                          can know in advance how tall the stack will be.)
  */
 typedef struct {
     BytecodeArray compiledBytecode;
     ConstantPool constantPool;
     Source* ASTSource;  // Root of the AST
-    u_int8_t currentStackLevel;
+    u_int8_t currentStackHeight;
 } Compiler;
 
 /* Initialize a Compiler with an AST to be parsed */

@@ -20,7 +20,7 @@ void initCompiler(Compiler* compiler, Source* ASTSource) {
     compiler->compiledBytecode = bytecodeArray;
     compiler->ASTSource = ASTSource;
     compiler->constantPool = constantPool;
-    compiler->currentStackLevel = 0;
+    compiler->currentStackHeight = 0;
 }
 
 /* FORWARD DECLARATIONS */
@@ -53,11 +53,11 @@ static void emitBytecode(Compiler* compiler, Bytecode bytecode) {
  * of the height. For example, a local variable declaration increases the stack by 1 (locals live on the stack).
  */
 static void increaseStackHeight(Compiler* compiler) {
-    if (compiler->currentStackLevel == UCHAR_MAX) {
+    if (compiler->currentStackHeight == UCHAR_MAX) {
         errorAndExit("Compiler error: VM stack will overflow.");
     }
 
-    compiler->currentStackLevel++;
+    compiler->currentStackHeight++;
 }
 
 /**
@@ -65,7 +65,7 @@ static void increaseStackHeight(Compiler* compiler) {
  * of the height. For example, an addition decreases the height of the stack by 1 (pop, pop, push).
  */
 static void decreaseStackHeight(Compiler* compiler) {
-    compiler->currentStackLevel--;
+    compiler->currentStackHeight--;
 }
 
 static double tokenTodouble(Token token) {
@@ -261,7 +261,7 @@ static void visitPrintStatement(Compiler* compiler, PrintStatement* printStateme
 
 static void visitBlockStatement(Compiler* compiler, BlockStatement* blockStatement) {
     // Keep track of the stack height so we can later pop all the variables etc defined in it.
-    uint8_t stackHeightBeforeBlockStmt = compiler->currentStackLevel;
+    uint8_t stackHeightBeforeBlockStmt = compiler->currentStackHeight;
 
     for (size_t i = 0; i < blockStatement->statementArray.used; i++) {
         Statement* statement = blockStatement->statementArray.values[i];
@@ -269,7 +269,7 @@ static void visitBlockStatement(Compiler* compiler, BlockStatement* blockStateme
     }
 
     // Pop all the Values that were put in the stack in the block.
-    uint8_t stackHeightAfterBlockStmt = compiler->currentStackLevel;
+    uint8_t stackHeightAfterBlockStmt = compiler->currentStackHeight;
     uint8_t blockStmtStackEffect = stackHeightAfterBlockStmt - stackHeightBeforeBlockStmt;
     emitBytecode(compiler, BYTECODE_OPERAND_1(OP_POPN, blockStmtStackEffect));
 }
