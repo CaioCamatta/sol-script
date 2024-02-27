@@ -245,10 +245,10 @@ int test_compiler() {
 
     // Compared the actual and expected
     ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
-    ASSERT(compiledCode.constantPool.values[0].as.number == 5);            // 5 is in slot 0 of the pool
-    ASSERT(compiledCode.bytecodeArray.values[0].maybeConstantIndex == 0);  // first instruction loads slot 0
+    ASSERT(compiledCode.constantPool.values[0].as.number == 5);       // 5 is in slot 0 of the pool
+    ASSERT(compiledCode.bytecodeArray.values[0].maybeOperand1 == 0);  // first instruction loads slot 0
     ASSERT(compiledCode.constantPool.values[1].as.number == 7);
-    ASSERT(compiledCode.bytecodeArray.values[1].maybeConstantIndex == 1);
+    ASSERT(compiledCode.bytecodeArray.values[1].maybeOperand1 == 1);
 
     // Clean up
     FREE_ARRAY(compiledCode.bytecodeArray);

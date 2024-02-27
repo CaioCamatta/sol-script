@@ -135,17 +135,17 @@ void step(VM* vm) {
 
     switch (instruction->type) {
         case OP_LOAD_CONSTANT:
-            push(vm, bytecodeConstantToValue(vm, instruction->maybeConstantIndex));
+            push(vm, bytecodeConstantToValue(vm, instruction->maybeOperand1));
             break;
         case OP_SET_VAL: {
             Value value = pop(vm);
-            size_t constantIndex = instruction->maybeConstantIndex;
+            size_t constantIndex = instruction->maybeOperand1;
             Constant constant = vm->compiledCode.constantPool.values[constantIndex];
             hashTableInsert(&vm->globals, constant.as.string, value);
             break;
         }
         case OP_GET_VAL: {
-            size_t constantIndex = instruction->maybeConstantIndex;
+            size_t constantIndex = instruction->maybeOperand1;
             Constant constant = vm->compiledCode.constantPool.values[constantIndex];
             Value value = hashTableGet(&vm->globals, constant.as.string)->value;
             push(vm, value);

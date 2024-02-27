@@ -284,13 +284,13 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
     for (int i = 0; i < bytecodeArray.used; i++) {
         switch (bytecodeArray.values[i].type) {
             case OP_LOAD_CONSTANT:
-                printf(" [ LOAD_CONSTANT #%zu ]\n", bytecodeArray.values[i].maybeConstantIndex);
+                printf(" [ LOAD_CONSTANT #%zu ]\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_SET_VAL:
-                printf(" [ OP_SET_VAL #%zu ]\n", bytecodeArray.values[i].maybeConstantIndex);
+                printf(" [ OP_SET_VAL #%zu ]\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_GET_VAL:
-                printf(" [ OP_GET_VAL #%zu ]\n", bytecodeArray.values[i].maybeConstantIndex);
+                printf(" [ OP_GET_VAL #%zu ]\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_PRINT:
                 printf(" [ PRINT ]\n");

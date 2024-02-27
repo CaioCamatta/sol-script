@@ -35,8 +35,8 @@ int test_vm_addition() {
     // Create a simple bytecode program: 1 + 2
     INSERT_ARRAY(code.constantPool, DOUBLE_CONST(1.0), Constant);  // put Constant in index 0
     INSERT_ARRAY(code.constantPool, DOUBLE_CONST(2.0), Constant);  // put Constant in index 1
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 1), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 1), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_ADD), Bytecode);
 
     // Initialize VM with the bytecode
@@ -72,7 +72,7 @@ int test_vm_print() {
     INSERT_ARRAY(code.constantPool, numberToPrint, Constant);
     size_t indexOfNumberToPrintInPool = 0;
 
-    Bytecode constantBytecode = BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, indexOfNumberToPrintInPool);
+    Bytecode constantBytecode = BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, indexOfNumberToPrintInPool);
     INSERT_ARRAY(code.bytecodeArray, constantBytecode, Bytecode);
 
     Bytecode printBytecode = BYTECODE(OP_PRINT);
@@ -123,9 +123,9 @@ int test_vm_set_and_get_global() {
     INSERT_ARRAY(code.constantPool, numberValue, Constant);
     size_t numberValueIndex = 1;
 
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, numberValueIndex), Bytecode);
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_SET_VAL, valNameIndex), Bytecode);
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_GET_VAL, valNameIndex), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, numberValueIndex), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_SET_VAL, valNameIndex), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_VAL, valNameIndex), Bytecode);
 
     // Initialize VM with the bytecode
     VM vm;
@@ -155,13 +155,13 @@ int test_vm_binary_equal() {
 
     // Test case: 1 == 1; should push true
     INSERT_ARRAY(code.constantPool, DOUBLE_CONST(1.0), Constant);
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_EQUAL), Bytecode);
 
     // Test case: 1 != 1; should push false
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_NOT_EQUAL), Bytecode);
 
     VM vm;
@@ -194,23 +194,23 @@ int test_vm_comparison_operations() {
     INSERT_ARRAY(code.constantPool, DOUBLE_CONST(2.0), Constant);  // Index 1
 
     // Test case: 1 < 2; should push true
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 1), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 1), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_LT), Bytecode);
 
     // Test case: 1 <= 2; should push true
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 1), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 1), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_LTE), Bytecode);
 
     // Test case: 2 > 1; should push true
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 1), Bytecode);
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 1), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_GT), Bytecode);
 
     // Test case: 2 >= 1; should push true
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 1), Bytecode);
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 1), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_GTE), Bytecode);
 
     VM vm;
@@ -247,13 +247,13 @@ int test_vm_logical_operations() {
     INSERT_ARRAY(code.constantPool, DOUBLE_CONST(0.0), Constant);  // Index 1 as false
 
     // Test case: true && false; should push false
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);  // true
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 1), Bytecode);  // false
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);  // true
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 1), Bytecode);  // false
     INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_LOGICAL_AND), Bytecode);
 
     // Test case: false || true; should push true
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 1), Bytecode);  // false
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);  // true
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 1), Bytecode);  // false
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);  // true
     INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_LOGICAL_OR), Bytecode);
 
     VM vm;
@@ -284,9 +284,9 @@ int test_vm_boolean_truthiness() {
     // Preparing constants
     INSERT_ARRAY(code.constantPool, DOUBLE_CONST(0.0), Constant);  // Index 0
 
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);  // Pushes 0.0
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_FALSE), Bytecode);                        // Pushes false
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_LOGICAL_OR), Bytecode);            // Should evaluate to false
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);  // Pushes 0.0
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_FALSE), Bytecode);                       // Pushes false
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_LOGICAL_OR), Bytecode);           // Should evaluate to false
 
     VM vm;
     initVM(&vm, code);
@@ -313,7 +313,7 @@ int test_vm_unary_negation() {
     INSERT_ARRAY(code.constantPool, DOUBLE_CONST(5.0), Constant);  // Index 0, value 5.0
 
     // Load constant onto stack
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_UNARY_NEGATE), Bytecode);
 
     // Initialize VM and run the code
@@ -382,7 +382,7 @@ int test_vm_print_string_literal() {
     INSERT_ARRAY(code.constantPool, STRING_CONST("Hello, World!\0"), Constant);  // Index 0
 
     // Assuming you have specific bytecode operations for loading a constant and printing
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);
 
     // Initialize VM with the bytecode

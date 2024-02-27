@@ -1,5 +1,6 @@
 #include "compiler.h"
 
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -19,6 +20,7 @@ void initCompiler(Compiler* compiler, Source* ASTSource) {
     compiler->compiledBytecode = bytecodeArray;
     compiler->ASTSource = ASTSource;
     compiler->constantPool = constantPool;
+    compiler->currentStackLevel = 0;
 }
 
 /* FORWARD DECLARATIONS */
@@ -44,6 +46,26 @@ static void visitLiteral(Compiler* compiler, Literal* literal);
 // Add bytecode to the compiled program.
 static void emitBytecode(Compiler* compiler, Bytecode bytecode) {
     INSERT_ARRAY(compiler->compiledBytecode, bytecode, Bytecode);
+}
+
+/**
+ * The compiler can know in advance how tall the VM stack will be at any point. This function helps keep track
+ * of the height. For example, a local variable declaration increases the stack by 1 (locals live on the stack).
+ */
+static void increaseStackHeight(Compiler* compiler) {
+    if (compiler->currentStackLevel == UCHAR_MAX) {
+        errorAndExit("Compiler error: VM stack will overflow.");
+    }
+
+    compiler->currentStackLevel++;
+}
+
+/**
+ * The compiler can know in advance how tall the VM stack will be at any point. This function helps keep track
+ * of the height. For example, an addition decreases the height of the stack by 1 (pop, pop, push).
+ */
+static void decreaseStackHeight(Compiler* compiler) {
+    compiler->currentStackLevel--;
 }
 
 static double tokenTodouble(Token token) {
@@ -119,6 +141,7 @@ static void visitAdditiveExpression(Compiler* compiler, AdditiveExpression* addi
         default:
             break;
     }
+    decreaseStackHeight(compiler);
 }
 
 static void visitMultiplicativeExpression(Compiler* compiler, MultiplicativeExpression* multiplicativeExpression) {
@@ -135,6 +158,7 @@ static void visitMultiplicativeExpression(Compiler* compiler, MultiplicativeExpr
         default:
             break;
     }
+    decreaseStackHeight(compiler);
 }
 
 static void visitEqualityExpression(Compiler* compiler, EqualityExpression* equalityExpression) {
@@ -151,18 +175,21 @@ static void visitEqualityExpression(Compiler* compiler, EqualityExpression* equa
         default:
             break;
     }
+    decreaseStackHeight(compiler);
 }
 
 static void visitLogicalOrExpression(Compiler* compiler, LogicalOrExpression* logicalOrExpression) {
     visitExpression(compiler, logicalOrExpression->leftExpression);
     visitExpression(compiler, logicalOrExpression->rightExpression);
     emitBytecode(compiler, BYTECODE(OP_BINARY_LOGICAL_OR));
+    decreaseStackHeight(compiler);
 }
 
 static void visitLogicalAndExpression(Compiler* compiler, LogicalAndExpression* logicalAndExpression) {
     visitExpression(compiler, logicalAndExpression->leftExpression);
     visitExpression(compiler, logicalAndExpression->rightExpression);
     emitBytecode(compiler, BYTECODE(OP_BINARY_LOGICAL_AND));
+    decreaseStackHeight(compiler);
 }
 
 // Visit the two expression on left and write, emit bytecode to add them
@@ -186,6 +213,7 @@ static void visitComparisonExpression(Compiler* compiler, ComparisonExpression* 
         default:
             break;
     }
+    decreaseStackHeight(compiler);
 }
 
 static void visitUnaryExpression(Compiler* compiler, UnaryExpression* unaryExpression) {
@@ -220,7 +248,9 @@ static void visitValDeclarationStatement(Compiler* compiler, ValDeclarationState
     if (findConstantInPool(compiler, constant) != -1) errorAndExit("Error: val \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
 
     size_t constantIndex = addConstantToPool(compiler, constant);
-    emitBytecode(compiler, BYTECODE_CONSTANT_1(OP_SET_VAL, constantIndex));
+    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_VAL, constantIndex));
+
+    increaseStackHeight(compiler);
 }
 
 // Visit expression following print, then emit bytecode to print that expression
@@ -229,14 +259,31 @@ static void visitPrintStatement(Compiler* compiler, PrintStatement* printStateme
     emitBytecode(compiler, BYTECODE(OP_PRINT));
 }
 
+static void visitBlockStatement(Compiler* compiler, BlockStatement* blockStatement) {
+    // Keep track of the stack height so we can later pop all the variables etc defined in it.
+    uint8_t stackHeightBeforeBlockStmt = compiler->currentStackLevel;
+
+    for (size_t i = 0; i < blockStatement->statementArray.used; i++) {
+        Statement* statement = blockStatement->statementArray.values[i];
+        visitStatement(compiler, statement);
+    }
+
+    // Pop all the Values that were put in the stack in the block.
+    uint8_t stackHeightAfterBlockStmt = compiler->currentStackLevel;
+    uint8_t blockStmtStackEffect = stackHeightAfterBlockStmt - stackHeightBeforeBlockStmt;
+    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_POPN, blockStmtStackEffect));
+}
+
 // Add number to constant pool and emit bytecode to load it onto the stack
 static void visitNumberLiteral(Compiler* compiler, NumberLiteral* numberLiteral) {
     double number = tokenTodouble(numberLiteral->token);
     Constant constant = DOUBLE_CONST(number);
     size_t constantIndex = addConstantToPool(compiler, constant);
 
-    Bytecode bytecode = BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, constantIndex);
+    Bytecode bytecode = BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, constantIndex);
     emitBytecode(compiler, bytecode);
+
+    increaseStackHeight(compiler);
 }
 
 static void visitBooleanLiteral(Compiler* compiler, BooleanLiteral* booleanLiteral) {
@@ -251,6 +298,7 @@ static void visitBooleanLiteral(Compiler* compiler, BooleanLiteral* booleanLiter
             errorAndExit("Error: failed to parse boolean from token '%.*s'.", booleanLiteral->token.length, booleanLiteral->token.start);
             return;
     }
+    increaseStackHeight(compiler);
 }
 
 static void visitIdentifierLiteral(Compiler* compiler, IdentifierLiteral* identifierLiteral) {
@@ -263,8 +311,10 @@ static void visitIdentifierLiteral(Compiler* compiler, IdentifierLiteral* identi
     if (index == -1) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
 
     // Generate bytecode to get the variable
-    Bytecode bytecodeToGetVariable = BYTECODE_CONSTANT_1(OP_GET_VAL, index);
+    Bytecode bytecodeToGetVariable = BYTECODE_OPERAND_1(OP_GET_VAL, index);
     emitBytecode(compiler, bytecodeToGetVariable);
+
+    increaseStackHeight(compiler);
 }
 
 static void visitStringLiteral(Compiler* compiler, StringLiteral* stringLiteral) {
@@ -275,8 +325,10 @@ static void visitStringLiteral(Compiler* compiler, StringLiteral* stringLiteral)
         .as = {stringTrimmedAndNullTerminated}};
     size_t constantIndex = addConstantToPool(compiler, constant);
 
-    Bytecode bytecodeToGetVariable = BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, constantIndex);
+    Bytecode bytecodeToGetVariable = BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, constantIndex);
     emitBytecode(compiler, bytecodeToGetVariable);
+
+    increaseStackHeight(compiler);
 }
 
 static void visitLiteral(Compiler* compiler, Literal* literal) {
@@ -338,13 +390,14 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
         case EXPRESSION_STATEMENT:
             visitExpressionStatement(compiler, statement->as.expressionStatement);
             break;
-
-        case VAL_DECLARATION_STATEMENT: {
+        case VAL_DECLARATION_STATEMENT:
             visitValDeclarationStatement(compiler, statement->as.valDeclarationStatement);
             break;
-        }
         case PRINT_STATEMENT:
             visitPrintStatement(compiler, statement->as.printStatement);
+            break;
+        case BLOCK_STATEMENT:
+            visitBlockStatement(compiler, statement->as.blockStatement);
             break;
         default:
             fprintf(stderr, "Unimplemented statement type %d.\n", statement->type);

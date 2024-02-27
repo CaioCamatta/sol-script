@@ -15,6 +15,7 @@
  * @param compiledCode compiled code including bytecode array and constants pool.
  * @param IP the instruction pointer.
  * @param stack the stack for our stack-based VM.
+ * @param globals hash table containing global variables
  * @param SP the stack pointer (we use an actual pointer instead of an int index for faster dereferencing)
  * */
 typedef struct {

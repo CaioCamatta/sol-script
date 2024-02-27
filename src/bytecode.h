@@ -18,6 +18,7 @@ typedef enum {
     OP_TRUE,           // put Value true on the stack
     OP_FALSE,          // put Value false on the stack
     OP_PRINT,          // print value at the top of the stack
+    OP_POPN,           // pop N values from the stack
 
     // Unary operations
     OP_UNARY_NEGATE,  // -stack[-1]
@@ -43,16 +44,16 @@ typedef enum {
     (Bytecode) { .type = op }
 
 // Create bytecode with one constant
-#define BYTECODE_CONSTANT_1(op, index1) \
-    (Bytecode) {                        \
-        .type = op,                     \
-        .maybeConstantIndex = (index1)  \
+#define BYTECODE_OPERAND_1(op, index1) \
+    (Bytecode) {                       \
+        .type = op,                    \
+        .maybeOperand1 = (index1)      \
     }
 
 /* The bytecode contains the Opcode and optional operands depending on the type of operation. */
 typedef struct {
     Opcode type;
-    size_t maybeConstantIndex;
+    size_t maybeOperand1;
 } Bytecode;
 
 typedef struct {
