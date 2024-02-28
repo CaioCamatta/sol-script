@@ -292,6 +292,9 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
             case OP_GET_VAL:
                 printf(" [ OP_GET_VAL #%zu ]\n", bytecodeArray.values[i].maybeOperand1);
                 break;
+            case OP_POPN:
+                printf(" [ OP_POPN #%zu ]\n", bytecodeArray.values[i].maybeOperand1);
+                break;
             case OP_PRINT:
                 printf(" [ PRINT ]\n");
                 break;

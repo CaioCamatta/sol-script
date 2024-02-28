@@ -48,6 +48,15 @@ Value pop(VM* vm) {
     vm->SP--;
     return *(vm->SP);
 }
+
+// Pop N values from the stack
+void popN(VM* vm, int n) {
+    if (n > (vm->SP - vm->stack)) {
+        runtimeError(vm, "Runtime error: attempted to pop more elements from the stack than are in the stack.");
+    }
+    vm->SP -= n;
+}
+
 /**
  * peek(0) peeks the top of the stack
  * peek(1) peeks the second highest element of the stack
@@ -149,6 +158,11 @@ void step(VM* vm) {
             Constant constant = vm->compiledCode.constantPool.values[constantIndex];
             Value value = hashTableGet(&vm->globals, constant.as.string)->value;
             push(vm, value);
+            break;
+        }
+        case OP_POPN: {
+            size_t n = instruction->maybeOperand1;
+            popN(vm, n);
             break;
         }
         case OP_PRINT: {
