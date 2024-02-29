@@ -233,7 +233,7 @@ int test_compiler() {
 
     initCompiler(&compiler, &testSource);
     CompiledCode compiledCode = compile(&compiler);
-    printCompiledCode(compiledCode);
+    // printCompiledCode(compiledCode);
 
     // Expected bytecode
     Bytecode expectedBytecode[] = {
@@ -279,7 +279,7 @@ int test_compiler_print() {
     ASSERT(compiledCode.bytecodeArray.values[1].type == OP_PRINT);          // Second should be OP_PRINT
 
     // Optionally, print the bytecode for visual verification
-    printCompiledCode(compiledCode);
+    // printCompiledCode(compiledCode);
 
     // Clean up
     FREE_ARRAY(compiledCode.bytecodeArray);
@@ -306,7 +306,7 @@ int test_compiler_val_declaration() {
     ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);  // First should be OP_LOAD_CONSTANT
     ASSERT(compiledCode.bytecodeArray.values[1].type == OP_SET_VAL);        // Second should be OP_SET_VAL
 
-    printCompiledCode(compiledCode);
+    // printCompiledCode(compiledCode);
 
     FREE_ARRAY(compiledCode.bytecodeArray);
     FREE_ARRAY(compiledCode.constantPool);

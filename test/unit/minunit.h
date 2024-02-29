@@ -3,6 +3,7 @@
 #define minunit_h
 
 #include <stdio.h>
+#include <time.h>
 
 #include "util/colors.h"
 
@@ -65,18 +66,21 @@ static int assertionsFailed = 0;
  *
  * @param tests a void function containing any number of tests.
  */
-#define RUN_SUITE(tests)                                                              \
-    do {                                                                              \
-        tests();                                                                      \
-        printf("\n");                                                                 \
-        printf("Assertions run: %d, failed: %d.\n", assertionsRun, assertionsFailed); \
-        printf("Tests run: %d, failed: %d.\n", testsRun, testsFailed);                \
-        if (testsFailed) {                                                            \
-            printf(KRED "FAILED\n" RESET);                                            \
-        } else {                                                                      \
-            printf(KGRN "PASSED\n" RESET);                                            \
-        }                                                                             \
-        return testsFailed != 0;                                                      \
+#define RUN_SUITE(tests)                                                                  \
+    do {                                                                                  \
+        clock_t startTime = clock();                                                      \
+        tests();                                                                          \
+        clock_t endTime = clock();                                                        \
+        double timeTaken = ((double)(endTime - startTime)) / CLOCKS_PER_SEC;              \
+        printf("\n");                                                                     \
+        printf("Assertions run: %d, failed: %d.\n", assertionsRun, assertionsFailed);     \
+        printf("Tests run: %d, failed: %d. (%.5fs)\n", testsRun, testsFailed, timeTaken); \
+        if (testsFailed) {                                                                \
+            printf(KRED "FAILED\n" RESET);                                                \
+        } else {                                                                          \
+            printf(KGRN "PASSED\n" RESET);                                                \
+        }                                                                                 \
+        return testsFailed != 0;                                                          \
     } while (0)
 
 #endif

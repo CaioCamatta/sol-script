@@ -52,7 +52,7 @@ int test_parser_simple_expression() {
     // Parse the expression
     Source* source = parseAST(&parser);
 
-    printAST(source);
+    // printAST(source);
 
     // Assertions to check the structure of the parsed AST
     ASSERT(source->numberOfStatements == 1);
@@ -118,7 +118,7 @@ int test_parser_logical_or_expression() {
 
     ASTParser parser;
     Source* source = parseASTFromTokens(&parser, &tokens);
-    printAST(source);
+    // printAST(source);
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -163,7 +163,7 @@ int test_parser_logical_and_expression() {
     ASTParser parser;
     initASTParser(&parser, tokens);
     Source* source = parseAST(&parser);
-    printAST(source);
+    // printAST(source);
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -206,7 +206,7 @@ int test_parser_equality_expression() {
     ASTParser parser;
     initASTParser(&parser, tokens);
     Source* source = parseAST(&parser);
-    printAST(source);
+    // printAST(source);
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -248,7 +248,7 @@ int test_parser_comparison_expression() {
     ASTParser parser;
     initASTParser(&parser, tokens);
     Source* source = parseAST(&parser);
-    printAST(source);
+    // printAST(source);
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -290,7 +290,7 @@ int test_parser_multiplicative_expression() {
     ASTParser parser;
     initASTParser(&parser, tokens);
     Source* source = parseAST(&parser);
-    printAST(source);
+    // printAST(source);
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -331,7 +331,7 @@ int test_parser_unary_expression() {
     ASTParser parser;
     initASTParser(&parser, tokens);
     Source* source = parseAST(&parser);
-    printAST(source);
+    // printAST(source);
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -366,7 +366,7 @@ int test_parser_boolean_literal() {
     ASTParser parser;
     initASTParser(&parser, tokens);
     Source* source = parseAST(&parser);
-    printAST(source);
+    // printAST(source);
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -419,7 +419,7 @@ int test_parser_complex_expression() {
     ASTParser parser;
     initASTParser(&parser, tokens);
     Source* source = parseAST(&parser);
-    printAST(source);
+    // printAST(source);
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -511,7 +511,7 @@ int test_parser_nested_parentheses_expression() {
 
     Source* source = parseAST(&parser);
     ASSERT(source->numberOfStatements == 1);  // Ensure one statement was parsed
-    printAST(source);
+    // printAST(source);
 
     Statement* statement = source->rootStatements[0];
     ASSERT(statement->type == EXPRESSION_STATEMENT);  // Ensure the statement is an expression
