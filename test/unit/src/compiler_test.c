@@ -240,8 +240,9 @@ int test_compiler() {
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_BINARY_ADD},
+        {.type = OP_POPN},
     };
-    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 3};
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 4};
 
     // Compared the actual and expected
     ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
@@ -387,8 +388,9 @@ int test_compiler_binary_equal() {
         {.type = OP_LOAD_CONSTANT},  // Load 5
         {.type = OP_LOAD_CONSTANT},  // Load 5 again
         {.type = OP_BINARY_EQUAL},   // Compare equality
+        {.type = OP_POPN},           // Expression statements pop the value left on the stack
     };
-    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 3};
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 4};
 
     // Assert the actual bytecode matches the expected
     ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
@@ -422,8 +424,9 @@ int test_compiler_binary_not_equal() {
         {.type = OP_LOAD_CONSTANT},     // Load 5
         {.type = OP_LOAD_CONSTANT},     // Load 7
         {.type = OP_BINARY_NOT_EQUAL},  // Check not equal
+        {.type = OP_POPN},
     };
-    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 3};
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 4};
 
     // Assert the bytecode is as expected
     ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
@@ -477,18 +480,22 @@ int test_compiler_comparison_operations() {
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_BINARY_GT},
+        {.type = OP_POPN},
         // 5 >= 5
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_BINARY_GTE},
+        {.type = OP_POPN},
         // 3 < 5
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_BINARY_LT},
+        {.type = OP_POPN},
         // 5 <= 5
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_BINARY_LTE},
+        {.type = OP_POPN},
     };
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
 
@@ -531,10 +538,12 @@ int test_compiler_logical_and_or_operations() {
         {.type = OP_TRUE},
         {.type = OP_FALSE},
         {.type = OP_BINARY_LOGICAL_AND},
+        {.type = OP_POPN},
         // true || false
         {.type = OP_TRUE},
         {.type = OP_FALSE},
         {.type = OP_BINARY_LOGICAL_OR},
+        {.type = OP_POPN},
     };
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
 
@@ -578,10 +587,12 @@ int test_compiler_multiplicative_expressions() {
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_BINARY_MULTIPLY},
+        {.type = OP_POPN},
         // 10 / 2
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_BINARY_DIVIDE},
+        {.type = OP_POPN},
     };
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
 
@@ -622,8 +633,10 @@ int test_compiler_unary_expressions() {
     Bytecode expectedBytecode[] = {
         {.type = OP_LOAD_CONSTANT},  // Load 42
         {.type = OP_UNARY_NEGATE},   // Apply unary negation
-        {.type = OP_TRUE},           // Push true
-        {.type = OP_UNARY_NOT},      // Apply logical NOT
+        {.type = OP_POPN},
+        {.type = OP_TRUE},       // Push true
+        {.type = OP_UNARY_NOT},  // Apply logical NOT
+        {.type = OP_POPN},
     };
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
 
@@ -649,7 +662,7 @@ int test_compiler_boolean_literal() {
     initCompiler(&compiler, &testSource);
     CompiledCode compiledCodeFalse = compile(&compiler);
 
-    ASSERT(compiledCodeFalse.bytecodeArray.used == 1);
+    ASSERT(compiledCodeFalse.bytecodeArray.used == 2);
     ASSERT(compiledCodeFalse.bytecodeArray.values[0].type == OP_FALSE);
 
     FREE_ARRAY(compiledCodeFalse.bytecodeArray);
@@ -679,6 +692,33 @@ int test_compiler_string_literal() {
     ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);                // Check bytecode to load string
 
     // Cleanup
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_stack_height_expression_and_val() {
+    // Setup a source with an expression statement followed by a val declaration
+    Source testSource = {
+        .rootStatements = {
+            EXPRESSION_STATEMENT(
+                PRIMARY_EXPRESSION(NUMBER_LITERAL("42"))),
+            PRINT_STATEMENT(PRIMARY_EXPRESSION(NUMBER_LITERAL("42"))),
+            VAL_DECLARATION_STATEMENT("x", PRIMARY_EXPRESSION(NUMBER_LITERAL("42")))},
+        .numberOfStatements = 3,
+    };
+
+    Compiler compiler;
+    initCompiler(&compiler, &testSource);
+
+    ASSERT(compiler.currentStackHeight == 0);  // Should start at zero
+    CompiledCode compiledCode = compile(&compiler);
+
+    // The expression and print statements shouldn't add to the height. The val declaration should add 1.
+    ASSERT(compiler.currentStackHeight == 1);
+
+    // Clean up
     FREE_ARRAY(compiledCode.bytecodeArray);
     FREE_ARRAY(compiledCode.constantPool);
 

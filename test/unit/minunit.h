@@ -19,17 +19,16 @@ static int assertionsFailed = 0;
  *
  * @param test an expression that evaluates to a truthy or falsy value.
  */
-#define ASSERT(test)                         \
-    do {                                     \
-        assertionsRun++;                     \
-        if (!(test)) {                       \
-            assertionsFailed++;              \
-            printf(KRED                      \
-                   "ERROR in %s\n"           \
-                   "\tfailed: " #test RESET, \
-                   __func__);                \
-            return FAILURE_RETURN_CODE;      \
-        }                                    \
+#define ASSERT(test)                                             \
+    do {                                                         \
+        assertionsRun++;                                         \
+        if (!(test)) {                                           \
+            assertionsFailed++;                                  \
+            printf(KRED                                          \
+                   "ERROR in %s\n\tfailed: " #test "\n\n" RESET, \
+                   __func__);                                    \
+            return FAILURE_RETURN_CODE;                          \
+        }                                                        \
     } while (0)
 
 /**

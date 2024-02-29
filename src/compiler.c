@@ -232,6 +232,10 @@ static void visitPrimaryExpression(Compiler* compiler, PrimaryExpression* primar
 // Visit the expression. (Should be executed only for its side-effects)
 static void visitExpressionStatement(Compiler* compiler, ExpressionStatement* expressionStatement) {
     visitExpression(compiler, expressionStatement->expression);
+
+    // The expression will always add a Value to the stack. We remove it because it's unreacheable and thus useless.
+    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_POPN, 1));
+    decreaseStackHeight(compiler);
 }
 
 /**
@@ -240,6 +244,7 @@ static void visitExpressionStatement(Compiler* compiler, ExpressionStatement* ex
  */
 static void visitValDeclarationStatement(Compiler* compiler, ValDeclarationStatement* valDeclarationStatement) {
     visitExpression(compiler, valDeclarationStatement->expression);
+    // The expression will add 1 to the stack height. We leave that value on the stack - that's the variable.
 
     Constant constant = IDENTIFIER_CONST(copyStringToHeap(valDeclarationStatement->identifier->token.start,
                                                           valDeclarationStatement->identifier->token.length));
@@ -249,14 +254,13 @@ static void visitValDeclarationStatement(Compiler* compiler, ValDeclarationState
 
     size_t constantIndex = addConstantToPool(compiler, constant);
     emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_VAL, constantIndex));
-
-    increaseStackHeight(compiler);
 }
 
 // Visit expression following print, then emit bytecode to print that expression
 static void visitPrintStatement(Compiler* compiler, PrintStatement* printStatement) {
     visitExpression(compiler, printStatement->expression);
     emitBytecode(compiler, BYTECODE(OP_PRINT));
+    decreaseStackHeight(compiler);
 }
 
 static void visitBlockStatement(Compiler* compiler, BlockStatement* blockStatement) {
@@ -296,7 +300,7 @@ static void visitBooleanLiteral(Compiler* compiler, BooleanLiteral* booleanLiter
             break;
         default:
             errorAndExit("Error: failed to parse boolean from token '%.*s'.", booleanLiteral->token.length, booleanLiteral->token.start);
-            return;
+            break;
     }
     increaseStackHeight(compiler);
 }
@@ -408,7 +412,8 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
 
 CompiledCode compile(Compiler* compiler) {
     clock_t startTime = clock();
-    printf("Started compiling.\n");
+    if (DEBUG_COMPILER)
+        printf("Started compiling.\n");
 
     for (int i = 0; i < compiler->ASTSource->numberOfStatements; i++) {
         Statement* statement = compiler->ASTSource->rootStatements[i];
@@ -421,7 +426,8 @@ CompiledCode compile(Compiler* compiler) {
 
     clock_t endTime = clock();
     double timeTaken = ((double)(endTime - startTime)) / CLOCKS_PER_SEC;
-    printf("Done compiling in %.5f seconds.\n\n", timeTaken);
+    if (DEBUG_COMPILER)
+        printf("Done compiling in %.5f seconds.\n\n", timeTaken);
 
     CompiledCode code = (CompiledCode){
         .bytecodeArray = compiler->compiledBytecode,

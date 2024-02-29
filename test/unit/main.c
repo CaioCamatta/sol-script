@@ -51,6 +51,7 @@ static void all_tests() {
     RUN_TEST(test_compiler_unary_expressions);
     RUN_TEST(test_compiler_boolean_literal);
     RUN_TEST(test_compiler_string_literal);
+    RUN_TEST(test_compiler_stack_height_expression_and_val);
 
     // VM tests
     RUN_TEST(test_vm_addition);
