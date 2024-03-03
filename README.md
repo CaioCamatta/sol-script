@@ -32,10 +32,6 @@ var uniqueNumberGenerator = struct {
 uniqueNumberGenerator.printNewNumbers(2);
 ```
 
-## Motivation
-
-SolScript is a toy programming language and a passion project. After finishing the book [Crafting Interpreters](https://craftinginterpreters.com/) and implementing the language Lox, I decided to create my own language. I had also just read [The C Programming Language](https://en.wikipedia.org/wiki/The_C_Programming_Language) and was motivated to work on another C project.
-
 ## Language Design
 
 The following diagram gives a high-level overview of SolScript's internals.
