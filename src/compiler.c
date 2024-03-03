@@ -1,6 +1,7 @@
 #include "compiler.h"
 
 #include <limits.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -21,6 +22,7 @@ void initCompiler(Compiler* compiler, Source* ASTSource) {
     compiler->ASTSource = ASTSource;
     compiler->constantPool = constantPool;
     compiler->currentStackHeight = 0;
+    compiler->isInGlobalScope = true;
 }
 
 /* FORWARD DECLARATIONS */
@@ -246,14 +248,16 @@ static void visitValDeclarationStatement(Compiler* compiler, ValDeclarationState
     visitExpression(compiler, valDeclarationStatement->expression);
     // The expression will add 1 to the stack height. We leave that value on the stack - that's the variable.
 
-    Constant constant = IDENTIFIER_CONST(copyStringToHeap(valDeclarationStatement->identifier->token.start,
-                                                          valDeclarationStatement->identifier->token.length));
+    if (compiler->isInGlobalScope) {
+        Constant constant = IDENTIFIER_CONST(copyStringToHeap(valDeclarationStatement->identifier->token.start,
+                                                              valDeclarationStatement->identifier->token.length));
 
-    // TODO: Remove duplicated check; addConstantToPool already runs findConstantInPool.
-    if (findConstantInPool(compiler, constant) != -1) errorAndExit("Error: val \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
+        // TODO: Remove duplicated check; addConstantToPool already runs findConstantInPool.
+        if (findConstantInPool(compiler, constant) != -1) errorAndExit("Error: val \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
 
-    size_t constantIndex = addConstantToPool(compiler, constant);
-    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_VAL, constantIndex));
+        size_t constantIndex = addConstantToPool(compiler, constant);
+        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAL, constantIndex));
+    }
 }
 
 // Visit expression following print, then emit bytecode to print that expression
@@ -264,6 +268,9 @@ static void visitPrintStatement(Compiler* compiler, PrintStatement* printStateme
 }
 
 static void visitBlockStatement(Compiler* compiler, BlockStatement* blockStatement) {
+    bool wasCompilerInGlobalScopeBeforeThisBlock = compiler->isInGlobalScope;
+    compiler->isInGlobalScope = false;
+
     // Keep track of the stack height so we can later pop all the variables etc defined in it.
     uint8_t stackHeightBeforeBlockStmt = compiler->currentStackHeight;
 
@@ -276,6 +283,8 @@ static void visitBlockStatement(Compiler* compiler, BlockStatement* blockStateme
     uint8_t stackHeightAfterBlockStmt = compiler->currentStackHeight;
     uint8_t blockStmtStackEffect = stackHeightAfterBlockStmt - stackHeightBeforeBlockStmt;
     emitBytecode(compiler, BYTECODE_OPERAND_1(OP_POPN, blockStmtStackEffect));
+
+    compiler->isInGlobalScope = wasCompilerInGlobalScopeBeforeThisBlock;
 }
 
 // Add number to constant pool and emit bytecode to load it onto the stack
@@ -306,17 +315,19 @@ static void visitBooleanLiteral(Compiler* compiler, BooleanLiteral* booleanLiter
 }
 
 static void visitIdentifierLiteral(Compiler* compiler, IdentifierLiteral* identifierLiteral) {
-    // Find address of this identifier in the constant pool
-    char* identifierNameNullTerminated = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
-    Constant constant = (Constant){
-        .type = CONST_TYPE_IDENTIFIER,
-        .as = {identifierNameNullTerminated}};
-    size_t index = findConstantInPool(compiler, constant);
-    if (index == -1) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
+    if (compiler->isInGlobalScope) {
+        // Find address of this identifier in the constant pool
+        char* identifierNameNullTerminated = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
+        Constant constant = (Constant){
+            .type = CONST_TYPE_IDENTIFIER,
+            .as = {identifierNameNullTerminated}};
+        size_t index = findConstantInPool(compiler, constant);
+        if (index == -1) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
 
-    // Generate bytecode to get the variable
-    Bytecode bytecodeToGetVariable = BYTECODE_OPERAND_1(OP_GET_VAL, index);
-    emitBytecode(compiler, bytecodeToGetVariable);
+        // Generate bytecode to get the variable
+        Bytecode bytecodeToGetVariable = BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index);
+        emitBytecode(compiler, bytecodeToGetVariable);
+    }
 
     increaseStackHeight(compiler);
 }

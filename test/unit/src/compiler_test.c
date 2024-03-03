@@ -302,9 +302,9 @@ int test_compiler_val_declaration() {
     CompiledCode compiledCode = compile(&compiler);
 
     // Verify bytecode for val declaration
-    ASSERT(compiledCode.bytecodeArray.used == 2);                           // Check if two bytecode instructions are generated
-    ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);  // First should be OP_LOAD_CONSTANT
-    ASSERT(compiledCode.bytecodeArray.values[1].type == OP_SET_VAL);        // Second should be OP_SET_VAL
+    ASSERT(compiledCode.bytecodeArray.used == 2);                            // Check if two bytecode instructions are generated
+    ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);   // First should be OP_LOAD_CONSTANT
+    ASSERT(compiledCode.bytecodeArray.values[1].type == OP_SET_GLOBAL_VAL);  // Second should be OP_SET_GLOBAL_VAL
 
     // printCompiledCode(compiledCode);
 
@@ -328,10 +328,10 @@ int test_compiler_variable_declaration_and_printing() {
     initCompiler(&compiler, &testSource);
     CompiledCode compiledCode = compile(&compiler);
 
-    ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);  // load 42 into stack
-    ASSERT(compiledCode.bytecodeArray.values[1].type == OP_SET_VAL);        // assign top of stack to variable 'x'
-    ASSERT(compiledCode.bytecodeArray.values[2].type == OP_GET_VAL);        // get variable 'x'
-    ASSERT(compiledCode.bytecodeArray.values[3].type == OP_PRINT);          // print top of stack
+    ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);   // load 42 into stack
+    ASSERT(compiledCode.bytecodeArray.values[1].type == OP_SET_GLOBAL_VAL);  // assign top of stack to variable 'x'
+    ASSERT(compiledCode.bytecodeArray.values[2].type == OP_GET_GLOBAL_VAL);  // get variable 'x'
+    ASSERT(compiledCode.bytecodeArray.values[3].type == OP_PRINT);           // print top of stack
 
     ASSERT(compiledCode.constantPool.values[0].type == CONST_TYPE_DOUBLE);  // 42
     ASSERT(compiledCode.constantPool.values[0].as.number == 42);

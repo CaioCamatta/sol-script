@@ -124,8 +124,8 @@ int test_vm_set_and_get_global() {
     size_t numberValueIndex = 1;
 
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, numberValueIndex), Bytecode);
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_SET_VAL, valNameIndex), Bytecode);
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_VAL, valNameIndex), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAL, valNameIndex), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, valNameIndex), Bytecode);
 
     // Initialize VM with the bytecode
     VM vm;

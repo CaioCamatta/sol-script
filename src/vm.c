@@ -146,14 +146,14 @@ void step(VM* vm) {
         case OP_LOAD_CONSTANT:
             push(vm, bytecodeConstantToValue(vm, instruction->maybeOperand1));
             break;
-        case OP_SET_VAL: {
+        case OP_SET_GLOBAL_VAL: {
             Value value = pop(vm);
             size_t constantIndex = instruction->maybeOperand1;
             Constant constant = vm->compiledCode.constantPool.values[constantIndex];
             hashTableInsert(&vm->globals, constant.as.string, value);
             break;
         }
-        case OP_GET_VAL: {
+        case OP_GET_GLOBAL_VAL: {
             size_t constantIndex = instruction->maybeOperand1;
             Constant constant = vm->compiledCode.constantPool.values[constantIndex];
             Value value = hashTableGet(&vm->globals, constant.as.string)->value;

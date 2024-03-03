@@ -12,13 +12,13 @@
  * TODO: benchmark OP_BINARY(op) instead of OP_BINARY*
  */
 typedef enum {
-    OP_LOAD_CONSTANT,  // load a constant from the compiled constant pool onto the stack
-    OP_SET_VAL,        // expects an identifier at the top of the stack, and a value right below it
-    OP_GET_VAL,        // expects an identifier at the top of the stack
-    OP_TRUE,           // put Value true on the stack
-    OP_FALSE,          // put Value false on the stack
-    OP_PRINT,          // print value at the top of the stack
-    OP_POPN,           // pop N values from the stack
+    OP_LOAD_CONSTANT,   // load a constant from the compiled constant pool onto the stack
+    OP_SET_GLOBAL_VAL,  // expects an identifier at the top of the stack, and a value right below it
+    OP_GET_GLOBAL_VAL,  // expects an identifier at the top of the stack
+    OP_TRUE,            // put Value true on the stack
+    OP_FALSE,           // put Value false on the stack
+    OP_PRINT,           // print value at the top of the stack
+    OP_POPN,            // pop N values from the stack
 
     // Unary operations
     OP_UNARY_NEGATE,  // -stack[-1]

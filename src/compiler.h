@@ -1,6 +1,8 @@
 #ifndef sol_script_compiler_h
 #define sol_script_compiler_h
 
+#include <stdbool.h>
+
 #include "bytecode.h"
 #include "syntax.h"
 #include "token.h"
@@ -16,6 +18,8 @@ typedef struct {
     ConstantPool constantPool;
     Source* ASTSource;  // Root of the AST
     u_int8_t currentStackHeight;
+    bool isInGlobalScope;  // Track whether the compiler is currently in the global scope instead of in a block.
+                           // This is used to distinguish between local variables and global variables.
 } Compiler;
 
 /* Initialize a Compiler with an AST to be parsed */
