@@ -385,8 +385,22 @@ static void visitIdentifierLiteral(Compiler* compiler, IdentifierLiteral* identi
         emitBytecode(compiler, bytecodeToGetVariable);
     } else {
         size_t stackIndex = findLocalByName(compiler, identifierNameNullTerminated);
-        Bytecode bytecodeToGetVariable = BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, stackIndex);
-        emitBytecode(compiler, bytecodeToGetVariable);
+
+        if (stackIndex == -1) {
+            // If the local isn't found, we check if its a global
+            Constant constant = (Constant){
+                .type = CONST_TYPE_IDENTIFIER,
+                .as = {identifierNameNullTerminated}};
+            size_t index = findConstantInPool(compiler, constant);
+            if (index == -1) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
+
+            // If we found a global, emit the appropriate bytecode
+            Bytecode bytecodeToGetVariable = BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index);
+            emitBytecode(compiler, bytecodeToGetVariable);
+        } else {
+            Bytecode bytecodeToGetVariable = BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, stackIndex);
+            emitBytecode(compiler, bytecodeToGetVariable);
+        }
     }
 
     increaseStackHeight(compiler);
