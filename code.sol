@@ -1,2 +1,4 @@
 // Example code
-{ print 1+1; }
+{ val a=2; print a;}
+{ val a=2; print a;}
+{ val a=2; print a;}

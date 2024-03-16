@@ -135,7 +135,7 @@ static size_t addConstantToPool(Compiler* compiler, Constant constant) {
  * Given a local variable name, find its position in the stack. (We can determine at compile time
  * where that local will be in the stack.)
  */
-static size_t findLocalByName(Compiler* compiler, char* name) {
+static int findLocalByName(Compiler* compiler, char* name) {
     for (int i = compiler->currentStackHeight; i >= 0; i--) {
         // Skip NULL entries. (These may exists because our temp stack only keeps track of locals.
         // Anything else that's on the stack is a NULL here)
@@ -144,7 +144,7 @@ static size_t findLocalByName(Compiler* compiler, char* name) {
         // See if name matches
         if (strcmp(name, compiler->tempStack[i].name) == 0) return i;
     }
-    return 0;
+    return -1;  // Not declared
 }
 
 /**
@@ -160,10 +160,10 @@ static void addLocalToTempStack(Compiler* compiler, char* name) {
  */
 static void removeLocalsFromTempStack(Compiler* compiler, int N) {
     for (int i = compiler->currentStackHeight; i > compiler->currentStackHeight - N; i--) {
-        if (N <= 0) {
+        if (N < 0) {
             errorAndExit("Attempted to remove more local variables than exist in the stack. This should be impossible.");
         }
-        compiler->tempStack[i].name = NULL;  // Setting the name to NULL frees up the spot
+        compiler->tempStack[i - 1].name = NULL;  // Setting the name to NULL frees up the spot
     }
 }
 
@@ -300,7 +300,7 @@ static void visitValDeclarationStatement(Compiler* compiler, ValDeclarationState
 
         decreaseStackHeight(compiler);  // Globals are popped from the stack.
     } else {
-        if (findLocalByName(compiler, constant.as.string) != 0) errorAndExit("Error: val \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
+        if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit("Error: val \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
 
         addLocalToTempStack(compiler, constant.as.string);
         emitBytecode(compiler, BYTECODE(OP_SET_LOCAL_VAL_FAST));
@@ -337,7 +337,7 @@ static void visitBlockStatement(Compiler* compiler, BlockStatement* blockStateme
     removeLocalsFromTempStack(compiler, blockStmtStackEffect);
 
     // Undo stack height
-    compiler->currentStackHeight = stackHeightAfterBlockStmt;
+    compiler->currentStackHeight = stackHeightBeforeBlockStmt;
 
     compiler->isInGlobalScope = wasCompilerInGlobalScopeBeforeThisBlock;
 }
