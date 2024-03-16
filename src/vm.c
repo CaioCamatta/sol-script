@@ -93,6 +93,7 @@ static void printValue(Value value) {
             printf("%s", value.as.stringVal);
             break;
     };
+    printf("\n");
 }
 
 // Apply an operation to two doubles, push double to stack
