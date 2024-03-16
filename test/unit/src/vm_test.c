@@ -98,7 +98,7 @@ int test_vm_print() {
     // Assertions
     // Check if the buffer contains the expected output
     char expectedOutput[128];
-    sprintf(expectedOutput, "%f", numberToPrint.as.number);
+    sprintf(expectedOutput, "%f\n", numberToPrint.as.number);
     ASSERT(strcmp(buffer, expectedOutput) == 0);
 
     // Clean up
