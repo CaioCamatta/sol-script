@@ -23,6 +23,10 @@ void initCompiler(Compiler* compiler, Source* ASTSource) {
     compiler->constantPool = constantPool;
     compiler->currentStackHeight = 0;
     compiler->isInGlobalScope = true;
+
+    for (int i = 0; i < STACK_MAX; i++) {
+        compiler->tempStack[i].name = NULL;
+    }
 }
 
 /* FORWARD DECLARATIONS */
@@ -56,7 +60,7 @@ static void emitBytecode(Compiler* compiler, Bytecode bytecode) {
  */
 static void increaseStackHeight(Compiler* compiler) {
     if (compiler->currentStackHeight == UCHAR_MAX) {
-        errorAndExit("Compiler error: VM stack will overflow.");
+        errorAndExit("CompilerStackOverflowError: VM stack will overflow.");
     }
 
     compiler->currentStackHeight++;
@@ -125,6 +129,42 @@ static size_t addConstantToPool(Compiler* compiler, Constant constant) {
     // If not, insert and return index
     INSERT_ARRAY(compiler->constantPool, constant, Constant);
     return compiler->constantPool.used - 1;
+}
+
+/**
+ * Given a local variable name, find its position in the stack. (We can determine at compile time
+ * where that local will be in the stack.)
+ */
+static size_t findLocalByName(Compiler* compiler, char* name) {
+    for (int i = compiler->currentStackHeight; i >= 0; i--) {
+        // Skip NULL entries. (These may exists because our temp stack only keeps track of locals.
+        // Anything else that's on the stack is a NULL here)
+        if (compiler->tempStack[i].name == NULL) continue;
+
+        // See if name matches
+        if (strcmp(name, compiler->tempStack[i].name) == 0) return i;
+    }
+    return 0;
+}
+
+/**
+ * Add a local variable to the Compiler's temporary stack.
+ */
+static void addLocalToTempStack(Compiler* compiler, char* name) {
+    // The local will be right below the current stack height
+    compiler->tempStack[compiler->currentStackHeight - 1] = (Local){.name = name};
+}
+
+/**
+ * Remove N locals from the top of the Compiler's temporary stack.
+ */
+static void removeLocalsFromTempStack(Compiler* compiler, int N) {
+    for (int i = compiler->currentStackHeight; i > compiler->currentStackHeight - N; i--) {
+        if (N <= 0) {
+            errorAndExit("Attempted to remove more local variables than exist in the stack. This should be impossible.");
+        }
+        compiler->tempStack[i].name = NULL;  // Setting the name to NULL frees up the spot
+    }
 }
 
 /* VISITOR FUNCTIONS */
@@ -248,15 +288,22 @@ static void visitValDeclarationStatement(Compiler* compiler, ValDeclarationState
     visitExpression(compiler, valDeclarationStatement->expression);
     // The expression will add 1 to the stack height. We leave that value on the stack - that's the variable.
 
-    if (compiler->isInGlobalScope) {
-        Constant constant = IDENTIFIER_CONST(copyStringToHeap(valDeclarationStatement->identifier->token.start,
-                                                              valDeclarationStatement->identifier->token.length));
+    Constant constant = IDENTIFIER_CONST(copyStringToHeap(valDeclarationStatement->identifier->token.start,
+                                                          valDeclarationStatement->identifier->token.length));
 
+    if (compiler->isInGlobalScope) {
         // TODO: Remove duplicated check; addConstantToPool already runs findConstantInPool.
         if (findConstantInPool(compiler, constant) != -1) errorAndExit("Error: val \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
 
         size_t constantIndex = addConstantToPool(compiler, constant);
         emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAL, constantIndex));
+
+        decreaseStackHeight(compiler);  // Globals are popped from the stack.
+    } else {
+        if (findLocalByName(compiler, constant.as.string) != 0) errorAndExit("Error: val \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
+
+        addLocalToTempStack(compiler, constant.as.string);
+        emitBytecode(compiler, BYTECODE(OP_SET_LOCAL_VAL_FAST));
     }
 }
 
@@ -279,10 +326,18 @@ static void visitBlockStatement(Compiler* compiler, BlockStatement* blockStateme
         visitStatement(compiler, statement);
     }
 
-    // Pop all the Values that were put in the stack in the block.
+    // Calculate the stack effect of this entire block so we can clean up at the end of the block.
     uint8_t stackHeightAfterBlockStmt = compiler->currentStackHeight;
     uint8_t blockStmtStackEffect = stackHeightAfterBlockStmt - stackHeightBeforeBlockStmt;
+
+    // Pop all the Values that were put in the VM stack in the block.
     emitBytecode(compiler, BYTECODE_OPERAND_1(OP_POPN, blockStmtStackEffect));
+
+    // Pop all the Locals that were put in the Compiler stack in the block.
+    removeLocalsFromTempStack(compiler, blockStmtStackEffect);
+
+    // Undo stack height
+    compiler->currentStackHeight = stackHeightAfterBlockStmt;
 
     compiler->isInGlobalScope = wasCompilerInGlobalScopeBeforeThisBlock;
 }
@@ -315,9 +370,10 @@ static void visitBooleanLiteral(Compiler* compiler, BooleanLiteral* booleanLiter
 }
 
 static void visitIdentifierLiteral(Compiler* compiler, IdentifierLiteral* identifierLiteral) {
+    char* identifierNameNullTerminated = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
+
     if (compiler->isInGlobalScope) {
         // Find address of this identifier in the constant pool
-        char* identifierNameNullTerminated = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
         Constant constant = (Constant){
             .type = CONST_TYPE_IDENTIFIER,
             .as = {identifierNameNullTerminated}};
@@ -326,6 +382,10 @@ static void visitIdentifierLiteral(Compiler* compiler, IdentifierLiteral* identi
 
         // Generate bytecode to get the variable
         Bytecode bytecodeToGetVariable = BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index);
+        emitBytecode(compiler, bytecodeToGetVariable);
+    } else {
+        size_t stackIndex = findLocalByName(compiler, identifierNameNullTerminated);
+        Bytecode bytecodeToGetVariable = BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, stackIndex);
         emitBytecode(compiler, bytecodeToGetVariable);
     }
 

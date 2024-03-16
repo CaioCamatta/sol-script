@@ -7,6 +7,16 @@
 #include "syntax.h"
 #include "token.h"
 
+#define STACK_MAX 256
+
+/**
+ * Represents a local variable in the temporary stack maintained by the compiler.
+ * This exists so we can optimize local variable access.
+ */
+typedef struct {
+    char* name;  // Null-terminated
+} Local;
+
 /**
  * Compiler struct to facilitate compiling an AST into bytecode.
  *
@@ -17,9 +27,13 @@ typedef struct {
     BytecodeArray compiledBytecode;
     ConstantPool constantPool;
     Source* ASTSource;  // Root of the AST
-    u_int8_t currentStackHeight;
+
     bool isInGlobalScope;  // Track whether the compiler is currently in the global scope instead of in a block.
                            // This is used to distinguish between local variables and global variables.
+
+    u_int8_t currentStackHeight;  // The next empty spot in the stack
+    Local tempStack[STACK_MAX];   // A copy of the VM's stack so we can know at compile time what position
+                                  // local variables will be in. Holds only strings for variable names.
 } Compiler;
 
 /* Initialize a Compiler with an AST to be parsed */

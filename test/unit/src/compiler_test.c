@@ -715,8 +715,9 @@ int test_compiler_stack_height_expression_and_val() {
     ASSERT(compiler.currentStackHeight == 0);  // Should start at zero
     CompiledCode compiledCode = compile(&compiler);
 
-    // The expression and print statements shouldn't add to the height. The val declaration should add 1.
-    ASSERT(compiler.currentStackHeight == 1);
+    // The expression and print statements shouldn't add to the height.
+    // The val declaration also shouldn't add anything because it's a global variable.
+    ASSERT(compiler.currentStackHeight == 0);
 
     // Clean up
     FREE_ARRAY(compiledCode.bytecodeArray);

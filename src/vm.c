@@ -160,6 +160,14 @@ void step(VM* vm) {
             push(vm, value);
             break;
         }
+        case OP_SET_LOCAL_VAL_FAST:
+            break;  // no action necessary to set locals. The compiler handles everything. 🤯
+        case OP_GET_LOCAL_VAL_FAST: {
+            size_t stackIndex = instruction->maybeOperand1;
+            Value value = vm->stack[stackIndex];
+            push(vm, value);
+            break;
+        }
         case OP_POPN: {
             size_t n = instruction->maybeOperand1;
             popN(vm, n);
