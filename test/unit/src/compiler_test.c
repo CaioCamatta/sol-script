@@ -194,6 +194,18 @@
         }                                           \
     }
 
+#define BLOCK_STATEMENT(...)                                                      \
+    &(Statement) {                                                                \
+        .type = BLOCK_STATEMENT,                                                  \
+        .as.blockStatement = &(BlockStatement) {                                  \
+            .statementArray = (StatementArray) {                                  \
+                .values = (Statement*[]){__VA_ARGS__},                            \
+                .used = sizeof((Statement*[]){__VA_ARGS__}) / sizeof(Statement*), \
+                .size = sizeof((Statement*[]){__VA_ARGS__}) / sizeof(Statement*)  \
+            }                                                                     \
+        }                                                                         \
+    }
+
 // ------------------------------------------------------------------------
 // ---------------------------- Test utilities ----------------------------
 // ------------------------------------------------------------------------
@@ -720,6 +732,49 @@ int test_compiler_stack_height_expression_and_val() {
     ASSERT(compiler.currentStackHeight == 0);
 
     // Clean up
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+// Test block statements with local variables
+int test_compiler_single_block_statement_with_locals() {
+    Compiler compiler;
+
+    // Set up a source structure with a block statement containing local variable declarations and usage
+    Source testSource = {
+        .rootStatements = {
+            BLOCK_STATEMENT(VAL_DECLARATION_STATEMENT("x", PRIMARY_EXPRESSION(NUMBER_LITERAL("10"))),
+                            PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("x"))),
+                            VAL_DECLARATION_STATEMENT("y", PRIMARY_EXPRESSION(NUMBER_LITERAL("20"))),
+                            PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("y"))))},
+        .numberOfStatements = 1,
+    };
+
+    initCompiler(&compiler, &testSource);
+    CompiledCode compiledCode = compile(&compiler);
+
+    // Define expected bytecode
+    Bytecode expectedBytecode[] = {
+        {.type = OP_LOAD_CONSTANT},       // Load 10
+        {.type = OP_SET_LOCAL_VAL_FAST},  // Set local 'x'
+        {.type = OP_GET_LOCAL_VAL_FAST},  // Get local 'x'
+        {.type = OP_PRINT},               // Print 'x'
+        {.type = OP_LOAD_CONSTANT},       // Load 20
+        {.type = OP_SET_LOCAL_VAL_FAST},  // Set local 'y'
+        {.type = OP_GET_LOCAL_VAL_FAST},  // Get local 'y'
+        {.type = OP_PRINT},               // Print 'y'
+        {.type = OP_POPN},                // Cleanup 'x' and 'y'
+    };
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
+
+    printCompiledCode(compiledCode);
+
+    // Assert the actual bytecode matches the expected
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+
+    // Cleanup
     FREE_ARRAY(compiledCode.bytecodeArray);
     FREE_ARRAY(compiledCode.constantPool);
 
