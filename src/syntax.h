@@ -7,6 +7,7 @@
 // Forward declarations
 typedef struct ExpressionStatement ExpressionStatement;
 typedef struct PrintStatement PrintStatement;
+typedef struct BlockStatement BlockStatement;
 typedef struct ValDeclarationStatement ValDeclarationStatement;
 typedef struct LogicalOrExpression LogicalOrExpression;
 typedef struct LogicalAndExpression LogicalAndExpression;
@@ -22,28 +23,30 @@ typedef struct IdentifierLiteral IdentifierLiteral;
 typedef struct StringLiteral StringLiteral;
 
 // --- Types ---
+// (Stack effect is how the instruction modifies the stack, +1 means it adds something to the stack.)
 typedef enum {
-    EXPRESSION_STATEMENT,
-    VAL_DECLARATION_STATEMENT,
-    PRINT_STATEMENT
+    EXPRESSION_STATEMENT,       // Stack effect: 0
+    VAL_DECLARATION_STATEMENT,  // Stack effect: +1 if local, 0 if global.
+    PRINT_STATEMENT,            // Stack effect: 0
+    BLOCK_STATEMENT             // Stack effect: 0
 } StatementType;
 
 typedef enum {
-    LOGICAL_OR_EXPRESSION,
-    LOGICAL_AND_EXPRESSION,
-    EQUALITY_EXPRESSION,
-    COMPARISON_EXPRESSION,
-    ADDITIVE_EXPRESSION,
-    MULTIPLICATIVE_EXPRESSION,
-    UNARY_EXPRESSION,
-    PRIMARY_EXPRESSION
+    LOGICAL_OR_EXPRESSION,      // Stack effect: -1
+    LOGICAL_AND_EXPRESSION,     // Stack effect: -1
+    EQUALITY_EXPRESSION,        // Stack effect: -1
+    COMPARISON_EXPRESSION,      // Stack effect: -1
+    ADDITIVE_EXPRESSION,        // Stack effect: -1
+    MULTIPLICATIVE_EXPRESSION,  // Stack effect: -1
+    UNARY_EXPRESSION,           // Stack effect: 0
+    PRIMARY_EXPRESSION          // Stack effect: 0 per se
 } ExpressionType;
 
 typedef enum {
-    BOOLEAN_LITERAL,
-    NUMBER_LITERAL,
-    IDENTIFIER_LITERAL,
-    STRING_LITERAL
+    BOOLEAN_LITERAL,     // Stack effect: +1
+    NUMBER_LITERAL,      // Stack effect: +1
+    IDENTIFIER_LITERAL,  // Stack effect: +1
+    STRING_LITERAL       // Stack effect: +1
 } LiteralType;
 
 // --- Abstract productions ---
@@ -53,6 +56,7 @@ typedef struct {
         ExpressionStatement *expressionStatement;
         ValDeclarationStatement *valDeclarationStatement;
         PrintStatement *printStatement;
+        BlockStatement *blockStatement;
     } as;
 } Statement;
 
@@ -83,6 +87,16 @@ typedef struct {
 // --- Concrete productions ---
 struct ExpressionStatement {
     Expression *expression;
+};
+
+typedef struct {
+    Statement **values;
+    size_t used;
+    size_t size;
+} StatementArray;
+
+struct BlockStatement {
+    StatementArray statementArray;
 };
 
 struct PrintStatement {

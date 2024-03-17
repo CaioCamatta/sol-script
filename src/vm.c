@@ -48,6 +48,15 @@ Value pop(VM* vm) {
     vm->SP--;
     return *(vm->SP);
 }
+
+// Pop N values from the stack
+void popN(VM* vm, int n) {
+    if (n > (vm->SP - vm->stack)) {
+        runtimeError(vm, "Runtime error: attempted to pop more elements from the stack than are in the stack.");
+    }
+    vm->SP -= n;
+}
+
 /**
  * peek(0) peeks the top of the stack
  * peek(1) peeks the second highest element of the stack
@@ -84,6 +93,7 @@ static void printValue(Value value) {
             printf("%s", value.as.stringVal);
             break;
     };
+    printf("\n");
 }
 
 // Apply an operation to two doubles, push double to stack
@@ -135,20 +145,33 @@ void step(VM* vm) {
 
     switch (instruction->type) {
         case OP_LOAD_CONSTANT:
-            push(vm, bytecodeConstantToValue(vm, instruction->maybeConstantIndex));
+            push(vm, bytecodeConstantToValue(vm, instruction->maybeOperand1));
             break;
-        case OP_SET_VAL: {
+        case OP_SET_GLOBAL_VAL: {
             Value value = pop(vm);
-            size_t constantIndex = instruction->maybeConstantIndex;
+            size_t constantIndex = instruction->maybeOperand1;
             Constant constant = vm->compiledCode.constantPool.values[constantIndex];
             hashTableInsert(&vm->globals, constant.as.string, value);
             break;
         }
-        case OP_GET_VAL: {
-            size_t constantIndex = instruction->maybeConstantIndex;
+        case OP_GET_GLOBAL_VAL: {
+            size_t constantIndex = instruction->maybeOperand1;
             Constant constant = vm->compiledCode.constantPool.values[constantIndex];
             Value value = hashTableGet(&vm->globals, constant.as.string)->value;
             push(vm, value);
+            break;
+        }
+        case OP_SET_LOCAL_VAL_FAST:
+            break;  // no action necessary to set locals. The compiler handles everything. 🤯
+        case OP_GET_LOCAL_VAL_FAST: {
+            size_t stackIndex = instruction->maybeOperand1;
+            Value value = vm->stack[stackIndex];
+            push(vm, value);
+            break;
+        }
+        case OP_POPN: {
+            size_t n = instruction->maybeOperand1;
+            popN(vm, n);
             break;
         }
         case OP_PRINT: {

@@ -13,7 +13,7 @@ int test_scanner() {
 
     initScanner(&scanner, sourceCode);
     TokenArray tokens = scanTokens(&scanner);
-    printTokenList(tokens);
+    // printTokenList(tokens);
 
     ASSERT_WITH_MESSAGE(tokens.used == expectedTokensLength, printf("ERROR - %zu tokens were found, but %d were expected.\n", tokens.used, expectedTokensLength));
 

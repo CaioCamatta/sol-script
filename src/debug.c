@@ -138,6 +138,12 @@ static void printStatement(const Statement* statement, int depth) {
             printf("PrintStatement\n");
             printExpression(statement->as.printStatement->expression, depth + 1);
             break;
+        case BLOCK_STATEMENT:
+            printf("BlockStatement" KGRY "(numberOfStatements=%zu)\n" RESET, statement->as.blockStatement->statementArray.used);
+            for (int i = 0; i < statement->as.blockStatement->statementArray.used; ++i) {
+                printStatement(statement->as.blockStatement->statementArray.values[i], depth + 1);
+            }
+            break;
     }
 }
 
@@ -278,13 +284,22 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
     for (int i = 0; i < bytecodeArray.used; i++) {
         switch (bytecodeArray.values[i].type) {
             case OP_LOAD_CONSTANT:
-                printf(" [ LOAD_CONSTANT #%zu ]\n", bytecodeArray.values[i].maybeConstantIndex);
+                printf(" [ LOAD_CONSTANT #%zu ]\n", bytecodeArray.values[i].maybeOperand1);
                 break;
-            case OP_SET_VAL:
-                printf(" [ OP_SET_VAL #%zu ]\n", bytecodeArray.values[i].maybeConstantIndex);
+            case OP_SET_GLOBAL_VAL:
+                printf(" [ OP_SET_GLOBAL_VAL #%zu ]\n", bytecodeArray.values[i].maybeOperand1);
                 break;
-            case OP_GET_VAL:
-                printf(" [ OP_GET_VAL #%zu ]\n", bytecodeArray.values[i].maybeConstantIndex);
+            case OP_GET_GLOBAL_VAL:
+                printf(" [ OP_GET_GLOBAL_VAL #%zu ]\n", bytecodeArray.values[i].maybeOperand1);
+                break;
+            case OP_SET_LOCAL_VAL_FAST:
+                printf(" [ OP_SET_LOCAL_VAL_FAST ]\n");
+                break;
+            case OP_GET_LOCAL_VAL_FAST:
+                printf(" [ OP_GET_LOCAL_VAL_FAST #%zu ]\n", bytecodeArray.values[i].maybeOperand1);
+                break;
+            case OP_POPN:
+                printf(" [ OP_POPN %zu ]\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_PRINT:
                 printf(" [ PRINT ]\n");

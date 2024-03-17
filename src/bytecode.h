@@ -12,12 +12,15 @@
  * TODO: benchmark OP_BINARY(op) instead of OP_BINARY*
  */
 typedef enum {
-    OP_LOAD_CONSTANT,  // load a constant from the compiled constant pool onto the stack
-    OP_SET_VAL,        // expects an identifier at the top of the stack, and a value right below it
-    OP_GET_VAL,        // expects an identifier at the top of the stack
-    OP_TRUE,           // put Value true on the stack
-    OP_FALSE,          // put Value false on the stack
-    OP_PRINT,          // print value at the top of the stack
+    OP_LOAD_CONSTANT,       // load a constant from the compiled constant pool onto the stack
+    OP_SET_GLOBAL_VAL,      // expects an identifier at the top of the stack, and a value right below it
+    OP_GET_GLOBAL_VAL,      // expects an identifier at the top of the stack
+    OP_SET_LOCAL_VAL_FAST,  // turn the value at the top of the stack into a local variable.
+    OP_GET_LOCAL_VAL_FAST,  // load a local variable that's already in the stack
+    OP_TRUE,                // put Value true on the stack
+    OP_FALSE,               // put Value false on the stack
+    OP_PRINT,               // print value at the top of the stack
+    OP_POPN,                // pop N values from the stack
 
     // Unary operations
     OP_UNARY_NEGATE,  // -stack[-1]
@@ -43,16 +46,16 @@ typedef enum {
     (Bytecode) { .type = op }
 
 // Create bytecode with one constant
-#define BYTECODE_CONSTANT_1(op, index1) \
-    (Bytecode) {                        \
-        .type = op,                     \
-        .maybeConstantIndex = (index1)  \
+#define BYTECODE_OPERAND_1(op, index1) \
+    (Bytecode) {                       \
+        .type = op,                    \
+        .maybeOperand1 = (index1)      \
     }
 
 /* The bytecode contains the Opcode and optional operands depending on the type of operation. */
 typedef struct {
     Opcode type;
-    size_t maybeConstantIndex;
+    size_t maybeOperand1;
 } Bytecode;
 
 typedef struct {

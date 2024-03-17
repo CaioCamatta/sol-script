@@ -52,7 +52,7 @@ int test_parser_simple_expression() {
     // Parse the expression
     Source* source = parseAST(&parser);
 
-    printAST(source);
+    // printAST(source);
 
     // Assertions to check the structure of the parsed AST
     ASSERT(source->numberOfStatements == 1);
@@ -118,7 +118,7 @@ int test_parser_logical_or_expression() {
 
     ASTParser parser;
     Source* source = parseASTFromTokens(&parser, &tokens);
-    printAST(source);
+    // printAST(source);
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -163,7 +163,7 @@ int test_parser_logical_and_expression() {
     ASTParser parser;
     initASTParser(&parser, tokens);
     Source* source = parseAST(&parser);
-    printAST(source);
+    // printAST(source);
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -206,7 +206,7 @@ int test_parser_equality_expression() {
     ASTParser parser;
     initASTParser(&parser, tokens);
     Source* source = parseAST(&parser);
-    printAST(source);
+    // printAST(source);
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -248,7 +248,7 @@ int test_parser_comparison_expression() {
     ASTParser parser;
     initASTParser(&parser, tokens);
     Source* source = parseAST(&parser);
-    printAST(source);
+    // printAST(source);
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -290,7 +290,7 @@ int test_parser_multiplicative_expression() {
     ASTParser parser;
     initASTParser(&parser, tokens);
     Source* source = parseAST(&parser);
-    printAST(source);
+    // printAST(source);
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -331,7 +331,7 @@ int test_parser_unary_expression() {
     ASTParser parser;
     initASTParser(&parser, tokens);
     Source* source = parseAST(&parser);
-    printAST(source);
+    // printAST(source);
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -366,7 +366,7 @@ int test_parser_boolean_literal() {
     ASTParser parser;
     initASTParser(&parser, tokens);
     Source* source = parseAST(&parser);
-    printAST(source);
+    // printAST(source);
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -419,7 +419,7 @@ int test_parser_complex_expression() {
     ASTParser parser;
     initASTParser(&parser, tokens);
     Source* source = parseAST(&parser);
-    printAST(source);
+    // printAST(source);
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -511,7 +511,7 @@ int test_parser_nested_parentheses_expression() {
 
     Source* source = parseAST(&parser);
     ASSERT(source->numberOfStatements == 1);  // Ensure one statement was parsed
-    printAST(source);
+    // printAST(source);
 
     Statement* statement = source->rootStatements[0];
     ASSERT(statement->type == EXPRESSION_STATEMENT);  // Ensure the statement is an expression
@@ -617,5 +617,47 @@ int test_parser_string_literal() {
     freeSource(source);
     FREE_ARRAY(tokens);
 
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_block_statement() {
+    // Define the tokens representing a block statement with a val declaration and a print statement
+    TokenType types[] = {
+        TOKEN_LEFT_CURLY,                                                         // {
+        TOKEN_VAL, TOKEN_IDENTIFIER, TOKEN_EQUAL, TOKEN_NUMBER, TOKEN_SEMICOLON,  // val x = 10;
+        TOKEN_PRINT, TOKEN_IDENTIFIER, TOKEN_SEMICOLON,                           // print x;
+        TOKEN_RIGHT_CURLY,                                                        // }
+        TOKEN_EOF};
+    TokenArray tokens = createTokenArray(types, sizeof(types) / sizeof(TokenType));
+
+    // Initialize the parser and parse the AST from the tokens
+    ASTParser parser;
+    initASTParser(&parser, tokens);
+    Source* source = parseAST(&parser);
+
+    // Assertions to verify the structure of the parsed AST
+    // Expect one statement at the root, which is a block statement
+    ASSERT(source->numberOfStatements == 1);
+    ASSERT(source->rootStatements[0]->type == BLOCK_STATEMENT);
+
+    // Verify the block contains two statements: a val declaration and a print statement
+    BlockStatement* blockStmt = source->rootStatements[0]->as.blockStatement;
+    ASSERT(blockStmt->statementArray.used == 2);
+
+    // Verify the first statement is a val declaration
+    Statement* firstStmt = blockStmt->statementArray.values[0];
+    ASSERT(firstStmt->type == VAL_DECLARATION_STATEMENT);
+    ValDeclarationStatement* valDecl = firstStmt->as.valDeclarationStatement;
+    ASSERT(valDecl->expression->type == PRIMARY_EXPRESSION);
+
+    // Verify the second statement is a print statement
+    Statement* secondStmt = blockStmt->statementArray.values[1];
+    ASSERT(secondStmt->type == PRINT_STATEMENT);
+    PrintStatement* printStmt = secondStmt->as.printStatement;
+    ASSERT(printStmt->expression->type == PRIMARY_EXPRESSION);
+
+    // Cleanup
+    freeSource(source);
+    FREE_ARRAY(tokens);
     return SUCCESS_RETURN_CODE;
 }

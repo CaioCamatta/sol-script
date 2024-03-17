@@ -194,6 +194,18 @@
         }                                           \
     }
 
+#define BLOCK_STATEMENT(...)                                                      \
+    &(Statement) {                                                                \
+        .type = BLOCK_STATEMENT,                                                  \
+        .as.blockStatement = &(BlockStatement) {                                  \
+            .statementArray = (StatementArray) {                                  \
+                .values = (Statement*[]){__VA_ARGS__},                            \
+                .used = sizeof((Statement*[]){__VA_ARGS__}) / sizeof(Statement*), \
+                .size = sizeof((Statement*[]){__VA_ARGS__}) / sizeof(Statement*)  \
+            }                                                                     \
+        }                                                                         \
+    }
+
 // ------------------------------------------------------------------------
 // ---------------------------- Test utilities ----------------------------
 // ------------------------------------------------------------------------
@@ -233,22 +245,23 @@ int test_compiler() {
 
     initCompiler(&compiler, &testSource);
     CompiledCode compiledCode = compile(&compiler);
-    printCompiledCode(compiledCode);
+    // printCompiledCode(compiledCode);
 
     // Expected bytecode
     Bytecode expectedBytecode[] = {
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_BINARY_ADD},
+        {.type = OP_POPN},
     };
-    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 3};
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 4};
 
     // Compared the actual and expected
     ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
-    ASSERT(compiledCode.constantPool.values[0].as.number == 5);            // 5 is in slot 0 of the pool
-    ASSERT(compiledCode.bytecodeArray.values[0].maybeConstantIndex == 0);  // first instruction loads slot 0
+    ASSERT(compiledCode.constantPool.values[0].as.number == 5);       // 5 is in slot 0 of the pool
+    ASSERT(compiledCode.bytecodeArray.values[0].maybeOperand1 == 0);  // first instruction loads slot 0
     ASSERT(compiledCode.constantPool.values[1].as.number == 7);
-    ASSERT(compiledCode.bytecodeArray.values[1].maybeConstantIndex == 1);
+    ASSERT(compiledCode.bytecodeArray.values[1].maybeOperand1 == 1);
 
     // Clean up
     FREE_ARRAY(compiledCode.bytecodeArray);
@@ -278,7 +291,7 @@ int test_compiler_print() {
     ASSERT(compiledCode.bytecodeArray.values[1].type == OP_PRINT);          // Second should be OP_PRINT
 
     // Optionally, print the bytecode for visual verification
-    printCompiledCode(compiledCode);
+    // printCompiledCode(compiledCode);
 
     // Clean up
     FREE_ARRAY(compiledCode.bytecodeArray);
@@ -301,11 +314,11 @@ int test_compiler_val_declaration() {
     CompiledCode compiledCode = compile(&compiler);
 
     // Verify bytecode for val declaration
-    ASSERT(compiledCode.bytecodeArray.used == 2);                           // Check if two bytecode instructions are generated
-    ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);  // First should be OP_LOAD_CONSTANT
-    ASSERT(compiledCode.bytecodeArray.values[1].type == OP_SET_VAL);        // Second should be OP_SET_VAL
+    ASSERT(compiledCode.bytecodeArray.used == 2);                            // Check if two bytecode instructions are generated
+    ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);   // First should be OP_LOAD_CONSTANT
+    ASSERT(compiledCode.bytecodeArray.values[1].type == OP_SET_GLOBAL_VAL);  // Second should be OP_SET_GLOBAL_VAL
 
-    printCompiledCode(compiledCode);
+    // printCompiledCode(compiledCode);
 
     FREE_ARRAY(compiledCode.bytecodeArray);
     FREE_ARRAY(compiledCode.constantPool);
@@ -327,10 +340,10 @@ int test_compiler_variable_declaration_and_printing() {
     initCompiler(&compiler, &testSource);
     CompiledCode compiledCode = compile(&compiler);
 
-    ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);  // load 42 into stack
-    ASSERT(compiledCode.bytecodeArray.values[1].type == OP_SET_VAL);        // assign top of stack to variable 'x'
-    ASSERT(compiledCode.bytecodeArray.values[2].type == OP_GET_VAL);        // get variable 'x'
-    ASSERT(compiledCode.bytecodeArray.values[3].type == OP_PRINT);          // print top of stack
+    ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);   // load 42 into stack
+    ASSERT(compiledCode.bytecodeArray.values[1].type == OP_SET_GLOBAL_VAL);  // assign top of stack to variable 'x'
+    ASSERT(compiledCode.bytecodeArray.values[2].type == OP_GET_GLOBAL_VAL);  // get variable 'x'
+    ASSERT(compiledCode.bytecodeArray.values[3].type == OP_PRINT);           // print top of stack
 
     ASSERT(compiledCode.constantPool.values[0].type == CONST_TYPE_DOUBLE);  // 42
     ASSERT(compiledCode.constantPool.values[0].as.number == 42);
@@ -387,8 +400,9 @@ int test_compiler_binary_equal() {
         {.type = OP_LOAD_CONSTANT},  // Load 5
         {.type = OP_LOAD_CONSTANT},  // Load 5 again
         {.type = OP_BINARY_EQUAL},   // Compare equality
+        {.type = OP_POPN},           // Expression statements pop the value left on the stack
     };
-    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 3};
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 4};
 
     // Assert the actual bytecode matches the expected
     ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
@@ -422,8 +436,9 @@ int test_compiler_binary_not_equal() {
         {.type = OP_LOAD_CONSTANT},     // Load 5
         {.type = OP_LOAD_CONSTANT},     // Load 7
         {.type = OP_BINARY_NOT_EQUAL},  // Check not equal
+        {.type = OP_POPN},
     };
-    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 3};
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 4};
 
     // Assert the bytecode is as expected
     ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
@@ -477,18 +492,22 @@ int test_compiler_comparison_operations() {
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_BINARY_GT},
+        {.type = OP_POPN},
         // 5 >= 5
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_BINARY_GTE},
+        {.type = OP_POPN},
         // 3 < 5
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_BINARY_LT},
+        {.type = OP_POPN},
         // 5 <= 5
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_BINARY_LTE},
+        {.type = OP_POPN},
     };
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
 
@@ -531,10 +550,12 @@ int test_compiler_logical_and_or_operations() {
         {.type = OP_TRUE},
         {.type = OP_FALSE},
         {.type = OP_BINARY_LOGICAL_AND},
+        {.type = OP_POPN},
         // true || false
         {.type = OP_TRUE},
         {.type = OP_FALSE},
         {.type = OP_BINARY_LOGICAL_OR},
+        {.type = OP_POPN},
     };
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
 
@@ -578,10 +599,12 @@ int test_compiler_multiplicative_expressions() {
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_BINARY_MULTIPLY},
+        {.type = OP_POPN},
         // 10 / 2
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_BINARY_DIVIDE},
+        {.type = OP_POPN},
     };
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
 
@@ -622,8 +645,10 @@ int test_compiler_unary_expressions() {
     Bytecode expectedBytecode[] = {
         {.type = OP_LOAD_CONSTANT},  // Load 42
         {.type = OP_UNARY_NEGATE},   // Apply unary negation
-        {.type = OP_TRUE},           // Push true
-        {.type = OP_UNARY_NOT},      // Apply logical NOT
+        {.type = OP_POPN},
+        {.type = OP_TRUE},       // Push true
+        {.type = OP_UNARY_NOT},  // Apply logical NOT
+        {.type = OP_POPN},
     };
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
 
@@ -649,7 +674,7 @@ int test_compiler_boolean_literal() {
     initCompiler(&compiler, &testSource);
     CompiledCode compiledCodeFalse = compile(&compiler);
 
-    ASSERT(compiledCodeFalse.bytecodeArray.used == 1);
+    ASSERT(compiledCodeFalse.bytecodeArray.used == 2);
     ASSERT(compiledCodeFalse.bytecodeArray.values[0].type == OP_FALSE);
 
     FREE_ARRAY(compiledCodeFalse.bytecodeArray);
@@ -679,6 +704,166 @@ int test_compiler_string_literal() {
     ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);                // Check bytecode to load string
 
     // Cleanup
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_stack_height_expression_and_val() {
+    // Setup a source with an expression statement followed by a val declaration
+    Source testSource = {
+        .rootStatements = {
+            EXPRESSION_STATEMENT(
+                PRIMARY_EXPRESSION(NUMBER_LITERAL("42"))),
+            PRINT_STATEMENT(PRIMARY_EXPRESSION(NUMBER_LITERAL("42"))),
+            VAL_DECLARATION_STATEMENT("x", PRIMARY_EXPRESSION(NUMBER_LITERAL("42")))},
+        .numberOfStatements = 3,
+    };
+
+    Compiler compiler;
+    initCompiler(&compiler, &testSource);
+
+    ASSERT(compiler.currentStackHeight == 0);  // Should start at zero
+    CompiledCode compiledCode = compile(&compiler);
+
+    // The expression and print statements shouldn't add to the height.
+    // The val declaration also shouldn't add anything because it's a global variable.
+    ASSERT(compiler.currentStackHeight == 0);
+
+    // Clean up
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+// Test block statements with local variables
+int test_compiler_single_block_statement_with_locals() {
+    Compiler compiler;
+
+    // Set up a source structure with a block statement containing local variable declarations and usage
+    Source testSource = {
+        .rootStatements = {
+            BLOCK_STATEMENT(VAL_DECLARATION_STATEMENT("x", PRIMARY_EXPRESSION(NUMBER_LITERAL("10"))),
+                            PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("x"))),
+                            VAL_DECLARATION_STATEMENT("y", PRIMARY_EXPRESSION(NUMBER_LITERAL("20"))),
+                            PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("y"))))},
+        .numberOfStatements = 1,
+    };
+
+    initCompiler(&compiler, &testSource);
+    CompiledCode compiledCode = compile(&compiler);
+
+    // Define expected bytecode
+    Bytecode expectedBytecode[] = {
+        {.type = OP_LOAD_CONSTANT},       // Load 10
+        {.type = OP_SET_LOCAL_VAL_FAST},  // Set local 'x'
+        {.type = OP_GET_LOCAL_VAL_FAST},  // Get local 'x'
+        {.type = OP_PRINT},               // Print 'x'
+        {.type = OP_LOAD_CONSTANT},       // Load 20
+        {.type = OP_SET_LOCAL_VAL_FAST},  // Set local 'y'
+        {.type = OP_GET_LOCAL_VAL_FAST},  // Get local 'y'
+        {.type = OP_PRINT},               // Print 'y'
+        {.type = OP_POPN},                // Cleanup 'x' and 'y'
+    };
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
+
+    // Assert the actual bytecode matches the expected
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+
+    // Cleanup
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_nested_blocks_with_global_and_local_vars() {
+    Compiler compiler;
+
+    /*
+    val g = 100;
+    print g;
+    {
+        print g;
+        val x = 10;
+        print x;
+        {
+            val g = 20;
+            print g;
+            val y = 30;
+            print y;
+        }
+    }
+    */
+    Source testSource = {
+        .rootStatements = {
+            VAL_DECLARATION_STATEMENT("g", PRIMARY_EXPRESSION(NUMBER_LITERAL("100"))),
+            PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("g"))),
+            BLOCK_STATEMENT(
+                PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("g"))),
+                VAL_DECLARATION_STATEMENT("x", PRIMARY_EXPRESSION(NUMBER_LITERAL("10"))),
+                PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("x"))),
+                BLOCK_STATEMENT(
+                    VAL_DECLARATION_STATEMENT("g", PRIMARY_EXPRESSION(NUMBER_LITERAL("20"))),
+                    PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("g"))),
+                    VAL_DECLARATION_STATEMENT("y", PRIMARY_EXPRESSION(NUMBER_LITERAL("30"))),
+                    PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("y")))))},
+        .numberOfStatements = 3,
+    };
+
+    initCompiler(&compiler, &testSource);
+    CompiledCode compiledCode = compile(&compiler);
+
+    Bytecode expectedBytecode[] = {
+        {.type = OP_LOAD_CONSTANT},
+        {.type = OP_SET_GLOBAL_VAL},
+        {.type = OP_GET_GLOBAL_VAL},
+        {.type = OP_PRINT},
+        {.type = OP_GET_GLOBAL_VAL},  // Global access inside local scope
+        {.type = OP_PRINT},
+        {.type = OP_LOAD_CONSTANT},
+        {.type = OP_SET_LOCAL_VAL_FAST},
+        {.type = OP_GET_LOCAL_VAL_FAST},  // No constant pool access; the VM won't even know the name of the val.
+        {.type = OP_PRINT},
+        {.type = OP_LOAD_CONSTANT},
+        {.type = OP_SET_LOCAL_VAL_FAST},
+        {.type = OP_GET_LOCAL_VAL_FAST},
+        {.type = OP_PRINT},
+        {.type = OP_LOAD_CONSTANT},
+        {.type = OP_SET_LOCAL_VAL_FAST},
+        {.type = OP_GET_LOCAL_VAL_FAST},
+        {.type = OP_PRINT},
+        {.type = OP_POPN},
+        {.type = OP_POPN},
+    };
+
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
+
+    // Assert the actual bytecode matches the expected
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+
+    // Assert constant pool contains one identifier for the global, and four numbers.
+    //  Constant Pool:
+    //  #0 (double) 100.000000
+    //  #1 (identifier) "g"
+    //  #2 (double) 10.000000
+    //  #3 (double) 20.000000
+    //  #4 (double) 30.000000
+    ASSERT(compiledCode.constantPool.used == 5);
+    ASSERT(compiledCode.constantPool.values[0].type == CONST_TYPE_DOUBLE);
+    ASSERT(compiledCode.constantPool.values[0].as.number == 100.0);
+    ASSERT(compiledCode.constantPool.values[1].type == CONST_TYPE_IDENTIFIER);
+    ASSERT(strcmp(compiledCode.constantPool.values[1].as.string, "g") == 0);
+    ASSERT(compiledCode.constantPool.values[2].type == CONST_TYPE_DOUBLE);
+    ASSERT(compiledCode.constantPool.values[2].as.number == 10.0);
+    ASSERT(compiledCode.constantPool.values[3].type == CONST_TYPE_DOUBLE);
+    ASSERT(compiledCode.constantPool.values[3].as.number == 20.0);
+    ASSERT(compiledCode.constantPool.values[4].type == CONST_TYPE_DOUBLE);
+    ASSERT(compiledCode.constantPool.values[4].as.number == 30.0);
+
+    // Cleanup and assertions
     FREE_ARRAY(compiledCode.bytecodeArray);
     FREE_ARRAY(compiledCode.constantPool);
 

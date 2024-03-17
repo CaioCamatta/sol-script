@@ -35,6 +35,7 @@ static void all_tests() {
     RUN_TEST(test_parser_nested_parentheses_expression);
     RUN_TEST(test_parser_variable_declaration_and_reading);
     RUN_TEST(test_parser_string_literal);
+    RUN_TEST(test_parser_block_statement);
 
     // Compiler tests
     RUN_TEST(test_compiler);
@@ -50,6 +51,9 @@ static void all_tests() {
     RUN_TEST(test_compiler_unary_expressions);
     RUN_TEST(test_compiler_boolean_literal);
     RUN_TEST(test_compiler_string_literal);
+    RUN_TEST(test_compiler_stack_height_expression_and_val);
+    RUN_TEST(test_compiler_single_block_statement_with_locals);
+    RUN_TEST(test_compiler_nested_blocks_with_global_and_local_vars);
 
     // VM tests
     RUN_TEST(test_vm_addition);
@@ -62,6 +66,8 @@ static void all_tests() {
     RUN_TEST(test_vm_unary_not);
     RUN_TEST(test_vm_unary_negation);
     RUN_TEST(test_vm_print_string_literal);
+    RUN_TEST(test_vm_simple_block_statement_and_cleanup);
+    RUN_TEST(test_vm_nested_blocks_with_global_and_local_vars);
 }
 
 int main(int argc, char **argv) {

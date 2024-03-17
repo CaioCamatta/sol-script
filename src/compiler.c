@@ -1,5 +1,7 @@
 #include "compiler.h"
 
+#include <limits.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -19,6 +21,12 @@ void initCompiler(Compiler* compiler, Source* ASTSource) {
     compiler->compiledBytecode = bytecodeArray;
     compiler->ASTSource = ASTSource;
     compiler->constantPool = constantPool;
+    compiler->currentStackHeight = 0;
+    compiler->isInGlobalScope = true;
+
+    for (int i = 0; i < STACK_MAX; i++) {
+        compiler->tempStack[i].name = NULL;
+    }
 }
 
 /* FORWARD DECLARATIONS */
@@ -44,6 +52,26 @@ static void visitLiteral(Compiler* compiler, Literal* literal);
 // Add bytecode to the compiled program.
 static void emitBytecode(Compiler* compiler, Bytecode bytecode) {
     INSERT_ARRAY(compiler->compiledBytecode, bytecode, Bytecode);
+}
+
+/**
+ * The compiler can know in advance how tall the VM stack will be at any point. This function helps keep track
+ * of the height. For example, a local variable declaration increases the stack by 1 (locals live on the stack).
+ */
+static void increaseStackHeight(Compiler* compiler) {
+    if (compiler->currentStackHeight == UCHAR_MAX) {
+        errorAndExit("CompilerStackOverflowError: VM stack will overflow.");
+    }
+
+    compiler->currentStackHeight++;
+}
+
+/**
+ * The compiler can know in advance how tall the VM stack will be at any point. This function helps keep track
+ * of the height. For example, an addition decreases the height of the stack by 1 (pop, pop, push).
+ */
+static void decreaseStackHeight(Compiler* compiler) {
+    compiler->currentStackHeight--;
 }
 
 static double tokenTodouble(Token token) {
@@ -103,6 +131,42 @@ static size_t addConstantToPool(Compiler* compiler, Constant constant) {
     return compiler->constantPool.used - 1;
 }
 
+/**
+ * Given a local variable name, find its position in the stack. (We can determine at compile time
+ * where that local will be in the stack.)
+ */
+static int findLocalByName(Compiler* compiler, char* name) {
+    for (int i = compiler->currentStackHeight; i >= 0; i--) {
+        // Skip NULL entries. (These may exists because our temp stack only keeps track of locals.
+        // Anything else that's on the stack is a NULL here)
+        if (compiler->tempStack[i].name == NULL) continue;
+
+        // See if name matches
+        if (strcmp(name, compiler->tempStack[i].name) == 0) return i;
+    }
+    return -1;  // Not declared
+}
+
+/**
+ * Add a local variable to the Compiler's temporary stack.
+ */
+static void addLocalToTempStack(Compiler* compiler, char* name) {
+    // The local will be right below the current stack height
+    compiler->tempStack[compiler->currentStackHeight - 1] = (Local){.name = name};
+}
+
+/**
+ * Remove N locals from the top of the Compiler's temporary stack.
+ */
+static void removeLocalsFromTempStack(Compiler* compiler, int N) {
+    for (int i = compiler->currentStackHeight; i > compiler->currentStackHeight - N; i--) {
+        if (N < 0) {
+            errorAndExit("Attempted to remove more local variables than exist in the stack. This should be impossible.");
+        }
+        compiler->tempStack[i - 1].name = NULL;  // Setting the name to NULL frees up the spot
+    }
+}
+
 /* VISITOR FUNCTIONS */
 
 static void visitAdditiveExpression(Compiler* compiler, AdditiveExpression* additiveExpression) {
@@ -119,6 +183,7 @@ static void visitAdditiveExpression(Compiler* compiler, AdditiveExpression* addi
         default:
             break;
     }
+    decreaseStackHeight(compiler);
 }
 
 static void visitMultiplicativeExpression(Compiler* compiler, MultiplicativeExpression* multiplicativeExpression) {
@@ -135,6 +200,7 @@ static void visitMultiplicativeExpression(Compiler* compiler, MultiplicativeExpr
         default:
             break;
     }
+    decreaseStackHeight(compiler);
 }
 
 static void visitEqualityExpression(Compiler* compiler, EqualityExpression* equalityExpression) {
@@ -151,18 +217,21 @@ static void visitEqualityExpression(Compiler* compiler, EqualityExpression* equa
         default:
             break;
     }
+    decreaseStackHeight(compiler);
 }
 
 static void visitLogicalOrExpression(Compiler* compiler, LogicalOrExpression* logicalOrExpression) {
     visitExpression(compiler, logicalOrExpression->leftExpression);
     visitExpression(compiler, logicalOrExpression->rightExpression);
     emitBytecode(compiler, BYTECODE(OP_BINARY_LOGICAL_OR));
+    decreaseStackHeight(compiler);
 }
 
 static void visitLogicalAndExpression(Compiler* compiler, LogicalAndExpression* logicalAndExpression) {
     visitExpression(compiler, logicalAndExpression->leftExpression);
     visitExpression(compiler, logicalAndExpression->rightExpression);
     emitBytecode(compiler, BYTECODE(OP_BINARY_LOGICAL_AND));
+    decreaseStackHeight(compiler);
 }
 
 // Visit the two expression on left and write, emit bytecode to add them
@@ -186,6 +255,7 @@ static void visitComparisonExpression(Compiler* compiler, ComparisonExpression* 
         default:
             break;
     }
+    decreaseStackHeight(compiler);
 }
 
 static void visitUnaryExpression(Compiler* compiler, UnaryExpression* unaryExpression) {
@@ -204,6 +274,11 @@ static void visitPrimaryExpression(Compiler* compiler, PrimaryExpression* primar
 // Visit the expression. (Should be executed only for its side-effects)
 static void visitExpressionStatement(Compiler* compiler, ExpressionStatement* expressionStatement) {
     visitExpression(compiler, expressionStatement->expression);
+
+    // The expression will always add a Value to the stack, but by definition it's not used
+    // (otherwise it wouldn't be an expression statement) so we need to remove it.
+    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_POPN, 1));
+    decreaseStackHeight(compiler);
 }
 
 /**
@@ -212,21 +287,60 @@ static void visitExpressionStatement(Compiler* compiler, ExpressionStatement* ex
  */
 static void visitValDeclarationStatement(Compiler* compiler, ValDeclarationStatement* valDeclarationStatement) {
     visitExpression(compiler, valDeclarationStatement->expression);
+    // The expression will add 1 to the stack height. We leave the value on the stack - that's the variable.
 
     Constant constant = IDENTIFIER_CONST(copyStringToHeap(valDeclarationStatement->identifier->token.start,
                                                           valDeclarationStatement->identifier->token.length));
 
-    // TODO: Remove duplicated check; addConstantToPool already runs findConstantInPool.
-    if (findConstantInPool(compiler, constant) != -1) errorAndExit("Error: val \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
+    if (compiler->isInGlobalScope) {
+        // TODO: Remove duplicated check; addConstantToPool already runs findConstantInPool.
+        if (findConstantInPool(compiler, constant) != -1) errorAndExit("Error: val \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
 
-    size_t constantIndex = addConstantToPool(compiler, constant);
-    emitBytecode(compiler, BYTECODE_CONSTANT_1(OP_SET_VAL, constantIndex));
+        size_t constantIndex = addConstantToPool(compiler, constant);
+        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAL, constantIndex));
+
+        decreaseStackHeight(compiler);  // Globals are popped from the stack.
+    } else {
+        if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit("Error: val \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
+
+        addLocalToTempStack(compiler, constant.as.string);
+        emitBytecode(compiler, BYTECODE(OP_SET_LOCAL_VAL_FAST));
+    }
 }
 
 // Visit expression following print, then emit bytecode to print that expression
 static void visitPrintStatement(Compiler* compiler, PrintStatement* printStatement) {
     visitExpression(compiler, printStatement->expression);
     emitBytecode(compiler, BYTECODE(OP_PRINT));
+    decreaseStackHeight(compiler);
+}
+
+static void visitBlockStatement(Compiler* compiler, BlockStatement* blockStatement) {
+    bool wasCompilerInGlobalScopeBeforeThisBlock = compiler->isInGlobalScope;
+    compiler->isInGlobalScope = false;
+
+    // Keep track of the stack height so we can later pop all the variables etc defined in it.
+    uint8_t stackHeightBeforeBlockStmt = compiler->currentStackHeight;
+
+    for (size_t i = 0; i < blockStatement->statementArray.used; i++) {
+        Statement* statement = blockStatement->statementArray.values[i];
+        visitStatement(compiler, statement);
+    }
+
+    // Calculate the stack effect of this entire block so we can clean up at the end of the block.
+    uint8_t stackHeightAfterBlockStmt = compiler->currentStackHeight;
+    uint8_t blockStmtStackEffect = stackHeightAfterBlockStmt - stackHeightBeforeBlockStmt;
+
+    // Pop all the Values that were put in the VM stack in the block.
+    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_POPN, blockStmtStackEffect));
+
+    // Pop all the Locals that were put in the Compiler stack in the block.
+    removeLocalsFromTempStack(compiler, blockStmtStackEffect);
+
+    // Undo stack height
+    compiler->currentStackHeight = stackHeightBeforeBlockStmt;
+
+    compiler->isInGlobalScope = wasCompilerInGlobalScopeBeforeThisBlock;
 }
 
 // Add number to constant pool and emit bytecode to load it onto the stack
@@ -235,8 +349,10 @@ static void visitNumberLiteral(Compiler* compiler, NumberLiteral* numberLiteral)
     Constant constant = DOUBLE_CONST(number);
     size_t constantIndex = addConstantToPool(compiler, constant);
 
-    Bytecode bytecode = BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, constantIndex);
+    Bytecode bytecode = BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, constantIndex);
     emitBytecode(compiler, bytecode);
+
+    increaseStackHeight(compiler);
 }
 
 static void visitBooleanLiteral(Compiler* compiler, BooleanLiteral* booleanLiteral) {
@@ -249,22 +365,46 @@ static void visitBooleanLiteral(Compiler* compiler, BooleanLiteral* booleanLiter
             break;
         default:
             errorAndExit("Error: failed to parse boolean from token '%.*s'.", booleanLiteral->token.length, booleanLiteral->token.start);
-            return;
+            break;
     }
+    increaseStackHeight(compiler);
 }
 
 static void visitIdentifierLiteral(Compiler* compiler, IdentifierLiteral* identifierLiteral) {
-    // Find address of this identifier in the constant pool
     char* identifierNameNullTerminated = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
-    Constant constant = (Constant){
-        .type = CONST_TYPE_IDENTIFIER,
-        .as = {identifierNameNullTerminated}};
-    size_t index = findConstantInPool(compiler, constant);
-    if (index == -1) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
 
-    // Generate bytecode to get the variable
-    Bytecode bytecodeToGetVariable = BYTECODE_CONSTANT_1(OP_GET_VAL, index);
-    emitBytecode(compiler, bytecodeToGetVariable);
+    if (compiler->isInGlobalScope) {
+        // Find address of this identifier in the constant pool
+        Constant constant = (Constant){
+            .type = CONST_TYPE_IDENTIFIER,
+            .as = {identifierNameNullTerminated}};
+        size_t index = findConstantInPool(compiler, constant);
+        if (index == -1) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
+
+        // Generate bytecode to get the variable
+        Bytecode bytecodeToGetVariable = BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index);
+        emitBytecode(compiler, bytecodeToGetVariable);
+    } else {
+        size_t stackIndex = findLocalByName(compiler, identifierNameNullTerminated);
+
+        if (stackIndex == -1) {
+            // If the local isn't found, we check if its a global
+            Constant constant = (Constant){
+                .type = CONST_TYPE_IDENTIFIER,
+                .as = {identifierNameNullTerminated}};
+            size_t index = findConstantInPool(compiler, constant);
+            if (index == -1) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
+
+            // If we found a global, emit the appropriate bytecode
+            Bytecode bytecodeToGetVariable = BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index);
+            emitBytecode(compiler, bytecodeToGetVariable);
+        } else {
+            Bytecode bytecodeToGetVariable = BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, stackIndex);
+            emitBytecode(compiler, bytecodeToGetVariable);
+        }
+    }
+
+    increaseStackHeight(compiler);
 }
 
 static void visitStringLiteral(Compiler* compiler, StringLiteral* stringLiteral) {
@@ -275,8 +415,10 @@ static void visitStringLiteral(Compiler* compiler, StringLiteral* stringLiteral)
         .as = {stringTrimmedAndNullTerminated}};
     size_t constantIndex = addConstantToPool(compiler, constant);
 
-    Bytecode bytecodeToGetVariable = BYTECODE_CONSTANT_1(OP_LOAD_CONSTANT, constantIndex);
+    Bytecode bytecodeToGetVariable = BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, constantIndex);
     emitBytecode(compiler, bytecodeToGetVariable);
+
+    increaseStackHeight(compiler);
 }
 
 static void visitLiteral(Compiler* compiler, Literal* literal) {
@@ -338,13 +480,14 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
         case EXPRESSION_STATEMENT:
             visitExpressionStatement(compiler, statement->as.expressionStatement);
             break;
-
-        case VAL_DECLARATION_STATEMENT: {
+        case VAL_DECLARATION_STATEMENT:
             visitValDeclarationStatement(compiler, statement->as.valDeclarationStatement);
             break;
-        }
         case PRINT_STATEMENT:
             visitPrintStatement(compiler, statement->as.printStatement);
+            break;
+        case BLOCK_STATEMENT:
+            visitBlockStatement(compiler, statement->as.blockStatement);
             break;
         default:
             fprintf(stderr, "Unimplemented statement type %d.\n", statement->type);
@@ -355,7 +498,8 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
 
 CompiledCode compile(Compiler* compiler) {
     clock_t startTime = clock();
-    printf("Started compiling.\n");
+    if (DEBUG_COMPILER)
+        printf("Started compiling.\n");
 
     for (int i = 0; i < compiler->ASTSource->numberOfStatements; i++) {
         Statement* statement = compiler->ASTSource->rootStatements[i];
@@ -368,7 +512,8 @@ CompiledCode compile(Compiler* compiler) {
 
     clock_t endTime = clock();
     double timeTaken = ((double)(endTime - startTime)) / CLOCKS_PER_SEC;
-    printf("Done compiling in %.5f seconds.\n\n", timeTaken);
+    if (DEBUG_COMPILER)
+        printf("Done compiling in %.5f seconds.\n\n", timeTaken);
 
     CompiledCode code = (CompiledCode){
         .bytecodeArray = compiler->compiledBytecode,
