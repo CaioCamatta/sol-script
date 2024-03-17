@@ -333,7 +333,8 @@ The following features are necessary a proper v1.0 release, in rough order:
  - [X] Implement additive expression
  - [X] Implement all other "simple" expressions, i.e. excluding call-expressions
  - [X] Implement string literals
- - [ ] Implement block statements and expressions
+ - [X] Implement block statements and expressions
+ - [X] Add [_FAST](https://stackoverflow.com/questions/74998947/whats-pythons-load-fast-bytecode-instruction-fast-at) local variables
  - [ ] Implement selection statement (`if`s)
  - [ ] Implement the rest of the parser for the whole syntax grammar
  - [ ] Add conditional debugging/logging for tests that fail
