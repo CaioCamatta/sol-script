@@ -621,29 +621,43 @@ int test_parser_string_literal() {
 }
 
 int test_parser_block_statement() {
-    TokenType types[] = {TOKEN_LEFT_CURLY, TOKEN_VAL, TOKEN_IDENTIFIER, TOKEN_EQUAL, TOKEN_NUMBER, TOKEN_SEMICOLON, TOKEN_PRINT, TOKEN_IDENTIFIER, TOKEN_SEMICOLON, TOKEN_RIGHT_CURLY, TOKEN_EOF};
-    TokenArray tokens = createTokenArray(types, 11);
+    // Define the tokens representing a block statement with a val declaration and a print statement
+    TokenType types[] = {
+        TOKEN_LEFT_CURLY,                                                         // {
+        TOKEN_VAL, TOKEN_IDENTIFIER, TOKEN_EQUAL, TOKEN_NUMBER, TOKEN_SEMICOLON,  // val x = 10;
+        TOKEN_PRINT, TOKEN_IDENTIFIER, TOKEN_SEMICOLON,                           // print x;
+        TOKEN_RIGHT_CURLY,                                                        // }
+        TOKEN_EOF};
+    TokenArray tokens = createTokenArray(types, sizeof(types) / sizeof(TokenType));
 
+    // Initialize the parser and parse the AST from the tokens
     ASTParser parser;
     initASTParser(&parser, tokens);
     Source* source = parseAST(&parser);
 
+    // Assertions to verify the structure of the parsed AST
+    // Expect one statement at the root, which is a block statement
     ASSERT(source->numberOfStatements == 1);
     ASSERT(source->rootStatements[0]->type == BLOCK_STATEMENT);
-    ASSERT(source->rootStatements[0]->as.blockStatement->statementArray.used == 2);  // val declaration and print statement
 
-    // Assert that the first statement is a val declaration
-    Statement* firstStmt = source->rootStatements[0]->as.blockStatement->statementArray.values[0];
+    // Verify the block contains two statements: a val declaration and a print statement
+    BlockStatement* blockStmt = source->rootStatements[0]->as.blockStatement;
+    ASSERT(blockStmt->statementArray.used == 2);
+
+    // Verify the first statement is a val declaration
+    Statement* firstStmt = blockStmt->statementArray.values[0];
     ASSERT(firstStmt->type == VAL_DECLARATION_STATEMENT);
-    ValDeclarationStatement* valDeclStmt = firstStmt->as.valDeclarationStatement;
-    ASSERT(valDeclStmt->expression->type == PRIMARY_EXPRESSION);
+    ValDeclarationStatement* valDecl = firstStmt->as.valDeclarationStatement;
+    ASSERT(valDecl->expression->type == PRIMARY_EXPRESSION);
 
-    // Assert that the second statement is a print statement
-    Statement* secondStmt = source->rootStatements[0]->as.blockStatement->statementArray.values[1];
+    // Verify the second statement is a print statement
+    Statement* secondStmt = blockStmt->statementArray.values[1];
     ASSERT(secondStmt->type == PRINT_STATEMENT);
     PrintStatement* printStmt = secondStmt->as.printStatement;
     ASSERT(printStmt->expression->type == PRIMARY_EXPRESSION);
 
+    // Cleanup
     freeSource(source);
+    FREE_ARRAY(tokens);
     return SUCCESS_RETURN_CODE;
 }

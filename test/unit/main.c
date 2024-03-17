@@ -53,7 +53,7 @@ static void all_tests() {
     RUN_TEST(test_compiler_string_literal);
     RUN_TEST(test_compiler_stack_height_expression_and_val);
     RUN_TEST(test_compiler_single_block_statement_with_locals);
-    RUN_TEST(test_nested_blocks_with_global_and_local_vars);
+    RUN_TEST(test_compiler_nested_blocks_with_global_and_local_vars);
 
     // VM tests
     RUN_TEST(test_vm_addition);
@@ -65,6 +65,8 @@ static void all_tests() {
     RUN_TEST(test_vm_boolean_truthiness);
     RUN_TEST(test_vm_unary_not);
     RUN_TEST(test_vm_unary_negation);
+    RUN_TEST(test_vm_simple_block_statement_and_cleanup);
+    RUN_TEST(test_vm_nested_blocks_with_global_and_local_vars);
     // RUN_TEST(test_vm_print_string_literal); // This test is flaky
 }
 

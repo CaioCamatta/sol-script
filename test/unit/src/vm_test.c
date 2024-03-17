@@ -1,7 +1,33 @@
 #include "vm.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "../minunit.h"
 #include "bytecode.h"
+
+// Macro to facilitate checking that print statements are printing. Uses a temporary file.
+#define BUFFER_SIZE 1024
+#define CAPTURE_PRINT_OUTPUT(executionBlock, assertionsBlock)    \
+    do {                                                         \
+        char buffer[BUFFER_SIZE] = {0};                          \
+        FILE* old_stdout = stdout;                               \
+        FILE* temp_file = tmpfile();                             \
+        if (!temp_file) {                                        \
+            perror("Failed to open temporary file");             \
+            exit(EXIT_FAILURE);                                  \
+        }                                                        \
+        stdout = temp_file;                                      \
+                                                                 \
+        executionBlock                                           \
+                                                                 \
+            fflush(stdout);                                      \
+        stdout = old_stdout;                                     \
+        fseek(temp_file, 0, SEEK_SET);                           \
+        fread(buffer, sizeof(char), BUFFER_SIZE - 1, temp_file); \
+        fclose(temp_file);                                       \
+        assertionsBlock                                          \
+    } while (0)
 
 // Helper function to compare values
 int compareValues(Value a, Value b) {
@@ -404,6 +430,114 @@ int test_vm_print_string_literal() {
     ASSERT(strcmp(buffer, "Hello, World!") == 0);
 
     // Cleanup
+    FREE_ARRAY(code.bytecodeArray);
+    FREE_ARRAY(code.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_vm_simple_block_statement_and_cleanup() {
+    // Setup bytecode for a block statement: {val a = 2; print a;}
+    CompiledCode code = {.constantPool = {}, .bytecodeArray = {}};
+    INIT_ARRAY(code.bytecodeArray, Bytecode);
+    INIT_ARRAY(code.constantPool, Constant);
+
+    // Insert constants for "2" and "a"
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(2.0), Constant);  // Index 0
+
+    // Setup bytecode: Load constant 2, set global "a", get global "a", print
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_SET_LOCAL_VAL_FAST), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_POPN, 1), Bytecode);
+
+    // Initialize VM
+    VM vm;
+    initVM(&vm, code);
+
+    CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "2.000000\n") == 0); });
+
+    // Check if the stack size is zero after execution
+    ASSERT(vm.SP == vm.stack);
+
+    // Cleanup
+    FREE_ARRAY(code.bytecodeArray);
+    FREE_ARRAY(code.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_vm_nested_blocks_with_global_and_local_vars() {
+    CompiledCode code = {.constantPool = {}, .bytecodeArray = {}};
+    INIT_ARRAY(code.bytecodeArray, Bytecode);
+    INIT_ARRAY(code.constantPool, Constant);
+
+    /*
+    val g = 100;
+    print g;
+    {
+        print g;
+        val x = 10;
+        print x;
+        {
+            val g = 20;
+            print g;
+            val y = 30;
+            print y;
+        }
+    }
+    */
+
+    // Constants for the test
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(100.0), Constant);  // Index 0
+    INSERT_ARRAY(code.constantPool, STRING_CONST("g"), Constant);    // Index 1
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(10.0), Constant);   // Index 2
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(20.0), Constant);   // Index 3
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(30.0), Constant);   // Index 4
+
+    // Bytecode
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);   // Load 100.0
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAL, 1), Bytecode);  // Set g = 100.0
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 1), Bytecode);  // Get g
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);                        // Print g (100.0)
+
+    // Start of block
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 1), Bytecode);  // Get g (100.0 again)
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);                        // Print g
+
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 2), Bytecode);       // Load 10.0
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_SET_LOCAL_VAL_FAST), Bytecode);               // Set x = 10.0
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, 0), Bytecode);  // Load x
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);                            // Print x
+
+    // Nested block
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 3), Bytecode);       // Load 20.0 (shadowing g)
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_SET_LOCAL_VAL_FAST), Bytecode);               // Set g = 20.0
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, 1), Bytecode);  // Load g
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);                            // Print g
+
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 4), Bytecode);       // Load 30.0
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_SET_LOCAL_VAL_FAST), Bytecode);               // Set y = 30.0
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, 2), Bytecode);  // Load y
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);                            // Print y
+
+    // End of nested block
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_POPN, 2), Bytecode);
+
+    // End of block
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_POPN, 1), Bytecode);
+
+    // Initialize VM with the bytecode
+    VM vm;
+    initVM(&vm, code);
+
+    // Run the test and capture output
+    CAPTURE_PRINT_OUTPUT({ run(&vm); }, {
+        char expectedOutput[] = "100.000000\n100.000000\n10.000000\n20.000000\n30.000000\n";
+        ASSERT(strcmp(buffer, expectedOutput) == 0); });
+
+    // Clean up
     FREE_ARRAY(code.bytecodeArray);
     FREE_ARRAY(code.constantPool);
 

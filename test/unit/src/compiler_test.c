@@ -779,7 +779,7 @@ int test_compiler_single_block_statement_with_locals() {
     return SUCCESS_RETURN_CODE;
 }
 
-int test_nested_blocks_with_global_and_local_vars() {
+int test_compiler_nested_blocks_with_global_and_local_vars() {
     Compiler compiler;
 
     /*
@@ -817,7 +817,7 @@ int test_nested_blocks_with_global_and_local_vars() {
     CompiledCode compiledCode = compile(&compiler);
 
     Bytecode expectedBytecode[] = {
-        {.type = OP_LOAD_CONSTANT},  //
+        {.type = OP_LOAD_CONSTANT},
         {.type = OP_SET_GLOBAL_VAL},
         {.type = OP_GET_GLOBAL_VAL},
         {.type = OP_PRINT},
