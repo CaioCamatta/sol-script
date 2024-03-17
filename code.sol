@@ -1,35 +1,13 @@
-// Example code
-{ 
-    val a = 2; 
-    print a;
-}
-{ 
-    val a = 3; 
-    print a;
-}
-{ 
-    val a = 4; 
-    print a;
-}
+val g = 100;
+print g;
 {
-    val b = 5;
+    print g;
+    val x = 10;
+    print x;
     {
-        print b;
-    }
-}
-{
-    val b = 6;
-    {
-        {
-            print b;
-        }
-    }
-}
-val c = 7;
-{
-    {
-        {
-            print c;
-        }
+        val g = 20;
+        print g;
+        val y = 30;
+        print y;
     }
 }

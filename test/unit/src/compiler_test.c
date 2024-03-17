@@ -769,12 +769,101 @@ int test_compiler_single_block_statement_with_locals() {
     };
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
 
-    printCompiledCode(compiledCode);
-
     // Assert the actual bytecode matches the expected
     ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
 
     // Cleanup
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_nested_blocks_with_global_and_local_vars() {
+    Compiler compiler;
+
+    /*
+    val g = 100;
+    print g;
+    {
+        print g;
+        val x = 10;
+        print x;
+        {
+            val g = 20;
+            print g;
+            val y = 30;
+            print y;
+        }
+    }
+    */
+    Source testSource = {
+        .rootStatements = {
+            VAL_DECLARATION_STATEMENT("g", PRIMARY_EXPRESSION(NUMBER_LITERAL("100"))),
+            PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("g"))),
+            BLOCK_STATEMENT(
+                PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("g"))),
+                VAL_DECLARATION_STATEMENT("x", PRIMARY_EXPRESSION(NUMBER_LITERAL("10"))),
+                PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("x"))),
+                BLOCK_STATEMENT(
+                    VAL_DECLARATION_STATEMENT("g", PRIMARY_EXPRESSION(NUMBER_LITERAL("20"))),
+                    PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("g"))),
+                    VAL_DECLARATION_STATEMENT("y", PRIMARY_EXPRESSION(NUMBER_LITERAL("30"))),
+                    PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("y")))))},
+        .numberOfStatements = 3,
+    };
+
+    initCompiler(&compiler, &testSource);
+    CompiledCode compiledCode = compile(&compiler);
+
+    Bytecode expectedBytecode[] = {
+        {.type = OP_LOAD_CONSTANT},  //
+        {.type = OP_SET_GLOBAL_VAL},
+        {.type = OP_GET_GLOBAL_VAL},
+        {.type = OP_PRINT},
+        {.type = OP_GET_GLOBAL_VAL},  // Global access inside local scope
+        {.type = OP_PRINT},
+        {.type = OP_LOAD_CONSTANT},
+        {.type = OP_SET_LOCAL_VAL_FAST},
+        {.type = OP_GET_LOCAL_VAL_FAST},  // No constant pool access; the VM won't even know the name of the val.
+        {.type = OP_PRINT},
+        {.type = OP_LOAD_CONSTANT},
+        {.type = OP_SET_LOCAL_VAL_FAST},
+        {.type = OP_GET_LOCAL_VAL_FAST},
+        {.type = OP_PRINT},
+        {.type = OP_LOAD_CONSTANT},
+        {.type = OP_SET_LOCAL_VAL_FAST},
+        {.type = OP_GET_LOCAL_VAL_FAST},
+        {.type = OP_PRINT},
+        {.type = OP_POPN},
+        {.type = OP_POPN},
+    };
+
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
+
+    // Assert the actual bytecode matches the expected
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+
+    // Assert constant pool contains one identifier for the global, and four numbers.
+    //  Constant Pool:
+    //  #0 (double) 100.000000
+    //  #1 (identifier) "g"
+    //  #2 (double) 10.000000
+    //  #3 (double) 20.000000
+    //  #4 (double) 30.000000
+    ASSERT(compiledCode.constantPool.used == 5);
+    ASSERT(compiledCode.constantPool.values[0].type == CONST_TYPE_DOUBLE);
+    ASSERT(compiledCode.constantPool.values[0].as.number == 100.0);
+    ASSERT(compiledCode.constantPool.values[1].type == CONST_TYPE_IDENTIFIER);
+    ASSERT(strcmp(compiledCode.constantPool.values[1].as.string, "g") == 0);
+    ASSERT(compiledCode.constantPool.values[2].type == CONST_TYPE_DOUBLE);
+    ASSERT(compiledCode.constantPool.values[2].as.number == 10.0);
+    ASSERT(compiledCode.constantPool.values[3].type == CONST_TYPE_DOUBLE);
+    ASSERT(compiledCode.constantPool.values[3].as.number == 20.0);
+    ASSERT(compiledCode.constantPool.values[4].type == CONST_TYPE_DOUBLE);
+    ASSERT(compiledCode.constantPool.values[4].as.number == 30.0);
+
+    // Cleanup and assertions
     FREE_ARRAY(compiledCode.bytecodeArray);
     FREE_ARRAY(compiledCode.constantPool);
 

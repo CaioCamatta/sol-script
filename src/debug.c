@@ -299,7 +299,7 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
                 printf(" [ OP_GET_LOCAL_VAL_FAST #%zu ]\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_POPN:
-                printf(" [ OP_POPN #%zu ]\n", bytecodeArray.values[i].maybeOperand1);
+                printf(" [ OP_POPN %zu ]\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_PRINT:
                 printf(" [ PRINT ]\n");
