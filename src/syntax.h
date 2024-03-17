@@ -26,7 +26,7 @@ typedef struct StringLiteral StringLiteral;
 // (Stack effect is how the instruction modifies the stack, +1 means it adds something to the stack.)
 typedef enum {
     EXPRESSION_STATEMENT,       // Stack effect: 0
-    VAL_DECLARATION_STATEMENT,  // Stack effect: +1
+    VAL_DECLARATION_STATEMENT,  // Stack effect: +1 if local, 0 if global.
     PRINT_STATEMENT,            // Stack effect: 0
     BLOCK_STATEMENT             // Stack effect: 0
 } StatementType;

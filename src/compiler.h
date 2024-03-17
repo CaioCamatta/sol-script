@@ -31,7 +31,7 @@ typedef struct {
     bool isInGlobalScope;  // Track whether the compiler is currently in the global scope instead of in a block.
                            // This is used to distinguish between local variables and global variables.
 
-    u_int8_t currentStackHeight;  // The next empty spot in the stack
+    u_int8_t currentStackHeight;  // The next empty spot on the stack
     Local tempStack[STACK_MAX];   // A copy of the VM's stack so we can know at compile time what position
                                   // local variables will be in. Holds only strings for variable names.
 } Compiler;

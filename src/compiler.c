@@ -275,7 +275,8 @@ static void visitPrimaryExpression(Compiler* compiler, PrimaryExpression* primar
 static void visitExpressionStatement(Compiler* compiler, ExpressionStatement* expressionStatement) {
     visitExpression(compiler, expressionStatement->expression);
 
-    // The expression will always add a Value to the stack. We remove it because it's unreacheable and thus useless.
+    // The expression will always add a Value to the stack, but by definition it's not used
+    // (otherwise it wouldn't be an expression statement) so we need to remove it.
     emitBytecode(compiler, BYTECODE_OPERAND_1(OP_POPN, 1));
     decreaseStackHeight(compiler);
 }
@@ -286,7 +287,7 @@ static void visitExpressionStatement(Compiler* compiler, ExpressionStatement* ex
  */
 static void visitValDeclarationStatement(Compiler* compiler, ValDeclarationStatement* valDeclarationStatement) {
     visitExpression(compiler, valDeclarationStatement->expression);
-    // The expression will add 1 to the stack height. We leave that value on the stack - that's the variable.
+    // The expression will add 1 to the stack height. We leave the value on the stack - that's the variable.
 
     Constant constant = IDENTIFIER_CONST(copyStringToHeap(valDeclarationStatement->identifier->token.start,
                                                           valDeclarationStatement->identifier->token.length));
