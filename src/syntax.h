@@ -29,7 +29,8 @@ typedef enum {
     EXPRESSION_STATEMENT,       // Stack effect: 0
     VAL_DECLARATION_STATEMENT,  // Stack effect: +1 if local, 0 if global.
     PRINT_STATEMENT,            // Stack effect: 0
-    BLOCK_STATEMENT             // Stack effect: 0
+    BLOCK_STATEMENT,            // Stack effect: 0
+    SELECTION_STATEMENT         // Stack effect: 1
 } StatementType;
 
 typedef enum {
@@ -112,6 +113,8 @@ struct ValDeclarationStatement {
 
 struct SelectionStatement {
     Expression *conditionExpression;
+    Statement *trueStatement;   // The parser will enforce that these statements are BlockStatements
+    Statement *falseStatement;  // NULL if there's no else
 };
 
 struct LogicalOrExpression {

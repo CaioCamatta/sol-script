@@ -496,12 +496,22 @@ static Statement* selectionStatement(ASTParser* parser) {
     Expression* conditionExpression = expression(parser);
     consume(parser, TOKEN_RIGHT_PAREN, "Expected right parenthesis, \")\", after the condition expression of an if-statement.");
 
-    ExpressionStatement* exprStmt = allocateASTNode(ExpressionStatement);
-    exprStmt->expression = expr;
+    Statement* trueStatement = blockStatement(parser);
+
+    SelectionStatement* selectionStatement = allocateASTNode(SelectionStatement);
+    selectionStatement->conditionExpression = conditionExpression;
+    selectionStatement->trueStatement = trueStatement;
+
+    if (match(parser, TOKEN_ELSE)) {
+        Statement* falseStatement = blockStatement(parser);
+        selectionStatement->falseStatement = falseStatement;
+    } else {
+        selectionStatement->falseStatement = NULL;
+    }
 
     Statement* stmt = allocateASTNode(Statement);
-    stmt->type = EXPRESSION_STATEMENT;
-    stmt->as.expressionStatement = exprStmt;
+    stmt->type = SELECTION_STATEMENT;
+    stmt->as.selectionStatement = selectionStatement;
 
     return stmt;
 }

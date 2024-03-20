@@ -134,6 +134,14 @@ static void printStatement(const Statement* statement, int depth) {
             printExpression(valDecl->expression, depth + 1);
             break;
         }
+        case SELECTION_STATEMENT: {
+            SelectionStatement* stmt = statement->as.selectionStatement;
+            printf("SelectionStatement");
+            printExpression(stmt->conditionExpression, depth + 1);
+            printStatement(stmt->trueStatement, depth + 1);
+            printStatement(stmt->falseStatement, depth + 1);
+            break;
+        }
         case PRINT_STATEMENT:
             printf("PrintStatement\n");
             printExpression(statement->as.printStatement->expression, depth + 1);
