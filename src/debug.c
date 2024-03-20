@@ -136,7 +136,7 @@ static void printStatement(const Statement* statement, int depth) {
         }
         case SELECTION_STATEMENT: {
             SelectionStatement* stmt = statement->as.selectionStatement;
-            printf("SelectionStatement");
+            printf("SelectionStatement\n");
             printExpression(stmt->conditionExpression, depth + 1);
             printStatement(stmt->trueStatement, depth + 1);
             printStatement(stmt->falseStatement, depth + 1);

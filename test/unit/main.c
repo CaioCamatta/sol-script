@@ -36,6 +36,8 @@ static void all_tests() {
     RUN_TEST(test_parser_variable_declaration_and_reading);
     RUN_TEST(test_parser_string_literal);
     RUN_TEST(test_parser_block_statement);
+    RUN_TEST(test_parser_if_statement_true_branch_only);
+    RUN_TEST(test_parser_if_statement_with_else_branch);
 
     // Compiler tests
     RUN_TEST(test_compiler);
