@@ -21,6 +21,8 @@ typedef enum {
     OP_FALSE,               // put Value false on the stack
     OP_PRINT,               // print value at the top of the stack
     OP_POPN,                // pop N values from the stack
+    OP_JUMP_IF_FALSE,       // pop the value on top of the stack, and jump it's falsy
+    OP_JUMP,                // jump unconditionally
 
     // Unary operations
     OP_UNARY_NEGATE,  // -stack[-1]

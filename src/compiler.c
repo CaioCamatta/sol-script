@@ -343,6 +343,37 @@ static void visitBlockStatement(Compiler* compiler, BlockStatement* blockStateme
     compiler->isInGlobalScope = wasCompilerInGlobalScopeBeforeThisBlock;
 }
 
+static void visitSelectionStatement(Compiler* compiler, SelectionStatement* selectionStatement) {
+    // Visit the condition
+    visitExpression(compiler, selectionStatement->conditionExpression);
+
+    // Emit bytecode for conditional jump, keep track of its index in jumpIfFalsePosition.
+    // 999999 is a placeholder. We don't know how much bytecode is in the statement for the "then" branch so
+    // we will have to come back and patch this placeholder.
+    size_t jumpIfFalsePosition = compiler->compiledBytecode.used;
+    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_JUMP_IF_FALSE, 999999));
+
+    // Visit the true (a.k.a. "then") branch.
+    visitStatement(compiler, selectionStatement->trueStatement);
+
+    // If there's an else branch, we need to jump over it once the true branch is executed
+    size_t jumpToEndPosition = 0;
+    if (selectionStatement->falseStatement != NULL) {
+        jumpToEndPosition = compiler->compiledBytecode.used;
+        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_JUMP, 999999));  // We'll have to patch this too
+    }
+
+    // Patch the jump-if-false position now that we know where to jump
+    compiler->compiledBytecode.values[jumpIfFalsePosition].maybeOperand1 = compiler->compiledBytecode.used;
+
+    // Visit the false (a.k.a. "else") branch if it exists.
+    if (selectionStatement->falseStatement != NULL) {
+        visitStatement(compiler, selectionStatement->falseStatement);
+        // Back-patch the jump-to-end position.
+        compiler->compiledBytecode.values[jumpToEndPosition].maybeOperand1 = compiler->compiledBytecode.used;
+    }
+}
+
 // Add number to constant pool and emit bytecode to load it onto the stack
 static void visitNumberLiteral(Compiler* compiler, NumberLiteral* numberLiteral) {
     double number = tokenTodouble(numberLiteral->token);
@@ -488,6 +519,9 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
             break;
         case BLOCK_STATEMENT:
             visitBlockStatement(compiler, statement->as.blockStatement);
+            break;
+        case SELECTION_STATEMENT:
+            visitSelectionStatement(compiler, statement->as.selectionStatement);
             break;
         default:
             fprintf(stderr, "Unimplemented statement type %d.\n", statement->type);
