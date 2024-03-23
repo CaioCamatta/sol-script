@@ -258,13 +258,15 @@ void step(VM* vm) {
             // If condition is falsey, jump over the "then" branch
             if (isFalsey(value)) {
                 size_t IPAfterThenBranch = instruction->maybeOperand1;
-                vm->IP = &(vm->compiledCode.bytecodeArray.values[IPAfterThenBranch]);
+                // We have to subtract 1 because the instruction we jump to will be skipped (in `vm->IP++;` below).
+                vm->IP = &(vm->compiledCode.bytecodeArray.values[IPAfterThenBranch - 1]);
             }
             break;
         }
         case OP_JUMP: {
             size_t IPToJumpTo = instruction->maybeOperand1;
-            vm->IP = &(vm->compiledCode.bytecodeArray.values[IPToJumpTo]);
+            // We have to subtract 1 because the instruction we jump to will be skipped (in `vm->IP++;` below).
+            vm->IP = &(vm->compiledCode.bytecodeArray.values[IPToJumpTo - 1]);
             break;
         }
         default:
