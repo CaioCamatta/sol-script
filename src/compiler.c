@@ -332,6 +332,7 @@ static void visitBlockStatement(Compiler* compiler, BlockStatement* blockStateme
     uint8_t blockStmtStackEffect = stackHeightAfterBlockStmt - stackHeightBeforeBlockStmt;
 
     // Pop all the Values that were put in the VM stack in the block.
+    // TODO: optimization; stop emitting POP when blockStmtStackEffect = 0.
     emitBytecode(compiler, BYTECODE_OPERAND_1(OP_POPN, blockStmtStackEffect));
 
     // Pop all the Locals that were put in the Compiler stack in the block.
@@ -341,6 +342,41 @@ static void visitBlockStatement(Compiler* compiler, BlockStatement* blockStateme
     compiler->currentStackHeight = stackHeightBeforeBlockStmt;
 
     compiler->isInGlobalScope = wasCompilerInGlobalScopeBeforeThisBlock;
+}
+
+static void visitSelectionStatement(Compiler* compiler, SelectionStatement* selectionStatement) {
+    // Visit the condition
+    visitExpression(compiler, selectionStatement->conditionExpression);
+
+    // Emit bytecode for conditional jump, keep track of its index in jumpIfFalsePosition.
+    // 999999 is a placeholder. We don't know how much bytecode is in the statement for the "then" branch so
+    // we will have to come back and patch this placeholder.
+    size_t jumpIfFalsePosition = compiler->compiledBytecode.used;
+    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_JUMP_IF_FALSE, 999999));
+
+    // Visiting the expression causes the stack to grow, but OP_JUMP_IF_FALSE pops it,
+    // so we need to decrease the stack height to compensate for that.
+    decreaseStackHeight(compiler);
+
+    // Visit the true (a.k.a. "then") branch.
+    visitStatement(compiler, selectionStatement->trueStatement);
+
+    // If there's an else branch, we need to jump over it once the true branch is executed
+    size_t jumpToEndPosition = 0;
+    if (selectionStatement->falseStatement != NULL) {
+        jumpToEndPosition = compiler->compiledBytecode.used;
+        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_JUMP, 999999));  // We'll have to patch this too
+    }
+
+    // Patch the jump-if-false position now that we know where to jump
+    compiler->compiledBytecode.values[jumpIfFalsePosition].maybeOperand1 = compiler->compiledBytecode.used;
+
+    // Visit the false (a.k.a. "else") branch if it exists.
+    if (selectionStatement->falseStatement != NULL) {
+        visitStatement(compiler, selectionStatement->falseStatement);
+        // Back-patch the jump-to-end position.
+        compiler->compiledBytecode.values[jumpToEndPosition].maybeOperand1 = compiler->compiledBytecode.used;
+    }
 }
 
 // Add number to constant pool and emit bytecode to load it onto the stack
@@ -489,6 +525,9 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
         case BLOCK_STATEMENT:
             visitBlockStatement(compiler, statement->as.blockStatement);
             break;
+        case SELECTION_STATEMENT:
+            visitSelectionStatement(compiler, statement->as.selectionStatement);
+            break;
         default:
             fprintf(stderr, "Unimplemented statement type %d.\n", statement->type);
             exit(EXIT_FAILURE);
@@ -497,23 +536,25 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
 }
 
 CompiledCode compile(Compiler* compiler) {
+#if DEBUG_COMPILER
     clock_t startTime = clock();
-    if (DEBUG_COMPILER)
-        printf("Started compiling.\n");
+    printf("Started compiling.\n");
+#endif
 
     for (int i = 0; i < compiler->ASTSource->numberOfStatements; i++) {
         Statement* statement = compiler->ASTSource->rootStatements[i];
         visitStatement(compiler, statement);
     }
 
-    // if (DEBUG_COMPILER) {
+    // #if DEBUG_COMPILER
     //     printBytecodeArray(compiler->compiledBytecode);
-    // }
+    // #endif
 
+#if DEBUG_COMPILER
     clock_t endTime = clock();
     double timeTaken = ((double)(endTime - startTime)) / CLOCKS_PER_SEC;
-    if (DEBUG_COMPILER)
-        printf("Done compiling in %.5f seconds.\n\n", timeTaken);
+    printf("Done compiling in %.5f seconds.\n\n", timeTaken);
+#endif
 
     CompiledCode code = (CompiledCode){
         .bytecodeArray = compiler->compiledBytecode,

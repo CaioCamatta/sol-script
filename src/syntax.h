@@ -9,6 +9,7 @@ typedef struct ExpressionStatement ExpressionStatement;
 typedef struct PrintStatement PrintStatement;
 typedef struct BlockStatement BlockStatement;
 typedef struct ValDeclarationStatement ValDeclarationStatement;
+typedef struct SelectionStatement SelectionStatement;
 typedef struct LogicalOrExpression LogicalOrExpression;
 typedef struct LogicalAndExpression LogicalAndExpression;
 typedef struct EqualityExpression EqualityExpression;
@@ -28,7 +29,8 @@ typedef enum {
     EXPRESSION_STATEMENT,       // Stack effect: 0
     VAL_DECLARATION_STATEMENT,  // Stack effect: +1 if local, 0 if global.
     PRINT_STATEMENT,            // Stack effect: 0
-    BLOCK_STATEMENT             // Stack effect: 0
+    BLOCK_STATEMENT,            // Stack effect: 0
+    SELECTION_STATEMENT         // Stack effect: 1
 } StatementType;
 
 typedef enum {
@@ -57,6 +59,7 @@ typedef struct {
         ValDeclarationStatement *valDeclarationStatement;
         PrintStatement *printStatement;
         BlockStatement *blockStatement;
+        SelectionStatement *selectionStatement;
     } as;
 } Statement;
 
@@ -106,6 +109,12 @@ struct PrintStatement {
 struct ValDeclarationStatement {
     IdentifierLiteral *identifier;
     Expression *expression;
+};
+
+struct SelectionStatement {
+    Expression *conditionExpression;
+    Statement *trueStatement;   // The parser will enforce that these statements are BlockStatements
+    Statement *falseStatement;  // NULL if there's no else
 };
 
 struct LogicalOrExpression {

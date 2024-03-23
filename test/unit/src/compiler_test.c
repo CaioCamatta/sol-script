@@ -206,6 +206,16 @@
         }                                                                         \
     }
 
+#define SELECTION_STATEMENT(conditionExpr, trueStatementArg, falseStatementArg) \
+    &(Statement) {                                                              \
+        .type = SELECTION_STATEMENT,                                            \
+        .as.selectionStatement = &(SelectionStatement) {                        \
+            .conditionExpression = conditionExpr,                               \
+            .trueStatement = trueStatementArg,                                  \
+            .falseStatement = falseStatementArg                                 \
+        }                                                                       \
+    }
+
 // ------------------------------------------------------------------------
 // ---------------------------- Test utilities ----------------------------
 // ------------------------------------------------------------------------
@@ -864,6 +874,164 @@ int test_compiler_nested_blocks_with_global_and_local_vars() {
     ASSERT(compiledCode.constantPool.values[4].as.number == 30.0);
 
     // Cleanup and assertions
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_if_statement_no_else() {
+    Compiler compiler;
+
+    // if (true) { print("Hello, World!") };
+    Source testSource = {
+        .rootStatements = {
+            SELECTION_STATEMENT(
+                PRIMARY_EXPRESSION(BOOLEAN_LITERAL(true)),
+                BLOCK_STATEMENT(PRINT_STATEMENT(PRIMARY_EXPRESSION(STRING_LITERAL("\"Hello, World!\"")))),
+                NULL)},
+        .numberOfStatements = 1,
+    };
+
+    initCompiler(&compiler, &testSource);
+    CompiledCode compiledCode = compile(&compiler);
+
+    Bytecode expectedBytecode[] = {
+        {.type = OP_TRUE},
+        {.type = OP_JUMP_IF_FALSE},
+        {.type = OP_LOAD_CONSTANT},
+        {.type = OP_PRINT},
+        {.type = OP_POPN, .maybeOperand1 = 0},
+    };
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
+
+    // Assert the actual bytecode matches the expected
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+
+    // Check that nothing is popped (we didnt create any variables)
+    ASSERT(expectedBytecode[4].maybeOperand1 == compiledCode.bytecodeArray.values[4].maybeOperand1);
+
+    // Cleanup
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_if_statement_with_else() {
+    Compiler compiler;
+
+    // if (false) { print("Hello, World!"); } else { print("Goodbye, World!"); };
+    Source testSource = {
+        .rootStatements = {
+            SELECTION_STATEMENT(
+                PRIMARY_EXPRESSION(BOOLEAN_LITERAL(false)),
+                BLOCK_STATEMENT(PRINT_STATEMENT(PRIMARY_EXPRESSION(STRING_LITERAL("\"Hello, World!\"")))),
+                BLOCK_STATEMENT(PRINT_STATEMENT(PRIMARY_EXPRESSION(STRING_LITERAL("\"Goodbye, World!\"")))))},
+        .numberOfStatements = 1,
+    };
+
+    initCompiler(&compiler, &testSource);
+    CompiledCode compiledCode = compile(&compiler);
+
+    Bytecode expectedBytecode[] = {
+        {.type = OP_FALSE},                     // Condition evaluation
+        {.type = OP_JUMP_IF_FALSE},             // Jump if condition is false
+        {.type = OP_LOAD_CONSTANT},             // Load "Hello, World!"
+        {.type = OP_PRINT},                     // Print
+        {.type = OP_POPN, .maybeOperand1 = 0},  // Clean up "then" block
+        {.type = OP_JUMP},                      // Jump to end to skip else branch
+        {.type = OP_LOAD_CONSTANT},             // Load "Goodbye, World!" for else
+        {.type = OP_PRINT},                     // Print for else
+        {.type = OP_POPN, .maybeOperand1 = 0}   // Clean up "then" block,
+    };
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
+
+    // Assert the actual bytecode matches the expected
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+
+    // Check that nothing is popped (we didnt create any variables)
+    ASSERT(expectedBytecode[4].maybeOperand1 == compiledCode.bytecodeArray.values[4].maybeOperand1);
+    ASSERT(expectedBytecode[8].maybeOperand1 == compiledCode.bytecodeArray.values[8].maybeOperand1);
+
+    // Cleanup
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_nested_if_statements() {
+    Compiler compiler;
+
+    /*
+    if (true) {
+        print "true-outer";
+        if (true) {
+            print "true-inner";
+        } else {
+            print "false-inner";
+        }
+    } else {
+        print "false-outer";
+    }
+    */
+    Source testSource = {
+        .rootStatements = {
+            SELECTION_STATEMENT(
+                PRIMARY_EXPRESSION(BOOLEAN_LITERAL(true)),  // Outer if condition
+                BLOCK_STATEMENT(                            // True branch of the outer if
+                    PRINT_STATEMENT(PRIMARY_EXPRESSION(STRING_LITERAL("\"true-outer\""))),
+                    SELECTION_STATEMENT(
+                        PRIMARY_EXPRESSION(BOOLEAN_LITERAL(true)),                                               // Inner if condition
+                        BLOCK_STATEMENT(PRINT_STATEMENT(PRIMARY_EXPRESSION(STRING_LITERAL("\"true-inner\"")))),  // True branch of the inner if
+                        BLOCK_STATEMENT(PRINT_STATEMENT(PRIMARY_EXPRESSION(STRING_LITERAL("\"false-inner\""))))  // False branch of the inner if
+                        )),
+                BLOCK_STATEMENT(PRINT_STATEMENT(PRIMARY_EXPRESSION(STRING_LITERAL("\"false-outer\""))))  // False branch of the outer if
+                )},
+        .numberOfStatements = 1,
+    };
+
+    initCompiler(&compiler, &testSource);
+    CompiledCode compiledCode = compile(&compiler);
+
+    // Expected bytecode and constant pool for the nested if statements
+    Bytecode expectedBytecode[] = {
+        {.type = OP_TRUE},
+        {.type = OP_JUMP_IF_FALSE, .maybeOperand1 = 15},
+        {.type = OP_LOAD_CONSTANT, .maybeOperand1 = 0},
+        {.type = OP_PRINT},
+        {.type = OP_TRUE},
+        {.type = OP_JUMP_IF_FALSE, .maybeOperand1 = 10},
+        {.type = OP_LOAD_CONSTANT, .maybeOperand1 = 1},
+        {.type = OP_PRINT},
+        {.type = OP_POPN, .maybeOperand1 = 0},
+        {.type = OP_JUMP, .maybeOperand1 = 13},
+        {.type = OP_LOAD_CONSTANT, .maybeOperand1 = 2},
+        {.type = OP_PRINT},
+        {.type = OP_POPN, .maybeOperand1 = 0},
+        {.type = OP_POPN, .maybeOperand1 = 0},
+        {.type = OP_JUMP, .maybeOperand1 = 18},
+        {.type = OP_LOAD_CONSTANT, .maybeOperand1 = 3},
+        {.type = OP_PRINT},
+        {.type = OP_POPN, .maybeOperand1 = 0},
+    };
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
+
+    // Assert bytecode matches expected
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+
+    // Verify operands
+    ASSERT(compiledCode.bytecodeArray.values[1].maybeOperand1 == 15);   // Operand for first OP_JUMP_IF_FALSE
+    ASSERT(compiledCode.bytecodeArray.values[5].maybeOperand1 == 10);   // Operand for nested OP_JUMP_IF_FALSE
+    ASSERT(compiledCode.bytecodeArray.values[9].maybeOperand1 == 13);   // Operand for first OP_JUMP
+    ASSERT(compiledCode.bytecodeArray.values[14].maybeOperand1 == 18);  // Operand for second OP_JUMP
+    ASSERT(compiledCode.bytecodeArray.values[8].maybeOperand1 == 0);    // Operand for the first OP_POPN after "true-inner"
+    ASSERT(compiledCode.bytecodeArray.values[12].maybeOperand1 == 0);   // Operand for the OP_POPN after "false-inner"
+    ASSERT(compiledCode.bytecodeArray.values[13].maybeOperand1 == 0);   // Operand for the OP_POPN after exiting the inner if
+    ASSERT(compiledCode.bytecodeArray.values[17].maybeOperand1 == 0);   // Operand for the OP_POPN after "false-outer"
+
+    // Clean up
     FREE_ARRAY(compiledCode.bytecodeArray);
     FREE_ARRAY(compiledCode.constantPool);
 

@@ -134,6 +134,14 @@ static void printStatement(const Statement* statement, int depth) {
             printExpression(valDecl->expression, depth + 1);
             break;
         }
+        case SELECTION_STATEMENT: {
+            SelectionStatement* stmt = statement->as.selectionStatement;
+            printf("SelectionStatement\n");
+            printExpression(stmt->conditionExpression, depth + 1);
+            printStatement(stmt->trueStatement, depth + 1);
+            printStatement(stmt->falseStatement, depth + 1);
+            break;
+        }
         case PRINT_STATEMENT:
             printf("PrintStatement\n");
             printExpression(statement->as.printStatement->expression, depth + 1);
@@ -263,7 +271,7 @@ static void printConstantPool(ConstantPool constantPool) {
     printf("Constant Pool \n");
     for (size_t i = 0; i < constantPool.used; i++) {
         Constant value = constantPool.values[i];
-        printf(" #%zu ", i);
+        printf(KGRY " #%-3zu " RESET, i);
         switch (value.type) {
             case CONST_TYPE_DOUBLE:
                 printf("(double) %f\n", value.as.number);
@@ -282,75 +290,82 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
     printf("Bytecode\n");
 
     for (int i = 0; i < bytecodeArray.used; i++) {
+        printf(KGRY " %-4d " RESET, i);
         switch (bytecodeArray.values[i].type) {
             case OP_LOAD_CONSTANT:
-                printf(" [ LOAD_CONSTANT #%zu ]\n", bytecodeArray.values[i].maybeOperand1);
+                printf("LOAD_CONSTANT #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_SET_GLOBAL_VAL:
-                printf(" [ OP_SET_GLOBAL_VAL #%zu ]\n", bytecodeArray.values[i].maybeOperand1);
+                printf("OP_SET_GLOBAL_VAL #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_GET_GLOBAL_VAL:
-                printf(" [ OP_GET_GLOBAL_VAL #%zu ]\n", bytecodeArray.values[i].maybeOperand1);
+                printf("OP_GET_GLOBAL_VAL #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_SET_LOCAL_VAL_FAST:
-                printf(" [ OP_SET_LOCAL_VAL_FAST ]\n");
+                printf("OP_SET_LOCAL_VAL_FAST\n");
                 break;
             case OP_GET_LOCAL_VAL_FAST:
-                printf(" [ OP_GET_LOCAL_VAL_FAST #%zu ]\n", bytecodeArray.values[i].maybeOperand1);
+                printf("OP_GET_LOCAL_VAL_FAST #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_POPN:
-                printf(" [ OP_POPN %zu ]\n", bytecodeArray.values[i].maybeOperand1);
+                printf("OP_POPN %zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_PRINT:
-                printf(" [ PRINT ]\n");
+                printf("PRINT\n");
                 break;
             case OP_TRUE:
-                printf(" [ TRUE ]\n");
+                printf("TRUE\n");
                 break;
             case OP_FALSE:
-                printf(" [ FALSE ]\n");
+                printf("FALSE\n");
                 break;
             case OP_UNARY_NEGATE:
-                printf(" [ UNARY_NEGATE ]\n");
+                printf("UNARY_NEGATE\n");
                 break;
             case OP_UNARY_NOT:
-                printf(" [ UNARY_NOT ]\n");
+                printf("UNARY_NOT\n");
                 break;
             case OP_BINARY_ADD:
-                printf(" [ BINARY_ADD ]\n");
+                printf("BINARY_ADD\n");
                 break;
             case OP_BINARY_SUBTRACT:
-                printf(" [ BINARY_SUBTRACT ]\n");
+                printf("BINARY_SUBTRACT\n");
                 break;
             case OP_BINARY_MULTIPLY:
-                printf(" [ BINARY_MULTIPLY ]\n");
+                printf("BINARY_MULTIPLY\n");
                 break;
             case OP_BINARY_DIVIDE:
-                printf(" [ BINARY_DIVIDE ]\n");
+                printf("BINARY_DIVIDE\n");
                 break;
             case OP_BINARY_GT:
-                printf(" [ BINARY_GT ]\n");
+                printf("BINARY_GT\n");
                 break;
             case OP_BINARY_GTE:
-                printf(" [ BINARY_GTE ]\n");
+                printf("BINARY_GTE\n");
                 break;
             case OP_BINARY_LT:
-                printf(" [ BINARY_LT ]\n");
+                printf("BINARY_LT\n");
                 break;
             case OP_BINARY_LTE:
-                printf(" [ BINARY_LTE ]\n");
+                printf("BINARY_LTE\n");
                 break;
             case OP_BINARY_LOGICAL_AND:
-                printf(" [ BINARY_LOGICAL_AND ]\n");
+                printf("BINARY_LOGICAL_AND\n");
                 break;
             case OP_BINARY_LOGICAL_OR:
-                printf(" [ BINARY_LOGICAL_OR ]\n");
+                printf("BINARY_LOGICAL_OR\n");
                 break;
             case OP_BINARY_EQUAL:
-                printf(" [ BINARY_EQUAL ]\n");
+                printf("BINARY_EQUAL\n");
                 break;
             case OP_BINARY_NOT_EQUAL:
-                printf(" [ BINARY_NOT_EQUAL ]\n");
+                printf("BINARY_NOT_EQUAL\n");
+                break;
+            case OP_JUMP_IF_FALSE:
+                printf("OP_JUMP_IF_FALSE #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                break;
+            case OP_JUMP:
+                printf("OP_JUMP #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
         }
     }
@@ -369,7 +384,7 @@ void printCompiledCode(CompiledCode compiledCode) {
 
 // Print VM stack. The top of the stack will be on the left.
 void printStack(const Value* topOfStack, const Value* bottomOfStack) {
-    printf("Stack: [ ");
+    printf(KGRY "[ " RESET);
     while (topOfStack != bottomOfStack) {
         topOfStack--;
         Value val = *topOfStack;
@@ -384,9 +399,9 @@ void printStack(const Value* topOfStack, const Value* bottomOfStack) {
                 printf(KGRY "{" RESET " NULL " KGRY "} " RESET);
                 break;
             case TYPE_STRING:
-                printf(KGRY "{" RESET " %.5s " KGRY "} " RESET, val.as.stringVal);
+                printf(KGRY "{" RESET " %.10s " KGRY "} " RESET, val.as.stringVal);
                 break;
         }
     }
-    printf("]\n");
+    printf(KGRY "]\n" RESET);
 }

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "bytecode.h"
+#include "colors.h"
 #include "config.h"
 #include "debug.h"
 #include "util/hash_table.h"
@@ -30,7 +31,9 @@ static void runtimeError(VM* vm, const char* format, ...) {
     // Print error message
     va_list args;
     va_start(args, format);
+    fprintf(stderr, KRED);
     vfprintf(stderr, format, args);
+    fprintf(stderr, RESET);
     va_end(args);
 
     // TODO: make this not exit during a REPL session.
@@ -119,8 +122,7 @@ static void printValue(Value value) {
     } while (false)
 
 /* Null, false, and the number 0 are falsey. Everything else is truthy */
-static bool isFalsey(
-    Value value) {
+static bool isFalsey(Value value) {
     return IS_NULL(value) || (IS_BOOLEAN(value) && !(value.as.booleanVal)) || (IS_DOUBLE(value) && (value.as.doubleVal == 0));
 }
 
@@ -139,7 +141,8 @@ void step(VM* vm) {
     // Fetch the instruction at the instruction pointer
     Bytecode* instruction = vm->IP;
 
-#ifdef DEBUG_VM
+#if DEBUG_VM
+    printf(KGRY "%-4ld " RESET, vm->IP - vm->compiledCode.bytecodeArray.values);
     printStack(vm->SP, &(vm->stack[0]));
 #endif
 
@@ -254,6 +257,22 @@ void step(VM* vm) {
             BINARY_TRUTHY_OP(!=);
             break;
         }
+        case OP_JUMP_IF_FALSE: {
+            Value value = pop(vm);
+            // If condition is falsey, jump over the "then" branch
+            if (isFalsey(value)) {
+                size_t IPAfterThenBranch = instruction->maybeOperand1;
+                // We have to subtract 1 because the instruction we jump to will be skipped (in `vm->IP++;` below).
+                vm->IP = &(vm->compiledCode.bytecodeArray.values[IPAfterThenBranch - 1]);
+            }
+            break;
+        }
+        case OP_JUMP: {
+            size_t IPToJumpTo = instruction->maybeOperand1;
+            // We have to subtract 1 because the instruction we jump to will be skipped (in `vm->IP++;` below).
+            vm->IP = &(vm->compiledCode.bytecodeArray.values[IPToJumpTo - 1]);
+            break;
+        }
         default:
             // Handle any unknown or unimplemented opcodes.
             fprintf(stderr, "Unimplemented opcode %d\n", instruction->type);
@@ -271,11 +290,11 @@ void run(VM* vm) {
     // Find the last instruction so we know when to stop executing
     Bytecode* lastInstruction = &(vm->compiledCode.bytecodeArray.values[vm->compiledCode.bytecodeArray.used]);
 
-#ifdef DEBUG_VM
+#if DEBUG_VM
     printf("Started executing VM.\n");
 #endif
 
-    while (vm->IP != lastInstruction) {
+    while (vm->IP < lastInstruction) {
         step(vm);
     }
 }

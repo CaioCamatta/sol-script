@@ -5,7 +5,7 @@
 #include "../minunit.h"
 #include "debug.h"
 
-// Helper function to create a token array
+// Helper function to create a token array based on types, with no meaningful lexeme or other info.
 static TokenArray createTokenArray(TokenType types[], int numTokens) {
     TokenArray array;
     INIT_ARRAY(array, Token);
@@ -25,6 +25,17 @@ static Token createToken(TokenType type, const char* lexeme) {
         .lineNo = 1,
         .colNo = 1};
     return token;
+}
+
+// Utility function to convert types and lexemes into a TokenArray
+static TokenArray createTokenArrayFromTypesAndLexemes(TokenType types[], const char* lexemes[], size_t count) {
+    TokenArray tokens;
+    INIT_ARRAY(tokens, Token);
+    for (size_t i = 0; i < count; i++) {
+        Token token = createToken(types[i], lexemes[i]);
+        INSERT_ARRAY(tokens, token, Token);
+    }
+    return tokens;
 }
 
 // Test for parsing a val declaration with a simple expression
@@ -657,6 +668,67 @@ int test_parser_block_statement() {
     ASSERT(printStmt->expression->type == PRIMARY_EXPRESSION);
 
     // Cleanup
+    freeSource(source);
+    FREE_ARRAY(tokens);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_if_statement_true_branch_only() {
+    TokenType types[] = {TOKEN_IF, TOKEN_LEFT_PAREN, TOKEN_TRUE, TOKEN_RIGHT_PAREN, TOKEN_LEFT_CURLY, TOKEN_PRINT, TOKEN_STRING, TOKEN_SEMICOLON, TOKEN_RIGHT_CURLY, TOKEN_EOF};
+    const char* lexemes[] = {"if", "(", "true", ")", "{", "print", "\"Hello, World!\"", ";", "}", ""};
+
+    TokenArray tokens = createTokenArrayFromTypesAndLexemes(types, lexemes, sizeof(types) / sizeof(TokenType));
+    ASTParser parser;
+    initASTParser(&parser, tokens);
+    Source* source = parseAST(&parser);
+
+    ASSERT(source->numberOfStatements == 1);
+    ASSERT(source->rootStatements[0]->type == SELECTION_STATEMENT);
+    ASSERT(source->rootStatements[0]->as.selectionStatement->conditionExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(source->rootStatements[0]->as.selectionStatement->trueStatement != NULL);
+    ASSERT(source->rootStatements[0]->as.selectionStatement->falseStatement == NULL);
+
+    ASSERT(source->rootStatements[0]->as.selectionStatement->conditionExpression->as.primaryExpression->literal->type == BOOLEAN_LITERAL);
+
+    BlockStatement* trueBlockStmt = source->rootStatements[0]->as.selectionStatement->trueStatement->as.blockStatement;
+    ASSERT(trueBlockStmt->statementArray.used == 1);
+    PrintStatement* printStmt = trueBlockStmt->statementArray.values[0]->as.printStatement;
+    ASSERT(printStmt->expression->type == PRIMARY_EXPRESSION);
+    ASSERT(printStmt->expression->as.primaryExpression->literal->type == STRING_LITERAL);
+    ASSERT(strcmp(printStmt->expression->as.primaryExpression->literal->as.stringLiteral->token.start, "\"Hello, World!\"") == 0);
+
+    freeSource(source);
+    FREE_ARRAY(tokens);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_if_statement_with_else_branch() {
+    TokenType types[] = {TOKEN_IF, TOKEN_LEFT_PAREN, TOKEN_TRUE, TOKEN_RIGHT_PAREN, TOKEN_LEFT_CURLY, TOKEN_PRINT, TOKEN_STRING, TOKEN_SEMICOLON, TOKEN_RIGHT_CURLY, TOKEN_ELSE, TOKEN_LEFT_CURLY, TOKEN_PRINT, TOKEN_STRING, TOKEN_SEMICOLON, TOKEN_RIGHT_CURLY, TOKEN_EOF};
+    const char* lexemes[] = {"if", "(", "true", ")", "{", "print", "\"Hello, World!\"", ";", "}", "else", "{", "print", "\"Goodbye, World!\"", ";", "}", ""};
+
+    TokenArray tokens = createTokenArrayFromTypesAndLexemes(types, lexemes, sizeof(types) / sizeof(TokenType));
+    ASTParser parser;
+    initASTParser(&parser, tokens);
+    Source* source = parseAST(&parser);
+
+    ASSERT(source->numberOfStatements == 1);
+    ASSERT(source->rootStatements[0]->type == SELECTION_STATEMENT);
+    ASSERT(source->rootStatements[0]->as.selectionStatement->conditionExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(source->rootStatements[0]->as.selectionStatement->trueStatement != NULL);
+    ASSERT(source->rootStatements[0]->as.selectionStatement->falseStatement != NULL);
+
+    ASSERT(source->rootStatements[0]->as.selectionStatement->conditionExpression->as.primaryExpression->literal->type == BOOLEAN_LITERAL);
+
+    BlockStatement* trueBlock = source->rootStatements[0]->as.selectionStatement->trueStatement->as.blockStatement;
+    ASSERT(trueBlock->statementArray.used == 1);
+    PrintStatement* truePrintStmt = trueBlock->statementArray.values[0]->as.printStatement;
+    ASSERT(strcmp(truePrintStmt->expression->as.primaryExpression->literal->as.stringLiteral->token.start, "\"Hello, World!\"") == 0);
+
+    BlockStatement* falseBlock = source->rootStatements[0]->as.selectionStatement->falseStatement->as.blockStatement;
+    ASSERT(falseBlock->statementArray.used == 1);
+    PrintStatement* falsePrintStmt = falseBlock->statementArray.values[0]->as.printStatement;
+    ASSERT(strcmp(falsePrintStmt->expression->as.primaryExpression->literal->as.stringLiteral->token.start, "\"Goodbye, World!\"") == 0);
+
     freeSource(source);
     FREE_ARRAY(tokens);
     return SUCCESS_RETURN_CODE;
