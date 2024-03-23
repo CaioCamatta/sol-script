@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "bytecode.h"
+#include "colors.h"
 #include "config.h"
 #include "debug.h"
 #include "util/hash_table.h"
@@ -139,6 +140,7 @@ void step(VM* vm) {
     Bytecode* instruction = vm->IP;
 
 #if DEBUG_VM
+    printf(KGRY "%-4d " RESET, vm->IP - vm->compiledCode.bytecodeArray.values);
     printStack(vm->SP, &(vm->stack[0]));
 #endif
 
