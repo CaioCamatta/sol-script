@@ -332,6 +332,7 @@ static void visitBlockStatement(Compiler* compiler, BlockStatement* blockStateme
     uint8_t blockStmtStackEffect = stackHeightAfterBlockStmt - stackHeightBeforeBlockStmt;
 
     // Pop all the Values that were put in the VM stack in the block.
+    // TODO: optimization; stop emitting POP when blockStmtStackEffect = 0.
     emitBytecode(compiler, BYTECODE_OPERAND_1(OP_POPN, blockStmtStackEffect));
 
     // Pop all the Locals that were put in the Compiler stack in the block.
