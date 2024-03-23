@@ -492,18 +492,18 @@ static Statement* blockStatement(ASTParser* parser) {
  */
 static Statement* selectionStatement(ASTParser* parser) {
     consume(parser, TOKEN_IF, "Invalid State: Expected \"if\" in if statement.");
-    consume(parser, TOKEN_LEFT_PAREN, "Expected left parenthesis, \"(\", before the condition expression of an if-statement.");
+    // consume(parser, TOKEN_LEFT_PAREN, "Expected left parenthesis, \"(\", before the condition expression of an if-statement.");
     Expression* conditionExpression = expression(parser);
-    consume(parser, TOKEN_RIGHT_PAREN, "Expected right parenthesis, \")\", after the condition expression of an if-statement.");
+    // consume(parser, TOKEN_RIGHT_PAREN, "Expected right parenthesis, \")\", after the condition expression of an if-statement.");
 
-    Statement* trueStatement = blockStatement(parser);
+    Statement* trueStatement = statement(parser);
 
     SelectionStatement* selectionStatement = allocateASTNode(SelectionStatement);
     selectionStatement->conditionExpression = conditionExpression;
     selectionStatement->trueStatement = trueStatement;
 
     if (match(parser, TOKEN_ELSE)) {
-        Statement* falseStatement = blockStatement(parser);
+        Statement* falseStatement = statement(parser);
         selectionStatement->falseStatement = falseStatement;
     } else {
         selectionStatement->falseStatement = NULL;
