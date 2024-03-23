@@ -6,7 +6,7 @@
 #ifndef ENV_TEST
 
 #define DEBUG_COMPILER 0
-#define DEBUG_VM 1
+#define DEBUG_VM 0
 
 #else
 
