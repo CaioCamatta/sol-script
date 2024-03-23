@@ -119,8 +119,7 @@ static void printValue(Value value) {
     } while (false)
 
 /* Null, false, and the number 0 are falsey. Everything else is truthy */
-static bool isFalsey(
-    Value value) {
+static bool isFalsey(Value value) {
     return IS_NULL(value) || (IS_BOOLEAN(value) && !(value.as.booleanVal)) || (IS_DOUBLE(value) && (value.as.doubleVal == 0));
 }
 
@@ -254,6 +253,20 @@ void step(VM* vm) {
             BINARY_TRUTHY_OP(!=);
             break;
         }
+        case OP_JUMP_IF_FALSE: {
+            Value value = pop(vm);
+            // If condition is falsey, jump over the "then" branch
+            if (isFalsey(value)) {
+                size_t IPAfterThenBranch = instruction->maybeOperand1;
+                vm->IP = &(vm->compiledCode.bytecodeArray.values[IPAfterThenBranch]);
+            }
+            break;
+        }
+        case OP_JUMP: {
+            size_t IPToJumpTo = instruction->maybeOperand1;
+            vm->IP = &(vm->compiledCode.bytecodeArray.values[IPToJumpTo]);
+            break;
+        }
         default:
             // Handle any unknown or unimplemented opcodes.
             fprintf(stderr, "Unimplemented opcode %d\n", instruction->type);
@@ -275,7 +288,7 @@ void run(VM* vm) {
     printf("Started executing VM.\n");
 #endif
 
-    while (vm->IP != lastInstruction) {
+    while (vm->IP < lastInstruction) {
         step(vm);
     }
 }

@@ -369,8 +369,8 @@ static void visitSelectionStatement(Compiler* compiler, SelectionStatement* sele
     // Visit the false (a.k.a. "else") branch if it exists.
     if (selectionStatement->falseStatement != NULL) {
         visitStatement(compiler, selectionStatement->falseStatement);
-        // Back-patch the jump-to-end position.
-        compiler->compiledBytecode.values[jumpToEndPosition].maybeOperand1 = compiler->compiledBytecode.used;
+        // Back-patch the jump-to-end position. We have to subtract 1 because so we jump to the very last instruction in the "else" branch. The VM skips that instruction and doesn't interpret it.
+        compiler->compiledBytecode.values[jumpToEndPosition].maybeOperand1 = compiler->compiledBytecode.used - 1;
     }
 }
 

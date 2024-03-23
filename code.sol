@@ -1,13 +1,3 @@
-val g = 100;
-print g;
-{
-    print g;
-    val x = 10;
-    print x;
-    {
-        val g = 20;
-        print g;
-        val y = 30;
-        print y;
-    }
-}
+if (true) { print 1;} else { print 2;}
+print 3;
+print 4;
