@@ -56,6 +56,9 @@ static void all_tests() {
     RUN_TEST(test_compiler_stack_height_expression_and_val);
     RUN_TEST(test_compiler_single_block_statement_with_locals);
     RUN_TEST(test_compiler_nested_blocks_with_global_and_local_vars);
+    RUN_TEST(test_compiler_if_statement_no_else);
+    RUN_TEST(test_compiler_if_statement_with_else);
+    RUN_TEST(test_compiler_nested_if_statements);
 
     // VM tests
     RUN_TEST(test_vm_addition);
