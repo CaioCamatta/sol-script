@@ -531,23 +531,25 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
 }
 
 CompiledCode compile(Compiler* compiler) {
+#if DEBUG_COMPILER
     clock_t startTime = clock();
-    if (DEBUG_COMPILER)
-        printf("Started compiling.\n");
+    printf("Started compiling.\n");
+#endif
 
     for (int i = 0; i < compiler->ASTSource->numberOfStatements; i++) {
         Statement* statement = compiler->ASTSource->rootStatements[i];
         visitStatement(compiler, statement);
     }
 
-    // if (DEBUG_COMPILER) {
+    // #if DEBUG_COMPILER
     //     printBytecodeArray(compiler->compiledBytecode);
-    // }
+    // #endif
 
+#if DEBUG_COMPILER
     clock_t endTime = clock();
     double timeTaken = ((double)(endTime - startTime)) / CLOCKS_PER_SEC;
-    if (DEBUG_COMPILER)
-        printf("Done compiling in %.5f seconds.\n\n", timeTaken);
+    printf("Done compiling in %.5f seconds.\n\n", timeTaken);
+#endif
 
     CompiledCode code = (CompiledCode){
         .bytecodeArray = compiler->compiledBytecode,

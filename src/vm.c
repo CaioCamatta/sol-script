@@ -138,7 +138,7 @@ void step(VM* vm) {
     // Fetch the instruction at the instruction pointer
     Bytecode* instruction = vm->IP;
 
-#ifdef DEBUG_VM
+#if DEBUG_VM
     printStack(vm->SP, &(vm->stack[0]));
 #endif
 
@@ -286,7 +286,7 @@ void run(VM* vm) {
     // Find the last instruction so we know when to stop executing
     Bytecode* lastInstruction = &(vm->compiledCode.bytecodeArray.values[vm->compiledCode.bytecodeArray.used]);
 
-#ifdef DEBUG_VM
+#if DEBUG_VM
     printf("Started executing VM.\n");
 #endif
 
