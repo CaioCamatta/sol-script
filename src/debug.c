@@ -399,7 +399,7 @@ void printStack(const Value* topOfStack, const Value* bottomOfStack) {
                 printf(KGRY "{" RESET " NULL " KGRY "} " RESET);
                 break;
             case TYPE_STRING:
-                printf(KGRY "{" RESET " %.5s " KGRY "} " RESET, val.as.stringVal);
+                printf(KGRY "{" RESET " %.10s " KGRY "} " RESET, val.as.stringVal);
                 break;
         }
     }

@@ -31,7 +31,9 @@ static void runtimeError(VM* vm, const char* format, ...) {
     // Print error message
     va_list args;
     va_start(args, format);
+    fprintf(stderr, KRED);
     vfprintf(stderr, format, args);
+    fprintf(stderr, RESET);
     va_end(args);
 
     // TODO: make this not exit during a REPL session.
@@ -140,7 +142,7 @@ void step(VM* vm) {
     Bytecode* instruction = vm->IP;
 
 #if DEBUG_VM
-    printf(KGRY "%-4d " RESET, vm->IP - vm->compiledCode.bytecodeArray.values);
+    printf(KGRY "%-4ld " RESET, vm->IP - vm->compiledCode.bytecodeArray.values);
     printStack(vm->SP, &(vm->stack[0]));
 #endif
 

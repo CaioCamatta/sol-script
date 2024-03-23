@@ -353,6 +353,10 @@ static void visitSelectionStatement(Compiler* compiler, SelectionStatement* sele
     size_t jumpIfFalsePosition = compiler->compiledBytecode.used;
     emitBytecode(compiler, BYTECODE_OPERAND_1(OP_JUMP_IF_FALSE, 999999));
 
+    // Visiting the expression causes the stack to grow, but OP_JUMP_IF_FALSE pops it,
+    // so we need to decrease the stack height to compensate for that.
+    decreaseStackHeight(compiler);
+
     // Visit the true (a.k.a. "then") branch.
     visitStatement(compiler, selectionStatement->trueStatement);
 
