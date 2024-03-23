@@ -45,6 +45,18 @@ int compareValues(Value a, Value b) {
     }
 }
 
+// Add multiple bytecodes to an array
+void addBytecodes(BytecodeArray* array, Bytecode* bytecodes, size_t count) {
+    for (size_t i = 0; i < count; ++i) {
+        INSERT_ARRAY((*array), bytecodes[i], Bytecode);
+    }
+}
+#define ADD_BYTECODES(array, ...)                                 \
+    do {                                                          \
+        Bytecode tmp[] = {__VA_ARGS__};                           \
+        addBytecodes(array, tmp, sizeof(tmp) / sizeof(Bytecode)); \
+    } while (0)
+
 // Simplified pop function for testing
 static Value popVmStack(VM* vm) {
     vm->SP--;
@@ -530,4 +542,55 @@ int test_vm_nested_blocks_with_global_and_local_vars() {
     FREE_ARRAY(code.constantPool);
 
     return SUCCESS_RETURN_CODE;
+}
+
+int test_vm_nested_if_statements() {
+    // Initialize the VM and bytecode for the nested if statement example
+    VM vm;
+    CompiledCode code = {
+        .constantPool = (ConstantPool){},
+        .bytecodeArray = (BytecodeArray){}};
+    INIT_ARRAY(code.bytecodeArray, Bytecode);
+    INIT_ARRAY(code.constantPool, Constant);
+
+    // Add string literals to the constant pool
+    INSERT_ARRAY(code.constantPool, STRING_CONST("true-outer"), Constant);   // Index 0
+    INSERT_ARRAY(code.constantPool, STRING_CONST("true-inner"), Constant);   // Index 1
+    INSERT_ARRAY(code.constantPool, STRING_CONST("false-inner"), Constant);  // Index 2
+    INSERT_ARRAY(code.constantPool, STRING_CONST("false-outer"), Constant);  // Index 3
+
+    ADD_BYTECODES(
+        &code.bytecodeArray,
+        BYTECODE(OP_TRUE),                         // Condition for outer if
+        BYTECODE_OPERAND_1(OP_JUMP_IF_FALSE, 15),  // Jump to else block of outer if
+        BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0),
+        BYTECODE(OP_PRINT),
+        BYTECODE(OP_FALSE),                        // Condition for inner if
+        BYTECODE_OPERAND_1(OP_JUMP_IF_FALSE, 10),  // Jump to else block of inner if
+        BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 1),
+        BYTECODE(OP_PRINT),
+        BYTECODE_OPERAND_1(OP_POPN, 0),
+        BYTECODE_OPERAND_1(OP_JUMP, 13),  // Jump to end of inner if
+        BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 2),
+        BYTECODE(OP_PRINT),
+        BYTECODE_OPERAND_1(OP_POPN, 0),
+        BYTECODE_OPERAND_1(OP_POPN, 0),
+        BYTECODE_OPERAND_1(OP_JUMP, 18),  // Jump to end of outer if
+        BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 3),
+        BYTECODE(OP_PRINT),
+        BYTECODE_OPERAND_1(OP_POPN, 0));
+
+    // Initialize VM with the bytecode
+    initVM(&vm, code);
+
+    // Run the VM and capture the output to verify correct execution
+    CAPTURE_PRINT_OUTPUT({ run(&vm); }, {
+        // Your assertions here, such as checking the output matches expected string sequence
+        ASSERT(strcmp(buffer, "true-outer\nfalse-inner\n") == 0); });
+
+    // Clean up
+    FREE_ARRAY(code.bytecodeArray);
+    FREE_ARRAY(code.constantPool);
+
+    return SUCCESS_RETURN_CODE;  // Assuming SUCCESS_RETURN_CODE is defined as part of your testing framework
 }
