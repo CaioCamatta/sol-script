@@ -322,8 +322,6 @@ int test_compiler_val_declaration() {
     ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);   // First should be OP_LOAD_CONSTANT
     ASSERT(compiledCode.bytecodeArray.values[1].type == OP_SET_GLOBAL_VAL);  // Second should be OP_SET_GLOBAL_VAL
 
-    // printCompiledCode(compiledCode);
-
     FREE_ARRAY(compiledCode.bytecodeArray);
     FREE_ARRAY(compiledCode.constantPool);
 
@@ -698,7 +696,6 @@ int test_compiler_stack_height_expression_and_val() {
     };
 
     COMPILE_TEST_SOURCE
-    CompiledCode compiledCode = compile(&compiler);
 
     // The expression and print statements shouldn't add to the height.
     // The val declaration also shouldn't add anything because it's a global variable.
