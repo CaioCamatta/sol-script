@@ -933,6 +933,7 @@ int test_compiler_if_statement_with_else() {
 
     initCompiler(&compiler, &testSource);
     CompiledCode compiledCode = compile(&compiler);
+    printCompiledCode(compiledCode);
 
     Bytecode expectedBytecode[] = {
         {.type = OP_FALSE},                     // Condition evaluation
@@ -994,6 +995,7 @@ int test_compiler_nested_if_statements() {
 
     initCompiler(&compiler, &testSource);
     CompiledCode compiledCode = compile(&compiler);
+    printCompiledCode(compiledCode);
 
     // Expected bytecode and constant pool for the nested if statements
     Bytecode expectedBytecode[] = {
