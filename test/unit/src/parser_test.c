@@ -38,6 +38,14 @@ static TokenArray createTokenArrayFromTypesAndLexemes(TokenType types[], const c
     return tokens;
 }
 
+// Macro to initialize a parser, parse the AST from tokens, and print the tree
+// Assumes the source token array is named `tokens`; creates a variable called `source`.
+#define PARSE_TEST_AST                  \
+    ASTParser parser;                   \
+    initASTParser(&parser, tokens);     \
+    Source* source = parseAST(&parser); \
+    printAST(source);
+
 // Test for parsing a val declaration with a simple expression
 int test_parser_simple_expression() {
     // Create a mock token array for the expression "val result = 1 + 2"
@@ -56,14 +64,7 @@ int test_parser_simple_expression() {
         .used = 8,
         .size = 8};
 
-    // Initialize the parser
-    ASTParser parser;
-    initASTParser(&parser, tokens);
-
-    // Parse the expression
-    Source* source = parseAST(&parser);
-
-    // printAST(source);
+    PARSE_TEST_AST
 
     // Assertions to check the structure of the parsed AST
     ASSERT(source->numberOfStatements == 1);
@@ -102,8 +103,7 @@ int test_parser_print_statement() {
     TokenType types[] = {TOKEN_PRINT, TOKEN_NUMBER, TOKEN_PLUS, TOKEN_NUMBER, TOKEN_SEMICOLON, TOKEN_EOF};
     TokenArray tokens = createTokenArray(types, 6);
 
-    ASTParser parser;
-    Source* source = parseASTFromTokens(&parser, &tokens);
+    PARSE_TEST_AST
     ASSERT(source->numberOfStatements == 1);
     ASSERT(source->rootStatements[0]->type == PRINT_STATEMENT);
     ASSERT(source->rootStatements[0]->as.printStatement->expression->type == ADDITIVE_EXPRESSION);
@@ -127,9 +127,7 @@ int test_parser_logical_or_expression() {
         .used = 4,
         .size = 4};
 
-    ASTParser parser;
-    Source* source = parseASTFromTokens(&parser, &tokens);
-    // printAST(source);
+    PARSE_TEST_AST
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -171,10 +169,7 @@ int test_parser_logical_and_expression() {
         .used = 4,
         .size = 4};
 
-    ASTParser parser;
-    initASTParser(&parser, tokens);
-    Source* source = parseAST(&parser);
-    // printAST(source);
+    PARSE_TEST_AST
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -214,10 +209,7 @@ int test_parser_equality_expression() {
         .used = 4,
         .size = 4};
 
-    ASTParser parser;
-    initASTParser(&parser, tokens);
-    Source* source = parseAST(&parser);
-    // printAST(source);
+    PARSE_TEST_AST
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -256,10 +248,7 @@ int test_parser_comparison_expression() {
         .used = 4,
         .size = 4};
 
-    ASTParser parser;
-    initASTParser(&parser, tokens);
-    Source* source = parseAST(&parser);
-    // printAST(source);
+    PARSE_TEST_AST
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -298,10 +287,7 @@ int test_parser_multiplicative_expression() {
         .used = 4,
         .size = 4};
 
-    ASTParser parser;
-    initASTParser(&parser, tokens);
-    Source* source = parseAST(&parser);
-    // printAST(source);
+    PARSE_TEST_AST
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -339,10 +325,7 @@ int test_parser_unary_expression() {
         .used = 3,
         .size = 3};
 
-    ASTParser parser;
-    initASTParser(&parser, tokens);
-    Source* source = parseAST(&parser);
-    // printAST(source);
+    PARSE_TEST_AST
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -374,10 +357,7 @@ int test_parser_boolean_literal() {
         .used = 2,
         .size = 2};
 
-    ASTParser parser;
-    initASTParser(&parser, tokens);
-    Source* source = parseAST(&parser);
-    // printAST(source);
+    PARSE_TEST_AST
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -427,10 +407,7 @@ int test_parser_complex_expression() {
         .used = 21,
         .size = 21};
 
-    ASTParser parser;
-    initASTParser(&parser, tokens);
-    Source* source = parseAST(&parser);
-    // printAST(source);
+    PARSE_TEST_AST
 
     ASSERT(source->numberOfStatements == 1);
 
@@ -517,12 +494,9 @@ int test_parser_nested_parentheses_expression() {
         .used = 11,
         .size = 11};
 
-    ASTParser parser;
-    initASTParser(&parser, tokens);
+    PARSE_TEST_AST
 
-    Source* source = parseAST(&parser);
     ASSERT(source->numberOfStatements == 1);  // Ensure one statement was parsed
-    // printAST(source);
 
     Statement* statement = source->rootStatements[0];
     ASSERT(statement->type == EXPRESSION_STATEMENT);  // Ensure the statement is an expression
@@ -566,9 +540,7 @@ int test_parser_variable_declaration_and_reading() {
         INSERT_ARRAY(tokens, tokensArray[i], Token);
     }
 
-    // Parse the manually created tokens
-    ASTParser parser;
-    Source* source = parseASTFromTokens(&parser, &tokens);
+    PARSE_TEST_AST
 
     // Assertions to validate the AST structure
     ASSERT(source->numberOfStatements == 2);
@@ -609,8 +581,7 @@ int test_parser_string_literal() {
         INSERT_ARRAY(tokens, token, Token);
     }
 
-    ASTParser parser;
-    Source* source = parseASTFromTokens(&parser, &tokens);
+    PARSE_TEST_AST
 
     // Check that the AST correctly represents a string literal expression
     ASSERT(source->numberOfStatements == 1);
@@ -642,9 +613,7 @@ int test_parser_block_statement() {
     TokenArray tokens = createTokenArray(types, sizeof(types) / sizeof(TokenType));
 
     // Initialize the parser and parse the AST from the tokens
-    ASTParser parser;
-    initASTParser(&parser, tokens);
-    Source* source = parseAST(&parser);
+    PARSE_TEST_AST
 
     // Assertions to verify the structure of the parsed AST
     // Expect one statement at the root, which is a block statement
@@ -678,9 +647,8 @@ int test_parser_if_statement_true_branch_only() {
     const char* lexemes[] = {"if", "(", "true", ")", "{", "print", "\"Hello, World!\"", ";", "}", ""};
 
     TokenArray tokens = createTokenArrayFromTypesAndLexemes(types, lexemes, sizeof(types) / sizeof(TokenType));
-    ASTParser parser;
-    initASTParser(&parser, tokens);
-    Source* source = parseAST(&parser);
+
+    PARSE_TEST_AST
 
     ASSERT(source->numberOfStatements == 1);
     ASSERT(source->rootStatements[0]->type == SELECTION_STATEMENT);
@@ -707,9 +675,8 @@ int test_parser_if_statement_with_else_branch() {
     const char* lexemes[] = {"if", "(", "true", ")", "{", "print", "\"Hello, World!\"", ";", "}", "else", "{", "print", "\"Goodbye, World!\"", ";", "}", ""};
 
     TokenArray tokens = createTokenArrayFromTypesAndLexemes(types, lexemes, sizeof(types) / sizeof(TokenType));
-    ASTParser parser;
-    initASTParser(&parser, tokens);
-    Source* source = parseAST(&parser);
+
+    PARSE_TEST_AST
 
     ASSERT(source->numberOfStatements == 1);
     ASSERT(source->rootStatements[0]->type == SELECTION_STATEMENT);

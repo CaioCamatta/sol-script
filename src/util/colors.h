@@ -12,4 +12,7 @@
 #define KGRY "\x1B[37m"   // Grey
 #define KDGRY "\x1B[90m"  // Dark grey
 
+#define KBOLD "\e[1m"  // Bold
+#define KBOFF "\e[m"   // End bold
+
 #endif
