@@ -4,30 +4,8 @@
 #include <stdlib.h>
 
 #include "../minunit.h"
+#include "../utils.h"
 #include "bytecode.h"
-
-// Macro to facilitate checking that print statements are printing. Uses a temporary file.
-#define BUFFER_SIZE 1024
-#define CAPTURE_PRINT_OUTPUT(executionBlock, assertionsBlock)    \
-    do {                                                         \
-        char buffer[BUFFER_SIZE] = {0};                          \
-        FILE* old_stdout = stdout;                               \
-        FILE* temp_file = tmpfile();                             \
-        if (!temp_file) {                                        \
-            perror("Failed to open temporary file");             \
-            exit(EXIT_FAILURE);                                  \
-        }                                                        \
-        stdout = temp_file;                                      \
-                                                                 \
-        executionBlock                                           \
-                                                                 \
-            fflush(stdout);                                      \
-        stdout = old_stdout;                                     \
-        fseek(temp_file, 0, SEEK_SET);                           \
-        fread(buffer, sizeof(char), BUFFER_SIZE - 1, temp_file); \
-        fclose(temp_file);                                       \
-        assertionsBlock                                          \
-    } while (0)
 
 // Helper function to compare values
 int compareValues(Value a, Value b) {
