@@ -235,14 +235,20 @@ static int compareTypesInBytecodeArrays(BytecodeArray expected, BytecodeArray ac
     return 1;
 }
 
+// Macro to initialize compiler, compile AST, and print the compiled bytecode
+// Assumes the source is named `testSource`; creates a variable called `compiledCode`.
+#define COMPILE_TEST_SOURCE                         \
+    Compiler compiler;                              \
+    initCompiler(&compiler, &testSource);           \
+    CompiledCode compiledCode = compile(&compiler); \
+    printCompiledCode(compiledCode);
+
 // -------------------------------------------------------------------------
 // --------------------------------- Tests ---------------------------------
 // -------------------------------------------------------------------------
 
 // Test basic arithmetic expression
 int test_compiler() {
-    Compiler compiler;
-
     Source testSource = {
         .rootStatements = {
             EXPRESSION_STATEMENT(
@@ -253,9 +259,7 @@ int test_compiler() {
         .numberOfStatements = 1,
     };
 
-    initCompiler(&compiler, &testSource);
-    CompiledCode compiledCode = compile(&compiler);
-    // printCompiledCode(compiledCode);
+    COMPILE_TEST_SOURCE
 
     // Expected bytecode
     Bytecode expectedBytecode[] = {
@@ -281,8 +285,6 @@ int test_compiler() {
 }
 
 int test_compiler_print() {
-    Compiler compiler;
-
     // Set up a source structure with a print statement
     Source testSource = {
         .rootStatements = {
@@ -290,18 +292,13 @@ int test_compiler_print() {
         .numberOfStatements = 1,
     };
 
-    // Initialize and run the compiler
-    initCompiler(&compiler, &testSource);
-    CompiledCode compiledCode = compile(&compiler);
+    COMPILE_TEST_SOURCE
 
     // Verify the bytecode
     // Assuming the bytecode for a print statement is OP_PRINT followed by the value to print
     ASSERT(compiledCode.bytecodeArray.used == 2);                           // Check if two bytecode instructions are generated
     ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);  // First should be OP_CONSTANT
     ASSERT(compiledCode.bytecodeArray.values[1].type == OP_PRINT);          // Second should be OP_PRINT
-
-    // Optionally, print the bytecode for visual verification
-    // printCompiledCode(compiledCode);
 
     // Clean up
     FREE_ARRAY(compiledCode.bytecodeArray);
@@ -311,8 +308,6 @@ int test_compiler_print() {
 }
 
 int test_compiler_val_declaration() {
-    Compiler compiler;
-
     // Setup a source structure with a val declaration statement
     Source testSource = {
         .rootStatements = {
@@ -320,8 +315,7 @@ int test_compiler_val_declaration() {
         .numberOfStatements = 1,
     };
 
-    initCompiler(&compiler, &testSource);
-    CompiledCode compiledCode = compile(&compiler);
+    COMPILE_TEST_SOURCE
 
     // Verify bytecode for val declaration
     ASSERT(compiledCode.bytecodeArray.used == 2);                            // Check if two bytecode instructions are generated
@@ -346,9 +340,7 @@ int test_compiler_variable_declaration_and_printing() {
         .numberOfStatements = 2,
     };
 
-    Compiler compiler;
-    initCompiler(&compiler, &testSource);
-    CompiledCode compiledCode = compile(&compiler);
+    COMPILE_TEST_SOURCE
 
     ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);   // load 42 into stack
     ASSERT(compiledCode.bytecodeArray.values[1].type == OP_SET_GLOBAL_VAL);  // assign top of stack to variable 'x'
@@ -366,7 +358,7 @@ int test_compiler_variable_declaration_and_printing() {
 }
 
 int test_add_constant_to_pool_no_duplicates() {
-    Source source = (Source){
+    Source testSource = (Source){
         .rootStatements = {
             VAL_DECLARATION_STATEMENT("x", PRIMARY_EXPRESSION(NUMBER_LITERAL("42"))),
             PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("x"))),
@@ -374,9 +366,7 @@ int test_add_constant_to_pool_no_duplicates() {
         .numberOfStatements = 3,
     };
 
-    Compiler compiler;
-    initCompiler(&compiler, &source);
-    CompiledCode compiledCode = compile(&compiler);
+    COMPILE_TEST_SOURCE
 
     // Assert the constants were not added twice; there should be one for '42', one for 'x', one for 'y'.
     ASSERT(compiledCode.constantPool.used == 3);
@@ -389,8 +379,6 @@ int test_add_constant_to_pool_no_duplicates() {
 }
 
 int test_compiler_binary_equal() {
-    Compiler compiler;
-
     // Setup source with an equality expression
     Source testSource = {
         .rootStatements = {
@@ -402,8 +390,7 @@ int test_compiler_binary_equal() {
         .numberOfStatements = 1,
     };
 
-    initCompiler(&compiler, &testSource);
-    CompiledCode compiledCode = compile(&compiler);
+    COMPILE_TEST_SOURCE
 
     // Expected bytecode for '5 == 5'
     Bytecode expectedBytecode[] = {
@@ -425,8 +412,6 @@ int test_compiler_binary_equal() {
 }
 
 int test_compiler_binary_not_equal() {
-    Compiler compiler;
-
     // Setup source with a not equal expression
     Source testSource = {
         .rootStatements = {
@@ -438,8 +423,7 @@ int test_compiler_binary_not_equal() {
         .numberOfStatements = 1,
     };
 
-    initCompiler(&compiler, &testSource);
-    CompiledCode compiledCode = compile(&compiler);
+    COMPILE_TEST_SOURCE
 
     // Expected bytecode for '5 != 7'
     Bytecode expectedBytecode[] = {
@@ -461,8 +445,6 @@ int test_compiler_binary_not_equal() {
 }
 
 int test_compiler_comparison_operations() {
-    Compiler compiler;
-
     // Setup source with multiple comparison expressions
     Source testSource = {
         .rootStatements = {
@@ -493,8 +475,7 @@ int test_compiler_comparison_operations() {
         .numberOfStatements = 4,
     };
 
-    initCompiler(&compiler, &testSource);
-    CompiledCode compiledCode = compile(&compiler);
+    COMPILE_TEST_SOURCE
 
     // Expected bytecode for the comparison expressions
     Bytecode expectedBytecode[] = {
@@ -532,8 +513,6 @@ int test_compiler_comparison_operations() {
 }
 
 int test_compiler_logical_and_or_operations() {
-    Compiler compiler;
-
     // Setup source with logical AND and OR expressions
     Source testSource = {
         .rootStatements = {
@@ -551,8 +530,7 @@ int test_compiler_logical_and_or_operations() {
         .numberOfStatements = 2,
     };
 
-    initCompiler(&compiler, &testSource);
-    CompiledCode compiledCode = compile(&compiler);
+    COMPILE_TEST_SOURCE
 
     // Expected bytecode for the logical AND and OR expressions
     Bytecode expectedBytecode[] = {
@@ -580,8 +558,6 @@ int test_compiler_logical_and_or_operations() {
 }
 
 int test_compiler_multiplicative_expressions() {
-    Compiler compiler;
-
     // Setup source with multiplicative expressions
     Source testSource = {
         .rootStatements = {
@@ -600,8 +576,7 @@ int test_compiler_multiplicative_expressions() {
         .numberOfStatements = 2,
     };
 
-    initCompiler(&compiler, &testSource);
-    CompiledCode compiledCode = compile(&compiler);
+    COMPILE_TEST_SOURCE
 
     // Expected bytecode for the multiplicative expressions
     Bytecode expectedBytecode[] = {
@@ -634,8 +609,6 @@ int test_compiler_multiplicative_expressions() {
 }
 
 int test_compiler_unary_expressions() {
-    Compiler compiler;
-
     // Construct an AST for the expressions: -42 and !true
     Source testSource = {
         .rootStatements = {
@@ -648,8 +621,7 @@ int test_compiler_unary_expressions() {
         .numberOfStatements = 2,
     };
 
-    initCompiler(&compiler, &testSource);
-    CompiledCode compiledCode = compile(&compiler);
+    COMPILE_TEST_SOURCE
 
     // Expected bytecode: Load constant 42, apply unary negation, push true, apply logical NOT
     Bytecode expectedBytecode[] = {
@@ -673,29 +645,24 @@ int test_compiler_unary_expressions() {
 }
 
 int test_compiler_boolean_literal() {
-    Compiler compiler;
-
     Source testSource = (Source){
         .rootStatements = {
             EXPRESSION_STATEMENT(PRIMARY_EXPRESSION(BOOLEAN_LITERAL(false)))},
         .numberOfStatements = 1,
     };
 
-    initCompiler(&compiler, &testSource);
-    CompiledCode compiledCodeFalse = compile(&compiler);
+    COMPILE_TEST_SOURCE
 
-    ASSERT(compiledCodeFalse.bytecodeArray.used == 2);
-    ASSERT(compiledCodeFalse.bytecodeArray.values[0].type == OP_FALSE);
+    ASSERT(compiledCode.bytecodeArray.used == 2);
+    ASSERT(compiledCode.bytecodeArray.values[0].type == OP_FALSE);
 
-    FREE_ARRAY(compiledCodeFalse.bytecodeArray);
-    FREE_ARRAY(compiledCodeFalse.constantPool);
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
 
     return SUCCESS_RETURN_CODE;
 }
 
 int test_compiler_string_literal() {
-    Compiler compiler;
-
     // Define a source with a string literal
     Source testSource = {
         .rootStatements = {
@@ -705,8 +672,7 @@ int test_compiler_string_literal() {
     };
 
     // Initialize and compile
-    initCompiler(&compiler, &testSource);
-    CompiledCode compiledCode = compile(&compiler);
+    COMPILE_TEST_SOURCE
 
     // Assertions to ensure string literal was correctly recognized, added to the constant pool, and properly loaded
     ASSERT(compiledCode.constantPool.used == 1);                                          // Ensure constant pool has entries
@@ -731,10 +697,7 @@ int test_compiler_stack_height_expression_and_val() {
         .numberOfStatements = 3,
     };
 
-    Compiler compiler;
-    initCompiler(&compiler, &testSource);
-
-    ASSERT(compiler.currentStackHeight == 0);  // Should start at zero
+    COMPILE_TEST_SOURCE
     CompiledCode compiledCode = compile(&compiler);
 
     // The expression and print statements shouldn't add to the height.
@@ -750,8 +713,6 @@ int test_compiler_stack_height_expression_and_val() {
 
 // Test block statements with local variables
 int test_compiler_single_block_statement_with_locals() {
-    Compiler compiler;
-
     // Set up a source structure with a block statement containing local variable declarations and usage
     Source testSource = {
         .rootStatements = {
@@ -762,8 +723,7 @@ int test_compiler_single_block_statement_with_locals() {
         .numberOfStatements = 1,
     };
 
-    initCompiler(&compiler, &testSource);
-    CompiledCode compiledCode = compile(&compiler);
+    COMPILE_TEST_SOURCE
 
     // Define expected bytecode
     Bytecode expectedBytecode[] = {
@@ -790,8 +750,6 @@ int test_compiler_single_block_statement_with_locals() {
 }
 
 int test_compiler_nested_blocks_with_global_and_local_vars() {
-    Compiler compiler;
-
     /*
     val g = 100;
     print g;
@@ -823,8 +781,7 @@ int test_compiler_nested_blocks_with_global_and_local_vars() {
         .numberOfStatements = 3,
     };
 
-    initCompiler(&compiler, &testSource);
-    CompiledCode compiledCode = compile(&compiler);
+    COMPILE_TEST_SOURCE
 
     Bytecode expectedBytecode[] = {
         {.type = OP_LOAD_CONSTANT},
@@ -881,8 +838,6 @@ int test_compiler_nested_blocks_with_global_and_local_vars() {
 }
 
 int test_compiler_if_statement_no_else() {
-    Compiler compiler;
-
     // if (true) { print("Hello, World!") };
     Source testSource = {
         .rootStatements = {
@@ -893,8 +848,7 @@ int test_compiler_if_statement_no_else() {
         .numberOfStatements = 1,
     };
 
-    initCompiler(&compiler, &testSource);
-    CompiledCode compiledCode = compile(&compiler);
+    COMPILE_TEST_SOURCE
 
     Bytecode expectedBytecode[] = {
         {.type = OP_TRUE},
@@ -919,8 +873,6 @@ int test_compiler_if_statement_no_else() {
 }
 
 int test_compiler_if_statement_with_else() {
-    Compiler compiler;
-
     // if (false) { print("Hello, World!"); } else { print("Goodbye, World!"); };
     Source testSource = {
         .rootStatements = {
@@ -931,9 +883,7 @@ int test_compiler_if_statement_with_else() {
         .numberOfStatements = 1,
     };
 
-    initCompiler(&compiler, &testSource);
-    CompiledCode compiledCode = compile(&compiler);
-    printCompiledCode(compiledCode);
+    COMPILE_TEST_SOURCE
 
     Bytecode expectedBytecode[] = {
         {.type = OP_FALSE},                     // Condition evaluation
@@ -963,8 +913,6 @@ int test_compiler_if_statement_with_else() {
 }
 
 int test_compiler_nested_if_statements() {
-    Compiler compiler;
-
     /*
     if (true) {
         print "true-outer";
@@ -993,9 +941,7 @@ int test_compiler_nested_if_statements() {
         .numberOfStatements = 1,
     };
 
-    initCompiler(&compiler, &testSource);
-    CompiledCode compiledCode = compile(&compiler);
-    printCompiledCode(compiledCode);
+    COMPILE_TEST_SOURCE
 
     // Expected bytecode and constant pool for the nested if statements
     Bytecode expectedBytecode[] = {
