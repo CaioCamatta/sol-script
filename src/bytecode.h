@@ -88,6 +88,7 @@ typedef struct {
         .as = {.string = nullTerminatedStringArg}, \
     }
 
+// Global variable name with end up as identifiers in the constant pool.
 #define IDENTIFIER_CONST(nullTerminatedIdentifierArg)  \
     (Constant) {                                       \
         .type = CONST_TYPE_IDENTIFIER,                 \
