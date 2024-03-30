@@ -336,13 +336,13 @@ The following features are necessary a proper v1.0 release, in rough order:
  - [X] Implement block statements and expressions
  - [X] Add [_FAST](https://stackoverflow.com/questions/74998947/whats-pythons-load-fast-bytecode-instruction-fast-at) local variables
  - [X] Implement selection statement (`if`s)
- - [ ] Implement the rest of the parser for the whole syntax grammar
  - [X] Add conditional debugging/logging for tests that fail
- - [ ] Implement functions and returns
+ - [ ] Implement iteration statement (loops)
  - [ ] Implement assignment statements
+ - [ ] Implement the rest of the parser for the whole syntax grammar
+ - [ ] Implement functions and returns
  - [ ] Add CLI argument to enable or disable debugging logs in the REPL.
  - [ ] Improve error logs; print line and column
- - [ ] Implement iteration statement (loops)
  - [ ] Add Panic Mode error recovery; stop crashing the compiler on every error.
  - [ ] Implement objects / structs
  - [ ] Add garbage collector
