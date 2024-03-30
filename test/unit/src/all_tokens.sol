@@ -8,6 +8,7 @@ true
 null
 val
 print
+while
 
 // Identifier
 valName
