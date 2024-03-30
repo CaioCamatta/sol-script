@@ -543,8 +543,8 @@ static Statement* statement(ASTParser* parser) {
             return printStatement(parser);
         case TOKEN_LEFT_CURLY:
             return blockStatement(parser);
-        case TOKEN_WHILE:
-            return iterationStatement(parser);
+        // case TOKEN_WHILE:
+        //     return iterationStatement(parser);
         case TOKEN_IF:
             return selectionStatement(parser);
         // case TOKEN_RETURN:
