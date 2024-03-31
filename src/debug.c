@@ -395,7 +395,7 @@ void printCompiledCode(CompiledCode compiledCode) {
 
 // Print VM stack. The top of the stack will be on the left.
 void printStack(const Value* topOfStack, const Value* bottomOfStack) {
-    printf(KGRY "[ " RESET);
+    printf(KGRY "t[ " RESET);
     while (topOfStack != bottomOfStack) {
         topOfStack--;
         Value val = *topOfStack;
@@ -414,5 +414,5 @@ void printStack(const Value* topOfStack, const Value* bottomOfStack) {
                 break;
         }
     }
-    printf(KGRY "]\n" RESET);
+    printf(KGRY "]b\n" RESET);
 }
