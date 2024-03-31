@@ -216,6 +216,18 @@
         }                                                                       \
     }
 
+#define BLOCK_EXPRESSION(stmts, lastExpr)                                    \
+    &(Expression) {                                                          \
+        .type = BLOCK_EXPRESSION,                                            \
+        .as.blockExpression = &(BlockExpression) {                           \
+            .statementArray = (StatementArray){                              \
+                .values = (Statement*[]){stmts},                             \
+                .used = sizeof((Statement*[]){stmts}) / sizeof(Statement*),  \
+                .size = sizeof((Statement*[]){stmts}) / sizeof(Statement*)}, \
+            .lastExpression = lastExpr                                       \
+        }                                                                    \
+    }
+
 // ------------------------------------------------------------------------
 // ---------------------------- Test utilities ----------------------------
 // ------------------------------------------------------------------------
@@ -977,6 +989,113 @@ int test_compiler_nested_if_statements() {
     ASSERT(compiledCode.bytecodeArray.values[17].maybeOperand1 == 0);   // Operand for the OP_POPN after "false-outer"
 
     // Clean up
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_block_expression_simple() {
+    // val a = { 3; };
+    Source testSource = {
+        .rootStatements = {
+            VAL_DECLARATION_STATEMENT(
+                "a",
+                BLOCK_EXPRESSION(
+                    ,
+                    PRIMARY_EXPRESSION(NUMBER_LITERAL("3"))))},
+        .numberOfStatements = 1,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    Bytecode expectedBytecode[] = {
+        {.type = OP_LOAD_CONSTANT, .maybeOperand1 = 0},
+        {.type = OP_SWAP, .maybeOperand1 = 0},
+        {.type = OP_POPN, .maybeOperand1 = 0},
+        {.type = OP_SET_GLOBAL_VAL, .maybeOperand1 = 1},
+    };
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 4};
+
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+    ASSERT(compiledCode.constantPool.values[0].as.number == 3);
+    ASSERT(strcmp(compiledCode.constantPool.values[1].as.string, "a") == 0);
+
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_block_expression_nested() {
+    // val a = {{{ 3; };}}
+    Source testSource = {
+        .rootStatements = {
+            VAL_DECLARATION_STATEMENT(
+                "a",
+                BLOCK_EXPRESSION(
+                    ,
+                    BLOCK_EXPRESSION(
+                        ,
+                        BLOCK_EXPRESSION(
+                            ,
+                            PRIMARY_EXPRESSION(NUMBER_LITERAL("3"))))))},
+        .numberOfStatements = 1,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    Bytecode expectedBytecode[] = {
+        {.type = OP_LOAD_CONSTANT, .maybeOperand1 = 0},
+        {.type = OP_SWAP, .maybeOperand1 = 0},
+        {.type = OP_POPN, .maybeOperand1 = 0},
+        {.type = OP_SWAP, .maybeOperand1 = 0},
+        {.type = OP_POPN, .maybeOperand1 = 0},
+        {.type = OP_SWAP, .maybeOperand1 = 0},
+        {.type = OP_POPN, .maybeOperand1 = 0},
+        {.type = OP_SET_GLOBAL_VAL, .maybeOperand1 = 1},
+    };
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 8};
+
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+    ASSERT(compiledCode.constantPool.values[0].as.number == 3);
+    ASSERT(strcmp(compiledCode.constantPool.values[1].as.string, "a") == 0);
+
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_block_expression_with_statements() {
+    // val a = { val b = 2; 3; };
+    Source testSource = {
+        .rootStatements = {
+            VAL_DECLARATION_STATEMENT(
+                "a",
+                BLOCK_EXPRESSION(
+                    VAL_DECLARATION_STATEMENT("b", PRIMARY_EXPRESSION(NUMBER_LITERAL("2"))),
+                    PRIMARY_EXPRESSION(NUMBER_LITERAL("3"))))},
+        .numberOfStatements = 1,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    Bytecode expectedBytecode[] = {
+        {.type = OP_LOAD_CONSTANT, .maybeOperand1 = 0},
+        {.type = OP_SET_LOCAL_VAL_FAST},
+        {.type = OP_LOAD_CONSTANT, .maybeOperand1 = 1},
+        {.type = OP_SWAP, .maybeOperand1 = 1},
+        {.type = OP_POPN, .maybeOperand1 = 1},
+        {.type = OP_SET_GLOBAL_VAL, .maybeOperand1 = 2},
+    };
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 6};
+
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+    ASSERT(compiledCode.constantPool.values[0].as.number == 2);
+    ASSERT(compiledCode.constantPool.values[1].as.number == 3);
+    ASSERT(strcmp(compiledCode.constantPool.values[2].as.string, "a") == 0);
+
     FREE_ARRAY(compiledCode.bytecodeArray);
     FREE_ARRAY(compiledCode.constantPool);
 

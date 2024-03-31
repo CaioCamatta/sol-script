@@ -700,3 +700,195 @@ int test_parser_if_statement_with_else_branch() {
     FREE_ARRAY(tokens);
     return SUCCESS_RETURN_CODE;
 }
+
+int test_parser_block_expression_simple() {
+    // val a = { 3; };
+    Token tokensArray[] = {
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "a"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_NUMBER, "3"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 9,
+        .size = 9};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == VAL_DECLARATION_STATEMENT);
+
+    ValDeclarationStatement* valDecl = statement->as.valDeclarationStatement;
+    ASSERT(valDecl->expression->type == BLOCK_EXPRESSION);
+
+    BlockExpression* blockExpr = valDecl->expression->as.blockExpression;
+    ASSERT(blockExpr->lastExpression->type == PRIMARY_EXPRESSION);
+
+    ASSERT(blockExpr->lastExpression->as.primaryExpression->literal->type == NUMBER_LITERAL);
+    ASSERT(strcmp(blockExpr->lastExpression->as.primaryExpression->literal->as.numberLiteral->token.start, "3") == 0);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_block_expression_nested() {
+    // val a = {{{ 3; };}}
+    Token tokensArray[] = {
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "a"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_NUMBER, "3"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 14,
+        .size = 14};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == VAL_DECLARATION_STATEMENT);
+
+    ValDeclarationStatement* valDecl = statement->as.valDeclarationStatement;
+    ASSERT(valDecl->expression->type == BLOCK_EXPRESSION);
+
+    BlockExpression* outerBlockExpr = valDecl->expression->as.blockExpression;
+    ASSERT(outerBlockExpr->lastExpression->type == BLOCK_EXPRESSION);
+
+    BlockExpression* middleBlockExpr = outerBlockExpr->lastExpression->as.blockExpression;
+    ASSERT(middleBlockExpr->lastExpression->type == BLOCK_EXPRESSION);
+
+    BlockExpression* innerBlockExpr = middleBlockExpr->lastExpression->as.blockExpression;
+    ASSERT(innerBlockExpr->lastExpression->type == PRIMARY_EXPRESSION);
+
+    ASSERT(innerBlockExpr->lastExpression->as.primaryExpression->literal->type == NUMBER_LITERAL);
+    ASSERT(strcmp(innerBlockExpr->lastExpression->as.primaryExpression->literal->as.numberLiteral->token.start, "3") == 0);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_block_expression_with_statements() {
+    // val a = { val b = 2; 3; };
+    Token tokensArray[] = {
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "a"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "b"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_NUMBER, "2"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_NUMBER, "3"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 14,
+        .size = 14};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == VAL_DECLARATION_STATEMENT);
+
+    ValDeclarationStatement* valDecl = statement->as.valDeclarationStatement;
+    ASSERT(valDecl->expression->type == BLOCK_EXPRESSION);
+
+    BlockExpression* blockExpr = valDecl->expression->as.blockExpression;
+    ASSERT(blockExpr->statementArray.used == 1);
+    ASSERT(blockExpr->statementArray.values[0]->type == VAL_DECLARATION_STATEMENT);
+
+    ASSERT(blockExpr->lastExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(blockExpr->lastExpression->as.primaryExpression->literal->type == NUMBER_LITERAL);
+    ASSERT(strcmp(blockExpr->lastExpression->as.primaryExpression->literal->as.numberLiteral->token.start, "3") == 0);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_block_expression_as_if_condition() {
+    // if ({ val a = 1; a > 0; }) {
+    //     print "Passed";
+    // }
+    Token tokensArray[] = {
+        createToken(TOKEN_IF, "if"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "a"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_NUMBER, "1"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_IDENTIFIER, "a"),
+        createToken(TOKEN_GREATER, ">"),
+        createToken(TOKEN_NUMBER, "0"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_PRINT, "print"),
+        createToken(TOKEN_STRING, "\"Passed\""),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 20,
+        .size = 20};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == SELECTION_STATEMENT);
+
+    SelectionStatement* selectionStmt = statement->as.selectionStatement;
+    ASSERT(selectionStmt->conditionExpression->type == BLOCK_EXPRESSION);
+
+    BlockExpression* blockExpr = selectionStmt->conditionExpression->as.blockExpression;
+    ASSERT(blockExpr->statementArray.used == 1);
+    ASSERT(blockExpr->statementArray.values[0]->type == VAL_DECLARATION_STATEMENT);
+
+    ASSERT(blockExpr->lastExpression->type == COMPARISON_EXPRESSION);
+    ComparisonExpression* comparisonExpr = blockExpr->lastExpression->as.comparisonExpression;
+    ASSERT(comparisonExpr->leftExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(comparisonExpr->leftExpression->as.primaryExpression->literal->type == IDENTIFIER_LITERAL);
+    ASSERT(strcmp(comparisonExpr->leftExpression->as.primaryExpression->literal->as.identifierLiteral->token.start, "a") == 0);
+
+    ASSERT(comparisonExpr->rightExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(comparisonExpr->rightExpression->as.primaryExpression->literal->type == NUMBER_LITERAL);
+    ASSERT(strcmp(comparisonExpr->rightExpression->as.primaryExpression->literal->as.numberLiteral->token.start, "0") == 0);
+
+    ASSERT(selectionStmt->trueStatement->type == BLOCK_STATEMENT);
+    BlockStatement* trueBlock = selectionStmt->trueStatement->as.blockStatement;
+    ASSERT(trueBlock->statementArray.used == 1);
+    ASSERT(trueBlock->statementArray.values[0]->type == PRINT_STATEMENT);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}

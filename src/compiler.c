@@ -315,6 +315,46 @@ static void visitPrintStatement(Compiler* compiler, PrintStatement* printStateme
     decreaseStackHeight(compiler);
 }
 
+static void visitBlockExpression(Compiler* compiler, BlockExpression* blockExpression) {
+    bool wasCompilerInGlobalScopeBeforeThisBlock = compiler->isInGlobalScope;
+    compiler->isInGlobalScope = false;
+
+    // Keep track of the stack height so we can later pop all the variables etc defined in it.
+    uint8_t stackHeightBeforeBlockStmt = compiler->currentStackHeight;
+
+    for (size_t i = 0; i < blockExpression->statementArray.used; i++) {
+        Statement* statement = blockExpression->statementArray.values[i];
+        visitStatement(compiler, statement);
+    }
+
+    // Final expression
+    visitExpression(compiler, blockExpression->lastExpression);
+
+    // Calculate the stack effect of this entire block so we can clean up at the end of the block.
+    uint8_t stackHeightAfterBlockStmt = compiler->currentStackHeight;
+    uint8_t blockStmtStackEffect = stackHeightAfterBlockStmt - stackHeightBeforeBlockStmt;
+
+    // Swap the value at the top of the stack (the Value produced by the expression) with the first value
+    // produced in the block. Example:
+    // Before: [ X X X BlockValue_0 BlockValue_1 BlockValue_2]
+    // Apply: SWAP(2)
+    // After:  [ X X X BlockValue_2 BlockValue_1 BlockValue_0]
+    if (blockStmtStackEffect)
+        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SWAP, blockStmtStackEffect - 1));
+
+    // Pop all the Values that were put in the VM stack in the block, except the Value produced by the expression
+    // TODO: optimization; stop emitting POP when blockStmtStackEffect = 0.
+    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_POPN, blockStmtStackEffect - 1));
+
+    // Pop all the Locals that were put in the Compiler stack in the block, except for the final expression.
+    removeLocalsFromTempStack(compiler, blockStmtStackEffect - 1);
+
+    // Undo stack height, except for final expression
+    compiler->currentStackHeight = stackHeightBeforeBlockStmt + 1;
+
+    compiler->isInGlobalScope = wasCompilerInGlobalScopeBeforeThisBlock;
+}
+
 static void visitBlockStatement(Compiler* compiler, BlockStatement* blockStatement) {
     bool wasCompilerInGlobalScopeBeforeThisBlock = compiler->isInGlobalScope;
     compiler->isInGlobalScope = false;
@@ -503,6 +543,9 @@ static void visitExpression(Compiler* compiler, Expression* expression) {
             break;
         case COMPARISON_EXPRESSION:
             visitComparisonExpression(compiler, expression->as.comparisonExpression);
+            break;
+        case BLOCK_EXPRESSION:
+            visitBlockExpression(compiler, expression->as.blockExpression);
             break;
         default:
             fprintf(stderr, "Unimplemented expression type %d.", expression->type);

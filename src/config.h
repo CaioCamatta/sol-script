@@ -5,8 +5,9 @@
 // capture standard output to confirm things are being printed correctly.
 #ifndef ENV_TEST
 
-#define DEBUG_COMPILER 0
-#define DEBUG_VM 0
+#define DEBUG_PARSER 1
+#define DEBUG_COMPILER 1
+#define DEBUG_VM 1
 
 #else
 

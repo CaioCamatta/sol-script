@@ -572,3 +572,108 @@ int test_vm_nested_if_statements() {
 
     return SUCCESS_RETURN_CODE;  // Assuming SUCCESS_RETURN_CODE is defined as part of your testing framework
 }
+
+int test_vm_simple_block_expression() {
+    // val a = { 10; };
+    // print a;
+    CompiledCode code = (CompiledCode){
+        .constantPool = (ConstantPool){},
+        .bytecodeArray = (BytecodeArray){}};
+    INIT_ARRAY(code.bytecodeArray, Bytecode);
+    INIT_ARRAY(code.constantPool, Constant);
+
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(10), Constant);   // Index 0
+    INSERT_ARRAY(code.constantPool, STRING_CONST("a"), Constant);  // Index 1
+
+    // Bytecode
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_SWAP, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_POPN, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAL, 1), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 1), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);
+
+    VM vm;
+    initVM(&vm, code);
+
+    CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "10.000000\n") == 0); });
+
+    FREE_ARRAY(code.bytecodeArray);
+    FREE_ARRAY(code.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_vm_block_expression_with_statements() {
+    // val a = { val b = 5; b + 3; };
+    // print a;
+    CompiledCode code = (CompiledCode){
+        .constantPool = (ConstantPool){},
+        .bytecodeArray = (BytecodeArray){}};
+    INIT_ARRAY(code.bytecodeArray, Bytecode);
+    INIT_ARRAY(code.constantPool, Constant);
+
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(5), Constant);    // Index 0
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(3), Constant);    // Index 1
+    INSERT_ARRAY(code.constantPool, STRING_CONST("a"), Constant);  // Index 2
+
+    // Bytecode
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_SET_LOCAL_VAL_FAST), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 1), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_ADD), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_SWAP, 1), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_POPN, 1), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAL, 2), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 2), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);
+
+    VM vm;
+    initVM(&vm, code);
+
+    CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "8.000000\n") == 0); });
+
+    FREE_ARRAY(code.bytecodeArray);
+    FREE_ARRAY(code.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_vm_block_expression_as_if_condition() {
+    // if ({ val a = 1; a > 0; }) { print "Passed"; }
+    CompiledCode code = (CompiledCode){
+        .constantPool = (ConstantPool){},
+        .bytecodeArray = (BytecodeArray){}};
+    INIT_ARRAY(code.bytecodeArray, Bytecode);
+    INIT_ARRAY(code.constantPool, Constant);
+
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(1), Constant);         // Index 0
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(0), Constant);         // Index 1
+    INSERT_ARRAY(code.constantPool, STRING_CONST("Passed"), Constant);  // Index 2
+
+    // Bytecode for the block expression
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_SET_LOCAL_VAL_FAST), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, 0), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 1), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_GT), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_SWAP, 1), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_POPN, 1), Bytecode);
+
+    // Bytecode for the if statement
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_JUMP_IF_FALSE, 11), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 2), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_POPN, 0), Bytecode);
+
+    VM vm;
+    initVM(&vm, code);
+
+    CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "Passed\n") == 0); });
+
+    FREE_ARRAY(code.bytecodeArray);
+    FREE_ARRAY(code.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}

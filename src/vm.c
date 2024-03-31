@@ -273,6 +273,15 @@ void step(VM* vm) {
             vm->IP = &(vm->compiledCode.bytecodeArray.values[IPToJumpTo - 1]);
             break;
         }
+        case OP_SWAP: {
+            // Example: Swap(2) will swap [X X X A B C] -> [X X X C B A]
+            size_t targetPositionFromTopOfStack = (vm->SP - vm->stack - 1) - instruction->maybeOperand1;
+
+            Value tempValue = vm->stack[targetPositionFromTopOfStack];
+            vm->stack[targetPositionFromTopOfStack] = *(vm->SP - 1);
+            *(vm->SP - 1) = tempValue;
+            break;
+        }
         default:
             // Handle any unknown or unimplemented opcodes.
             fprintf(stderr, "Unimplemented opcode %d\n", instruction->type);
