@@ -41,7 +41,7 @@ typedef enum {
     COMPARISON_EXPRESSION,      // Stack effect: -1
     ADDITIVE_EXPRESSION,        // Stack effect: -1
     MULTIPLICATIVE_EXPRESSION,  // Stack effect: -1
-    BLOCK_EXPRESSION,           // Stack effect: 0
+    BLOCK_EXPRESSION,           // Stack effect: 0 per se
     UNARY_EXPRESSION,           // Stack effect: 0
     PRIMARY_EXPRESSION          // Stack effect: 0 per se
 } ExpressionType;
