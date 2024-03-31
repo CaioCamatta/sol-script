@@ -230,6 +230,14 @@ static void printExpression(const Expression* expression, int depth) {
             printBinaryExpression(expression->as.logicalOrExpression, LogicalOrExpression);
             break;
         }
+        case BLOCK_EXPRESSION:
+            printf("BlockExpression" KGRY "(numberOfStatements=%zu)\n" RESET, expression->as.blockExpression->statementArray.used);
+            BlockExpression* blockExpr = expression->as.blockExpression;
+            for (int i = 0; i < blockExpr->statementArray.used; i++) {
+                printStatement(blockExpr->statementArray.values[i], depth + 1);
+            }
+            printExpression(blockExpr->lastExpression, depth + 1);
+            break;
     }
 }
 
@@ -366,6 +374,9 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
                 break;
             case OP_JUMP:
                 printf("OP_JUMP #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                break;
+            case OP_SWAP:
+                printf("OP_SWAP #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
         }
     }

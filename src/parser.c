@@ -1,6 +1,7 @@
 #include "parser.h"
 
 #include <stdbool.h>
+#include <string.h>
 
 #include "syntax.h"
 
@@ -75,6 +76,27 @@ static bool match(ASTParser* parser, TokenType type) {
     return false;
 }
 
+#define printErrorToken(parser, messagePrefix, errorToken)                      \
+    do {                                                                        \
+        char errorMessage[parser->current->length + strlen(messagePrefix)];     \
+        strcpy(errorMessage, messagePrefix);                                    \
+        strncat(errorMessage, parser->current->start, parser->current->length); \
+        errorAtCurrent(parser, errorMessage);                                   \
+    } while (0);
+
+/**
+ * Check that there is a semicolon after an expression.
+ *
+ * Exception: semicolons are optional after the block expressions. This is a quality of
+ * life thing to allow users to write "val a = { 2; }" for example.
+ * */
+static void checkSemicolonAfterExpression(ASTParser* parser, Expression* latestExpression, char* message) {
+    if (latestExpression->type == BLOCK_EXPRESSION) {
+        match(parser, TOKEN_SEMICOLON);
+    } else {
+        consume(parser, TOKEN_SEMICOLON, message);
+    }
+}
 // ---------------------------------------------------------------------------
 // ------------------------------- PRODUCTIONS -------------------------------
 // ---------------------------------------------------------------------------
@@ -82,6 +104,7 @@ static bool match(ASTParser* parser, TokenType type) {
 // Forward declarations
 static Expression* expression(ASTParser* parser);
 static Statement* statement(ASTParser* parser);
+static Expression* blockExpression(ASTParser* parser);
 
 /**
  * Terminal rule. Match identifier token.
@@ -148,6 +171,7 @@ static Literal* booleanLiteral(ASTParser* parser) {
  * primary-expression:
  * number-literal
  * string-literal
+ * block-expression
  * identifier
  * ( expression )
  * "true"
@@ -222,10 +246,14 @@ static Expression* primaryExpression(ASTParser* parser) {
             return expr;
             break;
         }
-        default: {
-            advance(parser);
-            Expression* expr = expression(parser);
+        case TOKEN_LEFT_CURLY: {
+            Expression* expr = blockExpression(parser);
             return expr;
+            break;
+        }
+        default: {
+            errorAtCurrent(parser, "Expected expression.");
+            return NULL;
             break;
         }
     }
@@ -382,11 +410,59 @@ static Expression* logicalOrExpression(ASTParser* parser) {
     return leftExpression;
 }
 
+static Expression* blockExpression(ASTParser* parser) {
+    consume(parser, TOKEN_LEFT_CURLY, "Expected '{' before the start of a block expression.");
+    BlockExpression* blockExpr = allocateASTNode(BlockExpression);
+    blockExpr->lastExpression = NULL;
+    INIT_ARRAY(blockExpr->statementArray, Statement*);
+
+    while (!check(parser, TOKEN_EOF) && !check(parser, TOKEN_RIGHT_CURLY)) {
+        // Keep track of where the parser was before this statement to potentially backtrack later.
+        Token* parserPositionBeforeStatement = parser->current;
+
+        Statement* statementNode = statement(parser);
+
+        if (statementNode != NULL) {
+            // If the statement we just parsed is the last one in the block, we backtrack to check that it's also
+            // parseable as an expression (e.g., maybe it was an ExpressionStatement or nested block.)
+            if (check(parser, TOKEN_RIGHT_CURLY)) {
+                // Backtrack
+                parser->current = parserPositionBeforeStatement;
+                parser->previous = parser->current - 1;
+
+                // Parse expression
+                Expression* lastExpression = expression(parser);
+                checkSemicolonAfterExpression(parser, lastExpression, "Impossible. Expected ';' after block expression.");
+
+                blockExpr->lastExpression = lastExpression;
+                break;
+            } else {
+                // If the statement isn't the last one, we just add it to the array.
+                INSERT_ARRAY(blockExpr->statementArray, statementNode, Statement*);
+            }
+
+        } else {
+            errorAtCurrent(parser, "Error parsing statement in block expression.");
+        }
+    }
+    consume(parser, TOKEN_RIGHT_CURLY, "Unclosed block expression. Expected '}'.");
+
+    // Block expressions must have at least one statement in them.
+    if (!blockExpr->statementArray.used && !blockExpr->lastExpression) errorAtCurrent(parser, "Encountered an empty block-expression.");
+
+    // Make the last ExpressionStatement the block's `lastExpression`
+
+    Expression* expr = allocateASTNode(Expression);
+    expr->type = BLOCK_EXPRESSION;
+    expr->as.blockExpression = blockExpr;
+
+    return expr;
+}
+
 /**
  * expression:
  *  struct-expression
  *  function-expression
- *  block-expression
  *  logical-or-expression
  */
 static Expression* expression(ASTParser* parser) {
@@ -400,9 +476,12 @@ static Expression* expression(ASTParser* parser) {
 static Statement* valDeclaration(ASTParser* parser) {
     consume(parser, TOKEN_VAL, "Expected 'val' in a val declaration.");
     Literal* tempIdentifier = identifierLiteral(parser);
+    if (check(parser, TOKEN_ERROR)) {
+        printErrorToken(parser, "Error parsing val declaration. ", *(parser->current));
+    }
     consume(parser, TOKEN_EQUAL, "Expected '=' in a val declaration.");
     Expression* tempExpression = expression(parser);
-    consume(parser, TOKEN_SEMICOLON, "Expected semicolon");
+    checkSemicolonAfterExpression(parser, tempExpression, "Expected ';' following the expression in val declaration.");
 
     ValDeclarationStatement* valDeclarationStatement = allocateASTNode(ValDeclarationStatement);
     valDeclarationStatement->identifier = tempIdentifier->as.identifierLiteral;
@@ -451,7 +530,7 @@ static Statement* printStatement(ASTParser* parser) {
 
 static Statement* expressionStatement(ASTParser* parser) {
     Expression* expr = expression(parser);
-    consume(parser, TOKEN_SEMICOLON, "Expected ';' after expression.");
+    checkSemicolonAfterExpression(parser, expr, "Expected ';' after expression-statement.");
 
     ExpressionStatement* exprStmt = allocateASTNode(ExpressionStatement);
     exprStmt->expression = expr;
@@ -478,6 +557,7 @@ static Statement* blockStatement(ASTParser* parser) {
         }
     }
     consume(parser, TOKEN_RIGHT_CURLY, "Unclosed block. Expected '}'.");
+    match(parser, TOKEN_SEMICOLON);  // Semicolons are optional after blocks
 
     Statement* stmt = allocateASTNode(Statement);
     stmt->type = BLOCK_STATEMENT;

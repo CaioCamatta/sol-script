@@ -16,6 +16,7 @@ typedef struct EqualityExpression EqualityExpression;
 typedef struct ComparisonExpression ComparisonExpression;
 typedef struct AdditiveExpression AdditiveExpression;
 typedef struct MultiplicativeExpression MultiplicativeExpression;
+typedef struct BlockExpression BlockExpression;
 typedef struct UnaryExpression UnaryExpression;
 typedef struct PrimaryExpression PrimaryExpression;
 typedef struct BooleanLiteral BooleanLiteral;
@@ -40,6 +41,7 @@ typedef enum {
     COMPARISON_EXPRESSION,      // Stack effect: -1
     ADDITIVE_EXPRESSION,        // Stack effect: -1
     MULTIPLICATIVE_EXPRESSION,  // Stack effect: -1
+    BLOCK_EXPRESSION,           // Stack effect: 0
     UNARY_EXPRESSION,           // Stack effect: 0
     PRIMARY_EXPRESSION          // Stack effect: 0 per se
 } ExpressionType;
@@ -72,6 +74,7 @@ typedef struct {
         ComparisonExpression *comparisonExpression;
         AdditiveExpression *additiveExpression;
         MultiplicativeExpression *multiplicativeExpression;
+        BlockExpression *blockExpression;
         UnaryExpression *unaryExpression;
         PrimaryExpression *primaryExpression;
     } as;
@@ -149,6 +152,11 @@ struct MultiplicativeExpression {
     Expression *leftExpression;
     Expression *rightExpression;
     Token punctuator;
+};
+
+struct BlockExpression {
+    StatementArray statementArray;
+    Expression *lastExpression;
 };
 
 struct UnaryExpression {
