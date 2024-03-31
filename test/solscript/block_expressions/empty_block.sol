@@ -1,0 +1,1 @@
+2 + {}; // Should throw error "Encountered an empty block-expression"
