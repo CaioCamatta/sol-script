@@ -221,8 +221,8 @@ postfix-expression:
 primary-expression:
   number-literal
   string-literal
-  block-expression
   identifier
+  block-expression
   ( expression )
   "true"
   "false"
@@ -235,7 +235,7 @@ call-expression:
 
 number-literal      # terminal
 string-literal      # terminal
-identifier-literal  # terminal
+identifier          # terminal
 ```
 
 #### Example
