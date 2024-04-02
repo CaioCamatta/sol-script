@@ -338,9 +338,9 @@ The following features are necessary a proper v1.0 release, in rough order:
  - [X] Implement selection statement (`if`s)
  - [X] Add conditional debugging/logging for tests that fail
  - [X] Implement block expressions
- - [ ] Implement functions and returns
- - [ ] Implement iteration statement (loops)
  - [ ] Implement assignment statements
+ - [ ] Implement iteration statement (loops)
+ - [ ] Implement functions and returns
  - [ ] Implement the rest of the parser for the whole syntax grammar
  - [ ] Add CLI argument to enable or disable debugging logs in the REPL.
  - [ ] Improve error logs; print line and column
