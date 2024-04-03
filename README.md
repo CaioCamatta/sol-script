@@ -120,16 +120,17 @@ statement:
   iteration-statement
   selection-statement
   return-statement
-  expression-statement # if this is a call expresison or an identifier, check next character. If next is  a "." 
-  assignment-statement
   print-statement
+  assignment-statement
+  expression-statement # if this is a call expresison or an identifier, check next character. If next is  a "." 
 
 declaration:
   var-declaration
   val-declaration
 
 var-declaration:
-  "var" identifier ( "=" expression )?  ";"
+  "var" identifier ";"
+  "var" identifier "=" expression  ";"
 
 val-declaration:
   "val" identifier "=" expression ";"
@@ -141,16 +142,18 @@ iteration-statement:
   "while" "(" expression ")" block-statement
 
 selection-statement:
-  "if" "(" expression ")" statement ( "else" statement )?
+  "if" "(" expression ")" statement 
+  "if" "(" expression ")" statement "else" statement
 
 return-statement:
-  "return" ( expression )? ";"
+  "return" ";"
+  "return" expression ";"
   
 expression-statement:
   expression ";"
 
 assignment-statement: 
-  postfix-call-expression "=" expression
+  postfix-call-expression "=" expression  # the compiler ensures the postfix-call-expression is a valid target of assigment.
 
 print-statement:
   "print" expression ";"
@@ -177,22 +180,14 @@ struct-declaration:
 
 
 function-expression:
-  "(" (parameter-list)? ")" "=>" "{" statement "}"
+  "(" ")" "=>" "{" statement "}"
+  "(" parameter-list ")" "=>" "{" statement "}"
   
 parameter-list:
   identifier ( "," identifier )*
 
 argument-list:
   expression ( "," expression )*
-
-postfix-call-expression:
-  ( "this" | identifier ) ( "(" argument-list ? ")" ) ? ( "." postfix-call-expression ) ?
-
-  # list.map(something).reduce(something).last
-
-  # postfix-call-expression could be "primary-expression ( "(" argument-list ? ")" | "." postfix-call-expression ) ? ; ", 
-  # which would allow users to do cool things like { struct { printHi: () => { print "Hi!" }; }}.printHi(). 
-  # However, that would require either a runtime check or a relatively complex compiler check
 
 
 block-expression:
@@ -219,19 +214,26 @@ multiplicative-expression:
   unary-expression ( ( "/" | "*" ) unary-expression )* 
 
 unary-expression:
-  ( "!"* | "-"* )? primary-expression
+  postfix-call-expression
+  ( "!" )* postfix-call-expression
+  ( "-" )* postfix-call-expression
+
+postfix-call-expression:
+  primary-expression
+  "this" "." postfix-call-expression
+  identifier "." postfix-call-expression
+  identifier "(" argument-list? ")"  "." postfix-call-expression
 
 primary-expression:
   number-literal
   string-literal
   identifier
-  block-expression # might wanna move this up
+  block-expression
   ( expression )
   "true"
   "false"
   "null"
 
-	
 
 number-literal      # terminal
 string-literal      # terminal
@@ -352,136 +354,3 @@ The following features are necessary a proper v1.0 release, in rough order:
  - [ ] (maybe) Add benchmark tests
  - [ ] (maybe) Profile execution and find opportunities for optimization
  - [ ] (maybe) Implement [NaN boxing](https://piotrduperas.com/posts/nan-boxing)
-
-
-
-```
-source: 
-  statement* EOF
-
-statement: 
-  declaration
-  block-statement
-  iteration-statement
-  selection-statement
-  return-statement
-  assignment-statement
-  print-statement
-  expression-statement # if this is a call expresison or an identifier, check next character. If next is  a "." 
-
-declaration:
-  var-declaration
-  val-declaration
-
-var-declaration:
-  "var" identifier ";"
-  "var" identifier "=" expression  ";"
-
-val-declaration:
-  "val" identifier "=" expression ";"
-
-block-statement:
-  "{" statement* "}" ";"
-
-iteration-statement:
-  "while" "(" expression ")" block-statement
-
-selection-statement:
-  "if" "(" expression ")" statement 
-  "if" "(" expression ")" statement "else" statement
-
-return-statement:
-  "return" ";"
-  "return" expression ";"
-  
-expression-statement:
-  expression ";"
-
-assignment-statement: 
-  postfix-call-expression "=" expression
-
-print-statement:
-  "print" expression ";"
-
-
-expression:
-  struct-expression
-  function-expression
-  logical-or-expression
-
-
-
-struct-expression:
-  "struct" "{" struct-declaration-list "}"
-
-struct-declaration-list:
-  struct-declaration
-  struct-declaration-list "," struct-declaration
-  
-struct-declaration:
-  identifier ":" expression
-  "prototype" ":" identifier
-
-
-
-function-expression:
-  "(" ")" "=>" "{" statement "}"
-  "(" parameter-list ")" "=>" "{" statement "}"
-  
-parameter-list:
-  identifier ( "," identifier )*
-
-argument-list:
-  expression ( "," expression )*
-
-
-block-expression:
-  "{" statement* expression "}"
-
-
-
-logical-or-expression:
-  logical-and-expression ( "or" logical-and-expression )*
-
-logical-and-expression:
-  equality-expression ( "and" equality-expression )*
-
-equality-expression: 
-  comparison-expression ( ("!=" | "==") comparison-expression) )*
-
-comparison-expression:
-  additive-expression ( ( ">" | ">=" | "<" | "<=" ) additive-expression )*
-
-additive-expression:
-  multiplicative-expression ( ( "-" | "+" ) multiplicative-expression )* 
-  
-multiplicative-expression:
-  unary-expression ( ( "/" | "*" ) unary-expression )* 
-
-unary-expression:
-  postfix-call-expression
-  ( "!" )* postfix-call-expression
-  ( "-" )* postfix-call-expression
-
-postfix-call-expression:
-  primary-expression
-  "this" "." postfix-call-expression
-  identifier "." postfix-call-expression
-  identifier "(" argument-list? ")"  "." postfix-call-expression
-
-primary-expression:
-  number-literal
-  string-literal
-  identifier
-  block-expression # might wanna move this up
-  ( expression )
-  "true"
-  "false"
-  "null"
-
-	
-
-number-literal      # terminal
-string-literal      # terminal
-identifier          # terminal
-```
