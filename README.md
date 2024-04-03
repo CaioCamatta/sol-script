@@ -106,7 +106,7 @@ TOKEN_EOF(lexeme="", line=2, column=2)
 
 ### Syntactical Grammar
 
-The syntactical grammar _should_ and LALR(1) grammar, i.e. it can be parsed by a left-to-right parser with 1 token of look-ahead. In SolScript, a program Source is a series of Statements. Statements use Expressions and Literals. Expressions are evaluated to a Value at run time.
+The syntactical grammar _should_ be an LALR(2) grammar, i.e. it can be parsed by a left-to-right parser with 2 tokens of look-ahead. In SolScript, a program Source is a series of Statements. Statements use Expressions and Literals. Expressions are evaluated to a Value at run time.
 
 This grammar is primarily inspired by the [ANSI C grammar](https://slebok.github.io/zoo/c/c90/sdf/extracted/index.html#Statement), [Lox](https://craftinginterpreters.com/) and Scala.
 
@@ -120,7 +120,7 @@ statement:
   iteration-statement
   selection-statement
   return-statement
-  expression-statement
+  expression-statement # if this is a call expresison or an identifier, check next character. If next is  a "." 
   assignment-statement
   print-statement
 
@@ -136,7 +136,6 @@ val-declaration:
 
 block-statement:
   "{" statement* "}" ";"
-  block-expression
 
 iteration-statement:
   "while" "(" expression ")" block-statement
@@ -150,8 +149,8 @@ return-statement:
 expression-statement:
   expression ";"
 
-assignment-statement:
-  postfix-expression "=" expression
+assignment-statement: 
+  postfix-call-expression "=" expression
 
 print-statement:
   "print" expression ";"
@@ -186,6 +185,14 @@ parameter-list:
 argument-list:
   expression ( "," expression )*
 
+postfix-call-expression:
+  ( "this" | identifier ) ( "(" argument-list ? ")" ) ? ( "." postfix-call-expression ) ?
+
+  # list.map(something).reduce(something).last
+
+  # postfix-call-expression could be "primary-expression ( "(" argument-list ? ")" | "." postfix-call-expression ) ? ; ", 
+  # which would allow users to do cool things like { struct { printHi: () => { print "Hi!" }; }}.printHi(). 
+  # However, that would require either a runtime check or a relatively complex compiler check
 
 
 block-expression:
@@ -212,25 +219,18 @@ multiplicative-expression:
   unary-expression ( ( "/" | "*" ) unary-expression )* 
 
 unary-expression:
-  ( "!"* | "-"* )? postfix-expression
-
-postfix-expression:
-  primary-expression
-  postfix-expression "." identifier  
+  ( "!"* | "-"* )? primary-expression
 
 primary-expression:
   number-literal
   string-literal
   identifier
-  block-expression
+  block-expression # might wanna move this up
   ( expression )
   "true"
   "false"
   "null"
-  "this"
 
-call-expression:
-  unary-expression
 	
 
 number-literal      # terminal
@@ -331,7 +331,7 @@ The following features are necessary a proper v1.0 release, in rough order:
  - [X] Add support for variable declaration and access
  - [X] Implement print statements
  - [X] Implement additive expression
- - [X] Implement all other "simple" expressions, i.e. excluding call-expressions
+ - [X] Implement all other "simple" expressions, i.e. excluding postfix-call-expressions
  - [X] Implement string literals
  - [X] Implement block statements
  - [X] Add [_FAST](https://stackoverflow.com/questions/74998947/whats-pythons-load-fast-bytecode-instruction-fast-at) local variables
@@ -352,3 +352,136 @@ The following features are necessary a proper v1.0 release, in rough order:
  - [ ] (maybe) Add benchmark tests
  - [ ] (maybe) Profile execution and find opportunities for optimization
  - [ ] (maybe) Implement [NaN boxing](https://piotrduperas.com/posts/nan-boxing)
+
+
+
+```
+source: 
+  statement* EOF
+
+statement: 
+  declaration
+  block-statement
+  iteration-statement
+  selection-statement
+  return-statement
+  assignment-statement
+  print-statement
+  expression-statement # if this is a call expresison or an identifier, check next character. If next is  a "." 
+
+declaration:
+  var-declaration
+  val-declaration
+
+var-declaration:
+  "var" identifier ";"
+  "var" identifier "=" expression  ";"
+
+val-declaration:
+  "val" identifier "=" expression ";"
+
+block-statement:
+  "{" statement* "}" ";"
+
+iteration-statement:
+  "while" "(" expression ")" block-statement
+
+selection-statement:
+  "if" "(" expression ")" statement 
+  "if" "(" expression ")" statement "else" statement
+
+return-statement:
+  "return" ";"
+  "return" expression ";"
+  
+expression-statement:
+  expression ";"
+
+assignment-statement: 
+  postfix-call-expression "=" expression
+
+print-statement:
+  "print" expression ";"
+
+
+expression:
+  struct-expression
+  function-expression
+  logical-or-expression
+
+
+
+struct-expression:
+  "struct" "{" struct-declaration-list "}"
+
+struct-declaration-list:
+  struct-declaration
+  struct-declaration-list "," struct-declaration
+  
+struct-declaration:
+  identifier ":" expression
+  "prototype" ":" identifier
+
+
+
+function-expression:
+  "(" ")" "=>" "{" statement "}"
+  "(" parameter-list ")" "=>" "{" statement "}"
+  
+parameter-list:
+  identifier ( "," identifier )*
+
+argument-list:
+  expression ( "," expression )*
+
+
+block-expression:
+  "{" statement* expression "}"
+
+
+
+logical-or-expression:
+  logical-and-expression ( "or" logical-and-expression )*
+
+logical-and-expression:
+  equality-expression ( "and" equality-expression )*
+
+equality-expression: 
+  comparison-expression ( ("!=" | "==") comparison-expression) )*
+
+comparison-expression:
+  additive-expression ( ( ">" | ">=" | "<" | "<=" ) additive-expression )*
+
+additive-expression:
+  multiplicative-expression ( ( "-" | "+" ) multiplicative-expression )* 
+  
+multiplicative-expression:
+  unary-expression ( ( "/" | "*" ) unary-expression )* 
+
+unary-expression:
+  postfix-call-expression
+  ( "!" )* postfix-call-expression
+  ( "-" )* postfix-call-expression
+
+postfix-call-expression:
+  primary-expression
+  "this" "." postfix-call-expression
+  identifier "." postfix-call-expression
+  identifier "(" argument-list? ")"  "." postfix-call-expression
+
+primary-expression:
+  number-literal
+  string-literal
+  identifier
+  block-expression # might wanna move this up
+  ( expression )
+  "true"
+  "false"
+  "null"
+
+	
+
+number-literal      # terminal
+string-literal      # terminal
+identifier          # terminal
+```
