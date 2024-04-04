@@ -91,6 +91,8 @@ punctuator: one of
     ( ) { } . * + - ! % < > = <= >= == != || && ; ,
 ```
 
+Note that comments are treated as whitespace.
+
 #### Example
 For the statement `print 2+3-4;`, the scanner would parse the following tokens:
 ```
@@ -136,7 +138,7 @@ val-declaration:
   "val" identifier "=" expression ";"
 
 block-statement:
-  "{" statement* "}" ";"
+  "{" statement* "}"
 
 iteration-statement:
   "while" "(" expression ")" block-statement
@@ -153,7 +155,7 @@ expression-statement:
   expression ";"
 
 assignment-statement: 
-  postfix-call-expression "=" expression  # the compiler ensures the postfix-call-expression is a valid target of assigment.
+  expression "=" expression  # the compiler ensures the expression is a valid target of assigment.
 
 print-statement:
   "print" expression ";"

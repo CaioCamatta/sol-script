@@ -42,6 +42,9 @@ static void all_tests() {
     RUN_TEST(test_parser_block_expression_nested);
     RUN_TEST(test_parser_block_expression_with_statements);
     RUN_TEST(test_parser_block_expression_as_if_condition);
+    RUN_TEST(test_parser_var_declaration);
+    RUN_TEST(test_parser_var_declaration_with_initializer);
+    RUN_TEST(test_parser_assignment);
 
     // Compiler tests
     RUN_TEST(test_compiler);

@@ -26,6 +26,7 @@ static char const* tokenTypeStrings[] = {
     "TOKEN_TRUE",
     "TOKEN_NULL",
     "TOKEN_VAL",
+    "TOKEN_VAR",
     "TOKEN_PRINT",
 
     // Identifier
@@ -127,11 +128,16 @@ static void printStatement(const Statement* statement, int depth) {
             printf("ExpressionStatement\n");
             printExpression(statement->as.expressionStatement->expression, depth + 1);
             break;
-
         case VAL_DECLARATION_STATEMENT: {
             ValDeclarationStatement* valDecl = statement->as.valDeclarationStatement;
             printf("ValDeclaration" KGRY "(identifier=\"%.*s\")\n" RESET, valDecl->identifier->token.length, valDecl->identifier->token.start);
             printExpression(valDecl->expression, depth + 1);
+            break;
+        }
+        case VAR_DECLARATION_STATEMENT: {
+            VarDeclarationStatement* varDecl = statement->as.varDeclarationStatement;
+            printf("VarDeclaration" KGRY "(identifier=\"%.*s\")\n" RESET, varDecl->identifier->token.length, varDecl->identifier->token.start);
+            if (varDecl->maybeExpression != NULL) printExpression(varDecl->maybeExpression, depth + 1);
             break;
         }
         case SELECTION_STATEMENT: {
@@ -140,6 +146,13 @@ static void printStatement(const Statement* statement, int depth) {
             printExpression(stmt->conditionExpression, depth + 1);
             printStatement(stmt->trueStatement, depth + 1);
             printStatement(stmt->falseStatement, depth + 1);
+            break;
+        }
+        case ASSIGNMENT_STATEMENT: {
+            AssignmentStatement* stmt = statement->as.assignmentStatement;
+            printf("AssignmentStatement\n");
+            printExpression(stmt->target, depth + 1);
+            printExpression(stmt->value, depth + 1);
             break;
         }
         case PRINT_STATEMENT:

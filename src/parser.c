@@ -90,8 +90,8 @@ static bool match(ASTParser* parser, TokenType type) {
  * Exception: semicolons are optional after the block expressions. This is a quality of
  * life thing to allow users to write "val a = { 2; }" for example.
  * */
-static void checkSemicolonAfterExpression(ASTParser* parser, Expression* latestExpression, char* message) {
-    if (latestExpression->type == BLOCK_EXPRESSION) {
+static void checkSemicolonAfterExpression(ASTParser* parser, Expression* maybeLatestExpression, char* message) {
+    if (maybeLatestExpression && maybeLatestExpression->type == BLOCK_EXPRESSION) {
         match(parser, TOKEN_SEMICOLON);
     } else {
         consume(parser, TOKEN_SEMICOLON, message);
@@ -260,8 +260,21 @@ static Expression* primaryExpression(ASTParser* parser) {
 }
 
 /**
+ * postfix-call-expression:
+ *  primary-expression
+ *  "this" "." postfix-call-expression
+ *  identifier "." postfix-call-expression
+ *  identifier "(" argument-list? ")"  "." postfix-call-expression
+ */
+static Expression* postfixCallExpression(ASTParser* parser) {
+    return primaryExpression(parser);
+}
+
+/**
  * unary-expression:
- *  ( "!"* | "-"* )? postfix-expression
+ *  postfix-call-expression
+ *  ( "!" )* postfix-call-expression
+ *  ( "-" )* postfix-call-expression
  */
 static Expression* unaryExpression(ASTParser* parser) {
     if (match(parser, TOKEN_EXCLAMATION) || match(parser, TOKEN_MINUS)) {
@@ -278,7 +291,7 @@ static Expression* unaryExpression(ASTParser* parser) {
 
         return expression;
     }
-    return primaryExpression(parser);
+    return postfixCallExpression(parser);
 }
 
 /**
@@ -495,6 +508,60 @@ static Statement* valDeclaration(ASTParser* parser) {
 }
 
 /**
+ * var-declaration:
+ *  "var" identifier ";"
+ *  "var" identifier "=" expression  ";"
+ */
+static Statement* varDeclaration(ASTParser* parser) {
+    consume(parser, TOKEN_VAR, "Expected the keyword 'var' in a var declaration.");
+
+    Literal* tempIdentifier = identifierLiteral(parser);
+    if (check(parser, TOKEN_ERROR)) {
+        printErrorToken(parser, "Error parsing var declaration. ", *(parser->current));
+    }
+
+    Expression* tempExpression = NULL;
+    if (match(parser, TOKEN_EQUAL)) {
+        tempExpression = expression(parser);
+    }
+
+    checkSemicolonAfterExpression(parser, tempExpression, "Expected ';' following the expression in var declaration.");
+
+    VarDeclarationStatement* varDeclarationStatement = allocateASTNode(VarDeclarationStatement);
+    varDeclarationStatement->identifier = tempIdentifier->as.identifierLiteral;
+    varDeclarationStatement->maybeExpression = tempExpression;
+
+    // Wrap VarDeclarationStatement in a Statement
+    Statement* statement = allocateASTNode(Statement);
+    statement->type = VAR_DECLARATION_STATEMENT;
+    statement->as.varDeclarationStatement = varDeclarationStatement;
+    return statement;
+}
+/**
+ * assignment-statement:
+ *  expression "=" expression
+ */
+
+static Statement* assignmentStatement(ASTParser* parser, Expression* optionalExpression) {
+    Expression* targetExpr = optionalExpression ? optionalExpression : expression(parser);
+
+    consume(parser, TOKEN_EQUAL, "Expected '=' in an assignment statement.");
+
+    Expression* valueExpr = expression(parser);
+    checkSemicolonAfterExpression(parser, valueExpr, "Expected ';' after assignment statement.");
+
+    AssignmentStatement* assignmentStmt = allocateASTNode(AssignmentStatement);
+    assignmentStmt->target = targetExpr;
+    assignmentStmt->value = valueExpr;
+
+    Statement* stmt = allocateASTNode(Statement);
+    stmt->type = ASSIGNMENT_STATEMENT;
+    stmt->as.assignmentStatement = assignmentStmt;
+
+    return stmt;
+}
+
+/**
  * declaration:
  *  var-declaration ";"
  *  val-declaration ";"
@@ -502,9 +569,10 @@ static Statement* valDeclaration(ASTParser* parser) {
 static Statement* declaration(ASTParser* parser) {
     if (peek(parser)->type == TOKEN_VAL) {
         return valDeclaration(parser);
-        // TODO: add VAR handling
+    } else if (peek(parser)->type == TOKEN_VAR) {
+        return varDeclaration(parser);
     } else {
-        errorAtCurrent(parser, "Expected 'var' or 'val' in a declaration.");  // Unreachable
+        errorAtCurrent(parser, "Expected 'var' or 'val' in a declaration.");  // This should be unreacheable
         return NULL;
     }
 }
@@ -528,8 +596,10 @@ static Statement* printStatement(ASTParser* parser) {
     return stmt;
 }
 
-static Statement* expressionStatement(ASTParser* parser) {
-    Expression* expr = expression(parser);
+// If an expression is passed in, this function will use it to create the ExpressionStatement.
+static Statement* expressionStatement(ASTParser* parser, Expression* optionalExpression) {
+    Expression* expr = optionalExpression ? optionalExpression : expression(parser);
+
     checkSemicolonAfterExpression(parser, expr, "Expected ';' after expression-statement.");
 
     ExpressionStatement* exprStmt = allocateASTNode(ExpressionStatement);
@@ -542,6 +612,10 @@ static Statement* expressionStatement(ASTParser* parser) {
     return stmt;
 }
 
+/**
+ * block-statement:
+ *  "{" statement* "}"
+ */
 static Statement* blockStatement(ASTParser* parser) {
     consume(parser, TOKEN_LEFT_CURLY, "Expected '{' before the start of a block.");
     BlockStatement* blockStmt = allocateASTNode(BlockStatement);
@@ -568,7 +642,8 @@ static Statement* blockStatement(ASTParser* parser) {
 
 /**
  * selection-statement:
- *  "if" "(" expression ")" statement ( "else" statement )?
+ *  "if" "(" expression ")" statement
+ *  "if" "(" expression ")" statement "else" statement
  */
 static Statement* selectionStatement(ASTParser* parser) {
     consume(parser, TOKEN_IF, "Invalid State: Expected \"if\" in if statement.");
@@ -616,7 +691,7 @@ static Statement* statement(ASTParser* parser) {
     // cleaner IMO but probably less efficient.
     TokenType currentType = peek(parser)->type;
     switch (currentType) {
-        // case TOKEN_VAR:
+        case TOKEN_VAR:
         case TOKEN_VAL:
             return declaration(parser);
         case TOKEN_PRINT:
@@ -628,9 +703,18 @@ static Statement* statement(ASTParser* parser) {
         case TOKEN_IF:
             return selectionStatement(parser);
         // case TOKEN_RETURN:
-        //     return returnStatement(parser);
-        default:
-            return expressionStatement(parser);
+        //     return returnStatement(parser);]
+        default: {
+            // In the default case, we know there's going to be an expression.
+            Expression* tempExpression = expression(parser);
+
+            // If that expression is followed by an "=", it's the LHS of an assigment statement.
+            if (check(parser, TOKEN_EQUAL))
+                return assignmentStatement(parser, tempExpression);
+
+            // If not, it's just an expression statement.
+            return expressionStatement(parser, tempExpression);
+        }
     }
 }
 
