@@ -308,6 +308,31 @@ static void visitValDeclarationStatement(Compiler* compiler, ValDeclarationState
     }
 }
 
+static void visitVarDeclarationStatement(Compiler* compiler, VarDeclarationStatement* varDeclarationStatement) {
+    if (varDeclarationStatement->maybeExpression != NULL)
+        visitExpression(compiler, varDeclarationStatement->maybeExpression);
+    else
+        emitBytecode(compiler, BYTECODE(OP_NULL));
+
+    Constant constant = IDENTIFIER_CONST(copyStringToHeap(varDeclarationStatement->identifier->token.start,
+                                                          varDeclarationStatement->identifier->token.length));
+
+    if (compiler->isInGlobalScope) {
+        // TODO: Remove duplicated check; addConstantToPool already runs findConstantInPool.
+        if (findConstantInPool(compiler, constant) != -1) errorAndExit("Error: var \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
+
+        size_t constantIndex = addConstantToPool(compiler, constant);
+        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAR, constantIndex));
+
+        decreaseStackHeight(compiler);  // Globals are popped from the stack after they're set.
+    } else {
+        if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit("Error: var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
+
+        addLocalToTempStack(compiler, constant.as.string);
+        emitBytecode(compiler, BYTECODE(OP_SET_LOCAL_VAR_FAST));
+    }
+}
+
 // Visit expression following print, then emit bytecode to print that expression
 static void visitPrintStatement(Compiler* compiler, PrintStatement* printStatement) {
     visitExpression(compiler, printStatement->expression);
@@ -561,6 +586,9 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
             break;
         case VAL_DECLARATION_STATEMENT:
             visitValDeclarationStatement(compiler, statement->as.valDeclarationStatement);
+            break;
+        case VAR_DECLARATION_STATEMENT:
+            visitVarDeclarationStatement(compiler, statement->as.varDeclarationStatement);
             break;
         case PRINT_STATEMENT:
             visitPrintStatement(compiler, statement->as.printStatement);
