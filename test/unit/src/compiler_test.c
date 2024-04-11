@@ -330,9 +330,9 @@ int test_compiler_val_declaration() {
     COMPILE_TEST_SOURCE
 
     // Verify bytecode for val declaration
-    ASSERT(compiledCode.bytecodeArray.used == 2);                            // Check if two bytecode instructions are generated
-    ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);   // First should be OP_LOAD_CONSTANT
-    ASSERT(compiledCode.bytecodeArray.values[1].type == OP_SET_GLOBAL_VAL);  // Second should be OP_SET_GLOBAL_VAL
+    ASSERT(compiledCode.bytecodeArray.used == 2);                               // Check if two bytecode instructions are generated
+    ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);      // First should be OP_LOAD_CONSTANT
+    ASSERT(compiledCode.bytecodeArray.values[1].type == OP_DEFINE_GLOBAL_VAL);  // Second should be OP_SET_GLOBAL_VAL
 
     FREE_ARRAY(compiledCode.bytecodeArray);
     FREE_ARRAY(compiledCode.constantPool);
@@ -352,10 +352,10 @@ int test_compiler_variable_declaration_and_printing() {
 
     COMPILE_TEST_SOURCE
 
-    ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);   // load 42 into stack
-    ASSERT(compiledCode.bytecodeArray.values[1].type == OP_SET_GLOBAL_VAL);  // assign top of stack to variable 'x'
-    ASSERT(compiledCode.bytecodeArray.values[2].type == OP_GET_GLOBAL_VAL);  // get variable 'x'
-    ASSERT(compiledCode.bytecodeArray.values[3].type == OP_PRINT);           // print top of stack
+    ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);      // load 42 into stack
+    ASSERT(compiledCode.bytecodeArray.values[1].type == OP_DEFINE_GLOBAL_VAL);  // assign top of stack to variable 'x'
+    ASSERT(compiledCode.bytecodeArray.values[2].type == OP_GET_GLOBAL_VAL);     // get variable 'x'
+    ASSERT(compiledCode.bytecodeArray.values[3].type == OP_PRINT);              // print top of stack
 
     ASSERT(compiledCode.constantPool.values[0].type == CONST_TYPE_DOUBLE);  // 42
     ASSERT(compiledCode.constantPool.values[0].as.number == 42);
@@ -736,15 +736,15 @@ int test_compiler_single_block_statement_with_locals() {
 
     // Define expected bytecode
     Bytecode expectedBytecode[] = {
-        {.type = OP_LOAD_CONSTANT},       // Load 10
-        {.type = OP_SET_LOCAL_VAL_FAST},  // Set local 'x'
-        {.type = OP_GET_LOCAL_VAL_FAST},  // Get local 'x'
-        {.type = OP_PRINT},               // Print 'x'
-        {.type = OP_LOAD_CONSTANT},       // Load 20
-        {.type = OP_SET_LOCAL_VAL_FAST},  // Set local 'y'
-        {.type = OP_GET_LOCAL_VAL_FAST},  // Get local 'y'
-        {.type = OP_PRINT},               // Print 'y'
-        {.type = OP_POPN},                // Cleanup 'x' and 'y'
+        {.type = OP_LOAD_CONSTANT},          // Load 10
+        {.type = OP_DEFINE_LOCAL_VAL_FAST},  // Set local 'x'
+        {.type = OP_GET_LOCAL_VAL_FAST},     // Get local 'x'
+        {.type = OP_PRINT},                  // Print 'x'
+        {.type = OP_LOAD_CONSTANT},          // Load 20
+        {.type = OP_DEFINE_LOCAL_VAL_FAST},  // Set local 'y'
+        {.type = OP_GET_LOCAL_VAL_FAST},     // Get local 'y'
+        {.type = OP_PRINT},                  // Print 'y'
+        {.type = OP_POPN},                   // Cleanup 'x' and 'y'
     };
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
 
@@ -794,21 +794,21 @@ int test_compiler_nested_blocks_with_global_and_local_vars() {
 
     Bytecode expectedBytecode[] = {
         {.type = OP_LOAD_CONSTANT},
-        {.type = OP_SET_GLOBAL_VAL},
+        {.type = OP_DEFINE_GLOBAL_VAL},
         {.type = OP_GET_GLOBAL_VAL},
         {.type = OP_PRINT},
         {.type = OP_GET_GLOBAL_VAL},  // Global access inside local scope
         {.type = OP_PRINT},
         {.type = OP_LOAD_CONSTANT},
-        {.type = OP_SET_LOCAL_VAL_FAST},
+        {.type = OP_DEFINE_LOCAL_VAL_FAST},
         {.type = OP_GET_LOCAL_VAL_FAST},  // No constant pool access; the VM won't even know the name of the val.
         {.type = OP_PRINT},
         {.type = OP_LOAD_CONSTANT},
-        {.type = OP_SET_LOCAL_VAL_FAST},
+        {.type = OP_DEFINE_LOCAL_VAL_FAST},
         {.type = OP_GET_LOCAL_VAL_FAST},
         {.type = OP_PRINT},
         {.type = OP_LOAD_CONSTANT},
-        {.type = OP_SET_LOCAL_VAL_FAST},
+        {.type = OP_DEFINE_LOCAL_VAL_FAST},
         {.type = OP_GET_LOCAL_VAL_FAST},
         {.type = OP_PRINT},
         {.type = OP_POPN},
@@ -1013,7 +1013,7 @@ int test_compiler_block_expression_simple() {
         {.type = OP_LOAD_CONSTANT, .maybeOperand1 = 0},
         {.type = OP_SWAP, .maybeOperand1 = 0},
         {.type = OP_POPN, .maybeOperand1 = 0},
-        {.type = OP_SET_GLOBAL_VAL, .maybeOperand1 = 1},
+        {.type = OP_DEFINE_GLOBAL_VAL, .maybeOperand1 = 1},
     };
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 4};
 
@@ -1053,7 +1053,7 @@ int test_compiler_block_expression_nested() {
         {.type = OP_POPN, .maybeOperand1 = 0},
         {.type = OP_SWAP, .maybeOperand1 = 0},
         {.type = OP_POPN, .maybeOperand1 = 0},
-        {.type = OP_SET_GLOBAL_VAL, .maybeOperand1 = 1},
+        {.type = OP_DEFINE_GLOBAL_VAL, .maybeOperand1 = 1},
     };
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 8};
 
@@ -1083,11 +1083,11 @@ int test_compiler_block_expression_with_statements() {
 
     Bytecode expectedBytecode[] = {
         {.type = OP_LOAD_CONSTANT, .maybeOperand1 = 0},
-        {.type = OP_SET_LOCAL_VAL_FAST},
+        {.type = OP_DEFINE_LOCAL_VAL_FAST},
         {.type = OP_LOAD_CONSTANT, .maybeOperand1 = 1},
         {.type = OP_SWAP, .maybeOperand1 = 1},
         {.type = OP_POPN, .maybeOperand1 = 1},
-        {.type = OP_SET_GLOBAL_VAL, .maybeOperand1 = 2},
+        {.type = OP_DEFINE_GLOBAL_VAL, .maybeOperand1 = 2},
     };
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 6};
 

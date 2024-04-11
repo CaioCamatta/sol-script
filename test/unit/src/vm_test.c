@@ -140,7 +140,7 @@ int test_vm_set_and_get_global() {
     size_t numberValueIndex = 1;
 
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, numberValueIndex), Bytecode);
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAL, valNameIndex), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, valNameIndex), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, valNameIndex), Bytecode);
 
     // Initialize VM with the bytecode
@@ -425,7 +425,7 @@ int test_vm_simple_block_statement_and_cleanup() {
 
     // Setup bytecode: Load constant 2, set global "a", get global "a", print
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_SET_LOCAL_VAL_FAST), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_DEFINE_LOCAL_VAL_FAST), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, 0), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_POPN, 1), Bytecode);
@@ -475,28 +475,28 @@ int test_vm_nested_blocks_with_global_and_local_vars() {
     INSERT_ARRAY(code.constantPool, DOUBLE_CONST(30.0), Constant);   // Index 4
 
     // Bytecode
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);   // Load 100.0
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAL, 1), Bytecode);  // Set g = 100.0
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 1), Bytecode);  // Get g
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);                        // Print g (100.0)
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);      // Load 100.0
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, 1), Bytecode);  // Set g = 100.0
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 1), Bytecode);     // Get g
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);                           // Print g (100.0)
 
     // Start of block
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 1), Bytecode);  // Get g (100.0 again)
     INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);                        // Print g
 
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 2), Bytecode);       // Load 10.0
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_SET_LOCAL_VAL_FAST), Bytecode);               // Set x = 10.0
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_DEFINE_LOCAL_VAL_FAST), Bytecode);            // Set x = 10.0
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, 0), Bytecode);  // Load x
     INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);                            // Print x
 
     // Nested block
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 3), Bytecode);       // Load 20.0 (shadowing g)
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_SET_LOCAL_VAL_FAST), Bytecode);               // Set g = 20.0
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_DEFINE_LOCAL_VAL_FAST), Bytecode);            // Set g = 20.0
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, 1), Bytecode);  // Load g
     INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);                            // Print g
 
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 4), Bytecode);       // Load 30.0
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_SET_LOCAL_VAL_FAST), Bytecode);               // Set y = 30.0
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_DEFINE_LOCAL_VAL_FAST), Bytecode);            // Set y = 30.0
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, 2), Bytecode);  // Load y
     INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);                            // Print y
 
@@ -589,7 +589,7 @@ int test_vm_simple_block_expression() {
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_SWAP, 0), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_POPN, 0), Bytecode);
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAL, 1), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, 1), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 1), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);
 
@@ -619,13 +619,13 @@ int test_vm_block_expression_with_statements() {
 
     // Bytecode
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_SET_LOCAL_VAL_FAST), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_DEFINE_LOCAL_VAL_FAST), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, 0), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 1), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_ADD), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_SWAP, 1), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_POPN, 1), Bytecode);
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAL, 2), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, 2), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 2), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);
 
@@ -654,7 +654,7 @@ int test_vm_block_expression_as_if_condition() {
 
     // Bytecode for the block expression
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);
-    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_SET_LOCAL_VAL_FAST), Bytecode);
+    INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_DEFINE_LOCAL_VAL_FAST), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, 0), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 1), Bytecode);
     INSERT_ARRAY(code.bytecodeArray, BYTECODE(OP_BINARY_GT), Bytecode);

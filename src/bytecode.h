@@ -12,23 +12,23 @@
  * TODO: benchmark OP_BINARY(op) instead of OP_BINARY*
  */
 typedef enum {
-    OP_LOAD_CONSTANT,       // load a constant from the compiled constant pool onto the stack
-    OP_SET_GLOBAL_VAL,      // expects an identifier at the top of the stack, and a value right below it
-    OP_GET_GLOBAL_VAL,      // expects an identifier at the top of the stack
-    OP_SET_LOCAL_VAL_FAST,  // turn the value at the top of the stack into a local variable.
-    OP_GET_LOCAL_VAL_FAST,  // load a local variable that's already in the stack
-    OP_SET_GLOBAL_VAR,      // expects an identifier at the top of the stack, and a value right below it
-    OP_GET_GLOBAL_VAR,      // expects an identifier at the top of the stack
-    OP_SET_LOCAL_VAR_FAST,  // turn the value at the top of the stack into a local variable.
-    OP_GET_LOCAL_VAR_FAST,  // load a local variable that's already in the stack
-    OP_NULL,                // put Value false on the stack
-    OP_TRUE,                // put Value true on the stack
-    OP_FALSE,               // put Value false on the stack
-    OP_PRINT,               // print value at the top of the stack
-    OP_POPN,                // pop N values from the stack
-    OP_JUMP_IF_FALSE,       // pop the value on top of the stack, and jump it's falsy
-    OP_JUMP,                // jump unconditionally
-    OP_SWAP,                // swap the value at the top of the stack with a value N positions below
+    OP_LOAD_CONSTANT,          // load a constant from the compiled constant pool onto the stack
+    OP_DEFINE_GLOBAL_VAL,      // expects an identifier at the top of the stack, and a value right below it
+    OP_GET_GLOBAL_VAL,         // expects an identifier at the top of the stack
+    OP_DEFINE_LOCAL_VAL_FAST,  // turn the value at the top of the stack into a local constant variable.
+    OP_GET_LOCAL_VAL_FAST,     // load a local variable that's already in the stack
+    OP_DEFINE_GLOBAL_VAR,      // expects an identifier at the top of the stack, and a value right below it
+    OP_GET_GLOBAL_VAR,         // expects an identifier at the top of the stack
+    OP_DEFINE_LOCAL_VAR_FAST,  // turn the value at the top of the stack into a local variable.
+    OP_GET_LOCAL_VAR_FAST,     // load a local variable that's already in the stack
+    OP_NULL,                   // put Value false on the stack
+    OP_TRUE,                   // put Value true on the stack
+    OP_FALSE,                  // put Value false on the stack
+    OP_PRINT,                  // print value at the top of the stack
+    OP_POPN,                   // pop N values from the stack
+    OP_JUMP_IF_FALSE,          // pop the value on top of the stack, and jump it's falsy
+    OP_JUMP,                   // jump unconditionally
+    OP_SWAP,                   // swap the value at the top of the stack with a value N positions below
 
     // Unary operations
     OP_UNARY_NEGATE,  // -stack[-1]

@@ -150,7 +150,7 @@ void step(VM* vm) {
         case OP_LOAD_CONSTANT:
             push(vm, bytecodeConstantToValue(vm, instruction->maybeOperand1));
             break;
-        case OP_SET_GLOBAL_VAL: {
+        case OP_DEFINE_GLOBAL_VAL: {
             Value value = pop(vm);
             size_t constantIndex = instruction->maybeOperand1;
             Constant constant = vm->compiledCode.constantPool.values[constantIndex];
@@ -164,7 +164,7 @@ void step(VM* vm) {
             push(vm, value);
             break;
         }
-        case OP_SET_LOCAL_VAL_FAST:
+        case OP_DEFINE_LOCAL_VAL_FAST:
             break;  // no action necessary to set locals. The compiler handles everything. 🤯
         case OP_GET_LOCAL_VAL_FAST: {
             size_t stackIndex = instruction->maybeOperand1;

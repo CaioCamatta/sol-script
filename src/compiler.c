@@ -297,14 +297,14 @@ static void visitValDeclarationStatement(Compiler* compiler, ValDeclarationState
         if (findConstantInPool(compiler, constant) != -1) errorAndExit("Error: val \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
 
         size_t constantIndex = addConstantToPool(compiler, constant);
-        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAL, constantIndex));
+        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, constantIndex));
 
         decreaseStackHeight(compiler);  // Globals are popped from the stack.
     } else {
         if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit("Error: val \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
 
         addLocalToTempStack(compiler, constant.as.string);
-        emitBytecode(compiler, BYTECODE(OP_SET_LOCAL_VAL_FAST));
+        emitBytecode(compiler, BYTECODE(OP_DEFINE_LOCAL_VAL_FAST));
     }
 }
 
@@ -322,14 +322,14 @@ static void visitVarDeclarationStatement(Compiler* compiler, VarDeclarationState
         if (findConstantInPool(compiler, constant) != -1) errorAndExit("Error: var \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
 
         size_t constantIndex = addConstantToPool(compiler, constant);
-        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAR, constantIndex));
+        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAR, constantIndex));
 
         decreaseStackHeight(compiler);  // Globals are popped from the stack after they're set.
     } else {
         if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit("Error: var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
 
         addLocalToTempStack(compiler, constant.as.string);
-        emitBytecode(compiler, BYTECODE(OP_SET_LOCAL_VAR_FAST));
+        emitBytecode(compiler, BYTECODE(OP_DEFINE_LOCAL_VAR_FAST));
     }
 }
 

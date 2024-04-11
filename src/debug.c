@@ -316,26 +316,26 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
             case OP_LOAD_CONSTANT:
                 printf("LOAD_CONSTANT #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
-            case OP_SET_GLOBAL_VAL:
-                printf("OP_SET_GLOBAL_VAL #%zu\n", bytecodeArray.values[i].maybeOperand1);
+            case OP_DEFINE_GLOBAL_VAL:
+                printf("OP_DEFINE_GLOBAL_VAL #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_GET_GLOBAL_VAL:
                 printf("OP_GET_GLOBAL_VAL #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
-            case OP_SET_LOCAL_VAL_FAST:
-                printf("OP_SET_LOCAL_VAL_FAST\n");
+            case OP_DEFINE_LOCAL_VAL_FAST:
+                printf("OP_DEFINE_LOCAL_VAL_FAST\n");
                 break;
             case OP_GET_LOCAL_VAL_FAST:
                 printf("OP_GET_LOCAL_VAL_FAST #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
-            case OP_SET_GLOBAL_VAR:
-                printf("OP_SET_GLOBAL_VAR #%zu\n", bytecodeArray.values[i].maybeOperand1);
+            case OP_DEFINE_GLOBAL_VAR:
+                printf("OP_DEFINE_GLOBAL_VAR #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_GET_GLOBAL_VAR:
                 printf("OP_GET_GLOBAL_VAR #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
-            case OP_SET_LOCAL_VAR_FAST:
-                printf("OP_SET_LOCAL_VAR_FAST\n");
+            case OP_DEFINE_LOCAL_VAR_FAST:
+                printf("OP_DEFINE_LOCAL_VAR_FAST\n");
                 break;
             case OP_GET_LOCAL_VAR_FAST:
                 printf("OP_GET_LOCAL_VAR_FAST #%zu\n", bytecodeArray.values[i].maybeOperand1);
@@ -348,6 +348,9 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
                 break;
             case OP_TRUE:
                 printf("TRUE\n");
+                break;
+            case OP_NULL:
+                printf("NULL\n");
                 break;
             case OP_FALSE:
                 printf("FALSE\n");
