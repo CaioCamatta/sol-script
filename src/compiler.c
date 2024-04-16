@@ -281,6 +281,46 @@ static void visitExpressionStatement(Compiler* compiler, ExpressionStatement* ex
     decreaseStackHeight(compiler);
 }
 
+static void visitAssignmentStatement(Compiler* compiler, AssignmentStatement* assignmentStatement) {
+    // Compile the code to compute the new value
+    visitExpression(compiler, assignmentStatement->value);
+
+    // Visit the target expression to determine the assignment target
+    visitExpression(compiler, assignmentStatement->target);
+
+    // Emit bytecode based on the target type (e.g., identifier, property access)
+    if (assignmentStatement->target->type == PRIMARY_EXPRESSION) {
+        PrimaryExpression* primaryExpr = assignmentStatement->target->as.primaryExpression;
+        if (primaryExpr->literal->type == IDENTIFIER_LITERAL) {
+            IdentifierLiteral* identifierLiteral = primaryExpr->literal->as.identifierLiteral;
+            char* identifierName = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
+
+            if (compiler->isInGlobalScope) {
+                // Global variable assignment
+                Constant constant = IDENTIFIER_CONST(identifierName);
+                size_t constantIndex = addConstantToPool(compiler, constant);
+                emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAR, constantIndex));
+            } else {
+                // Local variable assignment
+                size_t stackIndex = findLocalByName(compiler, identifierName);
+                if (stackIndex != -1) {
+                    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_LOCAL_VAR_FAST, stackIndex));
+                } else {
+                    errorAndExit("Error: identifier '%s' not declared.", identifierName);
+                }
+            }
+
+            free(identifierName);
+        } else {
+            errorAndExit("Invalid assignment target.");
+        }
+    } else {
+        errorAndExit("Invalid assignment target.");
+    }
+
+    decreaseStackHeight(compiler);
+}
+
 /**
  * Visit the expression after the val declaration, save the variable identifier to constant pool,
  * emit instruction to set identifier = val
@@ -589,6 +629,9 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
             break;
         case VAR_DECLARATION_STATEMENT:
             visitVarDeclarationStatement(compiler, statement->as.varDeclarationStatement);
+            break;
+        case ASSIGNMENT_STATEMENT:
+            visitAssignmentStatement(compiler, statement->as.assignmentStatement);
             break;
         case PRINT_STATEMENT:
             visitPrintStatement(compiler, statement->as.printStatement);
