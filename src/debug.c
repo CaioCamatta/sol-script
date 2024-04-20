@@ -26,6 +26,7 @@ static char const* tokenTypeStrings[] = {
     "TOKEN_TRUE",
     "TOKEN_NULL",
     "TOKEN_VAL",
+    "TOKEN_VAR",
     "TOKEN_PRINT",
 
     // Identifier
@@ -127,11 +128,16 @@ static void printStatement(const Statement* statement, int depth) {
             printf("ExpressionStatement\n");
             printExpression(statement->as.expressionStatement->expression, depth + 1);
             break;
-
         case VAL_DECLARATION_STATEMENT: {
             ValDeclarationStatement* valDecl = statement->as.valDeclarationStatement;
             printf("ValDeclaration" KGRY "(identifier=\"%.*s\")\n" RESET, valDecl->identifier->token.length, valDecl->identifier->token.start);
             printExpression(valDecl->expression, depth + 1);
+            break;
+        }
+        case VAR_DECLARATION_STATEMENT: {
+            VarDeclarationStatement* varDecl = statement->as.varDeclarationStatement;
+            printf("VarDeclaration" KGRY "(identifier=\"%.*s\")\n" RESET, varDecl->identifier->token.length, varDecl->identifier->token.start);
+            if (varDecl->maybeExpression != NULL) printExpression(varDecl->maybeExpression, depth + 1);
             break;
         }
         case SELECTION_STATEMENT: {
@@ -140,6 +146,13 @@ static void printStatement(const Statement* statement, int depth) {
             printExpression(stmt->conditionExpression, depth + 1);
             printStatement(stmt->trueStatement, depth + 1);
             printStatement(stmt->falseStatement, depth + 1);
+            break;
+        }
+        case ASSIGNMENT_STATEMENT: {
+            AssignmentStatement* stmt = statement->as.assignmentStatement;
+            printf("AssignmentStatement\n");
+            printExpression(stmt->target, depth + 1);
+            printExpression(stmt->value, depth + 1);
             break;
         }
         case PRINT_STATEMENT:
@@ -303,26 +316,47 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
             case OP_LOAD_CONSTANT:
                 printf("LOAD_CONSTANT #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
-            case OP_SET_GLOBAL_VAL:
-                printf("OP_SET_GLOBAL_VAL #%zu\n", bytecodeArray.values[i].maybeOperand1);
+            case OP_DEFINE_GLOBAL_VAL:
+                printf("DEFINE_GLOBAL_VAL #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_GET_GLOBAL_VAL:
-                printf("OP_GET_GLOBAL_VAL #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                printf("GET_GLOBAL_VAL #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
-            case OP_SET_LOCAL_VAL_FAST:
-                printf("OP_SET_LOCAL_VAL_FAST\n");
+            case OP_DEFINE_LOCAL_VAL_FAST:
+                printf("DEFINE_LOCAL_VAL_FAST\n");
                 break;
             case OP_GET_LOCAL_VAL_FAST:
-                printf("OP_GET_LOCAL_VAL_FAST #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                printf("GET_LOCAL_VAL_FAST #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                break;
+            case OP_DEFINE_GLOBAL_VAR:
+                printf("DEFINE_GLOBAL_VAR #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                break;
+            case OP_GET_GLOBAL_VAR:
+                printf("GET_GLOBAL_VAR #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                break;
+            case OP_DEFINE_LOCAL_VAR_FAST:
+                printf("DEFINE_LOCAL_VAR_FAST\n");
+                break;
+            case OP_GET_LOCAL_VAR_FAST:
+                printf("GET_LOCAL_VAR_FAST #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                break;
+            case OP_SET_GLOBAL_VAR:
+                printf("SET_GLOBAL_VAR #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                break;
+            case OP_SET_LOCAL_VAR_FAST:
+                printf("SET_LOCAL_VAR_FAST #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_POPN:
-                printf("OP_POPN %zu\n", bytecodeArray.values[i].maybeOperand1);
+                printf("POPN %zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_PRINT:
                 printf("PRINT\n");
                 break;
             case OP_TRUE:
                 printf("TRUE\n");
+                break;
+            case OP_NULL:
+                printf("NULL\n");
                 break;
             case OP_FALSE:
                 printf("FALSE\n");
@@ -370,13 +404,13 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
                 printf("BINARY_NOT_EQUAL\n");
                 break;
             case OP_JUMP_IF_FALSE:
-                printf("OP_JUMP_IF_FALSE #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                printf("JUMP_IF_FALSE #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_JUMP:
-                printf("OP_JUMP #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                printf("JUMP #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_SWAP:
-                printf("OP_SWAP #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                printf("SWAP #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
         }
     }

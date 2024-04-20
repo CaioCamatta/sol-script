@@ -68,7 +68,8 @@
     "hash_table.h": "c",
     "vm.h": "c",
     "typeinfo": "c",
-    "limits.h": "c"
+    "limits.h": "c",
+    "stddef.h": "c"
   },
   "C_Cpp.errorSquiggles": "enabled"
 }

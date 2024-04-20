@@ -13,7 +13,8 @@
  */
 typedef struct {
     char* key;
-    Value value;
+    Value value;  // TODO: decouple HashTable and Value. The hash table should be generic
+                  // so it can be used outside of the VM (Value is supposed to only be for the VM).
 } HashTableEntry;
 
 #define IS_TOMBSTONE(entry) ((entry)->key == NULL && (entry)->value.type == TYPE_BOOLEAN && (entry)->value.as.booleanVal == true)
@@ -40,13 +41,13 @@ void initHashTable(HashTable* table);
 // Free the hash table.
 void freeHashTable(HashTable* table);
 
-// Insert an entry pair into the hash table. Returns true if successful.
+// Insert an entry pair into the hash table. The string key must be null-terminated. Returns true if successful.
 bool hashTableInsert(HashTable* table, char* key, Value value);
 
-// Search for an entry by key in the hash table. The entry may be empty or a tombstone.
+// Search for an entry by key in the hash table.  The string key must be null-terminated. The entry may be empty or a tombstone.
 HashTableEntry* hashTableGet(HashTable* table, const char* key);
 
-// Delete an entry from the hash table by key. Returns true if the entry was found and deleted.
+// Delete an entry from the hash table by key.  The string key must be null-terminated. Returns true if the entry was found and deleted.
 bool hashTableDelete(HashTable* table, const char* key);
 
 // Resize the hash table to a new capacity.

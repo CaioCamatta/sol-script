@@ -150,26 +150,43 @@ void step(VM* vm) {
         case OP_LOAD_CONSTANT:
             push(vm, bytecodeConstantToValue(vm, instruction->maybeOperand1));
             break;
-        case OP_SET_GLOBAL_VAL: {
+        case OP_DEFINE_GLOBAL_VAR:
+        case OP_DEFINE_GLOBAL_VAL: {
             Value value = pop(vm);
             size_t constantIndex = instruction->maybeOperand1;
             Constant constant = vm->compiledCode.constantPool.values[constantIndex];
             hashTableInsert(&vm->globals, constant.as.string, value);
             break;
         }
-        case OP_GET_GLOBAL_VAL: {
+        case OP_GET_GLOBAL_VAL:
+        case OP_GET_GLOBAL_VAR: {
             size_t constantIndex = instruction->maybeOperand1;
             Constant constant = vm->compiledCode.constantPool.values[constantIndex];
             Value value = hashTableGet(&vm->globals, constant.as.string)->value;
             push(vm, value);
             break;
         }
-        case OP_SET_LOCAL_VAL_FAST:
+        case OP_SET_GLOBAL_VAR: {
+            Value value = pop(vm);
+            size_t constantIndex = instruction->maybeOperand1;
+            Constant constant = vm->compiledCode.constantPool.values[constantIndex];
+            hashTableInsert(&vm->globals, constant.as.string, value);
+            break;
+        }
+        case OP_DEFINE_LOCAL_VAL_FAST:
+        case OP_DEFINE_LOCAL_VAR_FAST:
             break;  // no action necessary to set locals. The compiler handles everything. 🤯
-        case OP_GET_LOCAL_VAL_FAST: {
+        case OP_GET_LOCAL_VAL_FAST:
+        case OP_GET_LOCAL_VAR_FAST: {
             size_t stackIndex = instruction->maybeOperand1;
             Value value = vm->stack[stackIndex];
             push(vm, value);
+            break;
+        }
+        case OP_SET_LOCAL_VAR_FAST: {
+            // Copy the value at the top of the stack onto the slot corresponding to the local var
+            size_t stackIndex = instruction->maybeOperand1;
+            vm->stack[stackIndex] = pop(vm);
             break;
         }
         case OP_POPN: {
@@ -184,6 +201,10 @@ void step(VM* vm) {
         }
         case OP_TRUE: {
             push(vm, BOOL_VAL(true));
+            break;
+        }
+        case OP_NULL: {
+            push(vm, NULL_VAL());
             break;
         }
         case OP_FALSE: {

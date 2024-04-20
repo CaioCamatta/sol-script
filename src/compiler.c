@@ -11,6 +11,7 @@
 #include "debug.h"
 #include "parser.h"
 #include "syntax.h"
+#include "util/hash_table.h"
 #include "vm.h"
 
 void initCompiler(Compiler* compiler, Source* ASTSource) {
@@ -23,6 +24,7 @@ void initCompiler(Compiler* compiler, Source* ASTSource) {
     compiler->constantPool = constantPool;
     compiler->currentStackHeight = 0;
     compiler->isInGlobalScope = true;
+    initHashTable(&compiler->tempGlobals);
 
     for (int i = 0; i < STACK_MAX; i++) {
         compiler->tempStack[i].name = NULL;
@@ -43,11 +45,22 @@ static void visitLiteral(Compiler* compiler, Literal* literal);
  * TODO: make it so we don't crash completely. It should be simple to print and error, move to compiling the next statement,
  * then after all statements have been compiled print all errors and exit the program.
  */
+#if DEBUG_COMPILER
+#define errorAndExit(...)                                \
+    {                                                    \
+        printCompiledCode((CompiledCode){                \
+            .bytecodeArray = compiler->compiledBytecode, \
+            .constantPool = compiler->constantPool});    \
+        fprintf(stderr, __VA_ARGS__);                    \
+        exit(EXIT_FAILURE);                              \
+    }
+#else
 #define errorAndExit(...)             \
     {                                 \
         fprintf(stderr, __VA_ARGS__); \
         exit(EXIT_FAILURE);           \
     }
+#endif
 
 // Add bytecode to the compiled program.
 static void emitBytecode(Compiler* compiler, Bytecode bytecode) {
@@ -60,7 +73,10 @@ static void emitBytecode(Compiler* compiler, Bytecode bytecode) {
  */
 static void increaseStackHeight(Compiler* compiler) {
     if (compiler->currentStackHeight == UCHAR_MAX) {
-        errorAndExit("CompilerStackOverflowError: VM stack will overflow.");
+        errorAndExit(
+            "StackOverflowError: The Compiler has predicted that this code will "
+            "cause the VM stack to overflow.");  // This error often indicates that something is wrong
+                                                 // with how the compiler tracks the predicted stack height
     }
 
     compiler->currentStackHeight++;
@@ -69,9 +85,19 @@ static void increaseStackHeight(Compiler* compiler) {
 /**
  * The compiler can know in advance how tall the VM stack will be at any point. This function helps keep track
  * of the height. For example, an addition decreases the height of the stack by 1 (pop, pop, push).
+ *
+ * When reducing the stack height, this function also clears the slots the were freed.
+ * Example:
+ *  Stack: [A B C D(top) X X]
+ *  decreaseStackHeight(1)
+ *  Stack: [A B C(top) X X X]
  */
 static void decreaseStackHeight(Compiler* compiler) {
-    compiler->currentStackHeight--;
+    if (compiler->currentStackHeight > 0) {
+        compiler->tempStack[compiler->currentStackHeight - 1].name = NULL;
+        compiler->currentStackHeight--;
+    } else
+        errorAndExit("InvalidStateException: the Compiler attempted to decrease the predicted stack height below 0.")
 }
 
 static double tokenTodouble(Token token) {
@@ -132,8 +158,40 @@ static size_t addConstantToPool(Compiler* compiler, Constant constant) {
 }
 
 /**
+ * Add a global variable to the compiler's table of globals.
+ */
+static void addGlobalToTable(Compiler* compiler, char* name, bool isConstant) {
+    hashTableInsert(&compiler->tempGlobals, name, (Value){.as.booleanVal = isConstant});
+}
+/**
+ * Check if a global variable in the compiler's table of globals is constant (i.e. `val`).
+ * Throws an error if the global doesn't exist.
+ */
+static bool isGlobalInTable(Compiler* compiler, char* name) {
+    HashTableEntry* entry = hashTableGet(&compiler->tempGlobals, name);
+    return entry->key != NULL;
+}
+
+/**
+ * Check if a global variable in the compiler's table of globals is constant (i.e. `val`).
+ * Throws an error if the global doesn't exist.
+ */
+static bool isGlobalConstant(Compiler* compiler, char* name) {
+    HashTableEntry* entry = hashTableGet(&compiler->tempGlobals, name);
+    if (entry) {
+        return entry->value.as.booleanVal;
+    } else {
+        errorAndExit(
+            "InvalidStateException: Attempted to check if a global variable is constant, but the "
+            "global doesn't exist in the Compiler's hash table.")
+    }
+}
+
+/**
  * Given a local variable name, find its position in the stack. (We can determine at compile time
  * where that local will be in the stack.)
+ *
+ * Returns either the stack index if found, or -1 if not found.
  */
 static int findLocalByName(Compiler* compiler, char* name) {
     for (int i = compiler->currentStackHeight; i >= 0; i--) {
@@ -148,11 +206,37 @@ static int findLocalByName(Compiler* compiler, char* name) {
 }
 
 /**
- * Add a local variable to the Compiler's temporary stack.
+ * Check if a local variable in the compiler's table of locals is constant (i.e. `val`).
+ * Throws an error if the local doesn't exist.
  */
-static void addLocalToTempStack(Compiler* compiler, char* name) {
+static int isLocalConstant(Compiler* compiler, char* name) {
+    int index = findLocalByName(compiler, name);
+    if (index == -1)
+        errorAndExit(
+            "InvalidStateException: Attempted to check if a local variable is constant, but the "
+            "local doesn't exist.") else {
+            return compiler->tempStack[index].isConstant;
+        }
+}
+/**
+ * Check if a local variable in the compiler's table of locals is constant (i.e. `val`).
+ * Throws an error if the local doesn't exist.
+ */
+static int isLocalConstantByIndex(Compiler* compiler, int indexInTempStack) {
+    if (indexInTempStack == -1)
+        errorAndExit(
+            "InvalidStateException: Attempted to check if a local variable is constant, but the "
+            "local doesn't exist.") else {
+            return compiler->tempStack[indexInTempStack].isConstant;
+        }
+}
+
+/**
+ * Add a local variable to the Compiler's temporary stack..
+ */
+static void addLocalToTempStack(Compiler* compiler, char* name, bool isConstant) {
     // The local will be right below the current stack height
-    compiler->tempStack[compiler->currentStackHeight - 1] = (Local){.name = name};
+    compiler->tempStack[compiler->currentStackHeight - 1] = (Local){.name = name, .isConstant = isConstant};
 }
 
 /**
@@ -281,6 +365,60 @@ static void visitExpressionStatement(Compiler* compiler, ExpressionStatement* ex
     decreaseStackHeight(compiler);
 }
 
+static void visitAssignmentStatement(Compiler* compiler, AssignmentStatement* assignmentStatement) {
+    // Compile the code to compute the new value
+    visitExpression(compiler, assignmentStatement->value);
+
+    // We don't need to visit the target expression.
+    // visitExpression(compiler, assignmentStatement->target);
+
+    // Emit bytecode based on the target type
+    if (assignmentStatement->target->type == PRIMARY_EXPRESSION) {
+        PrimaryExpression* primaryExpr = assignmentStatement->target->as.primaryExpression;
+        if (primaryExpr->literal->type == IDENTIFIER_LITERAL) {
+            IdentifierLiteral* identifierLiteral = primaryExpr->literal->as.identifierLiteral;
+            char* identifierName = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
+
+            // Check if its a local variable
+            size_t stackIndex = findLocalByName(compiler, identifierName);
+
+            if (stackIndex == -1) {  // Not a local variable
+                if (isGlobalInTable(compiler, identifierName)) {
+                    if (isGlobalConstant(compiler, identifierName)) {
+                        errorAndExit("Error: Cannot modify global constant '%s'.", identifierName);
+                    }
+
+                    // Global variable assignment
+                    Constant constant = IDENTIFIER_CONST(identifierName);
+                    size_t constantIndex = addConstantToPool(compiler, constant);
+                    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAR, constantIndex));
+                } else {
+                    errorAndExit("Error: identifier '%s' not declared.", identifierName);
+                }
+            } else {
+                if (isLocalConstantByIndex(compiler, stackIndex)) {
+                    errorAndExit("Error: Cannot modify local constant '%s'.", identifierName);
+                }
+
+                if (stackIndex != -1) {
+                    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_LOCAL_VAR_FAST, stackIndex));
+                } else {
+                    errorAndExit("Error: identifier '%s' not declared.", identifierName);
+                }
+            }
+
+            free(identifierName);
+        } else {
+            errorAndExit("Invalid assignment target. Invalid type of primary-expression.");
+        }
+    } else {
+        errorAndExit("Invalid assignment target.");
+    }
+
+    // The new value is already popped by the `OP_SET_*` operation, so we just need to update the stack height.
+    decreaseStackHeight(compiler);
+}
+
 /**
  * Visit the expression after the val declaration, save the variable identifier to constant pool,
  * emit instruction to set identifier = val
@@ -292,19 +430,55 @@ static void visitValDeclarationStatement(Compiler* compiler, ValDeclarationState
     Constant constant = IDENTIFIER_CONST(copyStringToHeap(valDeclarationStatement->identifier->token.start,
                                                           valDeclarationStatement->identifier->token.length));
 
+    bool isVariableConstant = true;  // Vals cannot be modified
+
     if (compiler->isInGlobalScope) {
-        // TODO: Remove duplicated check; addConstantToPool already runs findConstantInPool.
-        if (findConstantInPool(compiler, constant) != -1) errorAndExit("Error: val \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
+        if (isGlobalInTable(compiler, constant.as.string)) errorAndExit("Error: val \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
 
         size_t constantIndex = addConstantToPool(compiler, constant);
-        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAL, constantIndex));
+        addGlobalToTable(compiler, constant.as.string, isVariableConstant);  // We also keep track that this global exists so we can prevent redeclaration later.
+
+        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, constantIndex));
 
         decreaseStackHeight(compiler);  // Globals are popped from the stack.
     } else {
         if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit("Error: val \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
 
-        addLocalToTempStack(compiler, constant.as.string);
-        emitBytecode(compiler, BYTECODE(OP_SET_LOCAL_VAL_FAST));
+        addLocalToTempStack(compiler, constant.as.string, isVariableConstant);
+        emitBytecode(compiler, BYTECODE(OP_DEFINE_LOCAL_VAL_FAST));
+    }
+}
+
+static void visitVarDeclarationStatement(Compiler* compiler, VarDeclarationStatement* varDeclarationStatement) {
+    bool isValueNull = varDeclarationStatement->maybeExpression == NULL;
+    if (!isValueNull)
+        visitExpression(compiler, varDeclarationStatement->maybeExpression);
+    else {
+        emitBytecode(compiler, BYTECODE(OP_NULL));
+        increaseStackHeight(compiler);
+    }
+
+    Constant constant = IDENTIFIER_CONST(copyStringToHeap(varDeclarationStatement->identifier->token.start,
+                                                          varDeclarationStatement->identifier->token.length));
+
+    bool isVariableConstant = false;  // Vars can be modified
+
+    if (compiler->isInGlobalScope) {
+        // Preventing global redeclaration is an arbitrary choice.
+        if (isGlobalInTable(compiler, constant.as.string)) errorAndExit("Error: var \"%s\" is already declared. Redeclaration is not permitted as it often leads to confusion.", constant.as.string);
+
+        size_t constantIndex = addConstantToPool(compiler, constant);
+        addGlobalToTable(compiler, constant.as.string, isVariableConstant);  // We also keep track that this global exists so we can prevent redeclaration later.
+
+        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAR, constantIndex));
+
+        decreaseStackHeight(compiler);  // The value assigned to the Global is popped from the stack after we set the Global.
+    } else {
+        if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit("Error: var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
+
+        addLocalToTempStack(compiler, constant.as.string, isVariableConstant);
+
+        emitBytecode(compiler, BYTECODE(OP_DEFINE_LOCAL_VAR_FAST));
     }
 }
 
@@ -449,35 +623,26 @@ static void visitBooleanLiteral(Compiler* compiler, BooleanLiteral* booleanLiter
 static void visitIdentifierLiteral(Compiler* compiler, IdentifierLiteral* identifierLiteral) {
     char* identifierNameNullTerminated = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
 
-    if (compiler->isInGlobalScope) {
-        // Find address of this identifier in the constant pool
+    // Check if the identifier is a local variable
+    size_t stackIndex = findLocalByName(compiler, identifierNameNullTerminated);
+
+    if (stackIndex == -1) {  // Its not a local variable
         Constant constant = (Constant){
             .type = CONST_TYPE_IDENTIFIER,
             .as = {identifierNameNullTerminated}};
         size_t index = findConstantInPool(compiler, constant);
-        if (index == -1) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
 
-        // Generate bytecode to get the variable
-        Bytecode bytecodeToGetVariable = BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index);
+        if (!isGlobalInTable(compiler, identifierNameNullTerminated)) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
+
+        Bytecode bytecodeToGetVariable = isGlobalConstant(compiler, identifierNameNullTerminated)
+                                             ? BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index)
+                                             : BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, index);
         emitBytecode(compiler, bytecodeToGetVariable);
     } else {
-        size_t stackIndex = findLocalByName(compiler, identifierNameNullTerminated);
-
-        if (stackIndex == -1) {
-            // If the local isn't found, we check if its a global
-            Constant constant = (Constant){
-                .type = CONST_TYPE_IDENTIFIER,
-                .as = {identifierNameNullTerminated}};
-            size_t index = findConstantInPool(compiler, constant);
-            if (index == -1) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
-
-            // If we found a global, emit the appropriate bytecode
-            Bytecode bytecodeToGetVariable = BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index);
-            emitBytecode(compiler, bytecodeToGetVariable);
-        } else {
-            Bytecode bytecodeToGetVariable = BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, stackIndex);
-            emitBytecode(compiler, bytecodeToGetVariable);
-        }
+        Bytecode bytecodeToGetVariable = isLocalConstant(compiler, identifierNameNullTerminated)
+                                             ? BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, stackIndex)
+                                             : BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, stackIndex);
+        emitBytecode(compiler, bytecodeToGetVariable);
     }
 
     increaseStackHeight(compiler);
@@ -562,6 +727,12 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
         case VAL_DECLARATION_STATEMENT:
             visitValDeclarationStatement(compiler, statement->as.valDeclarationStatement);
             break;
+        case VAR_DECLARATION_STATEMENT:
+            visitVarDeclarationStatement(compiler, statement->as.varDeclarationStatement);
+            break;
+        case ASSIGNMENT_STATEMENT:
+            visitAssignmentStatement(compiler, statement->as.assignmentStatement);
+            break;
         case PRINT_STATEMENT:
             visitPrintStatement(compiler, statement->as.printStatement);
             break;
@@ -588,10 +759,6 @@ CompiledCode compile(Compiler* compiler) {
         Statement* statement = compiler->ASTSource->rootStatements[i];
         visitStatement(compiler, statement);
     }
-
-    // #if DEBUG_COMPILER
-    //     printBytecodeArray(compiler->compiledBytecode);
-    // #endif
 
 #if DEBUG_COMPILER
     clock_t endTime = clock();

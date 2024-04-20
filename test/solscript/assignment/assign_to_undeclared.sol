@@ -1,0 +1,1 @@
+a = 1; // Should cause a compiler error - 'a' not declared

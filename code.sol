@@ -1,5 +1,6 @@
-val a = { 
-    val b = 2; 
-    3;
-};
+var a;
+{
+  a = 1;
+  print a;
+}
 print a;

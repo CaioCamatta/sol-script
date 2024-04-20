@@ -91,6 +91,8 @@ punctuator: one of
     ( ) { } . * + - ! % < > = <= >= == != || && ; ,
 ```
 
+Note that comments are treated as whitespace.
+
 #### Example
 For the statement `print 2+3-4;`, the scanner would parse the following tokens:
 ```
@@ -106,7 +108,7 @@ TOKEN_EOF(lexeme="", line=2, column=2)
 
 ### Syntactical Grammar
 
-The syntactical grammar _should_ and LALR(1) grammar, i.e. it can be parsed by a left-to-right parser with 1 token of look-ahead. In SolScript, a program Source is a series of Statements. Statements use Expressions and Literals. Expressions are evaluated to a Value at run time.
+The syntactical grammar _should_ be an LALR(2) grammar, i.e. it can be parsed by a left-to-right parser with 2 tokens of look-ahead. In SolScript, a program Source is a series of Statements. Statements use Expressions and Literals. Expressions are evaluated to a Value at run time.
 
 This grammar is primarily inspired by the [ANSI C grammar](https://slebok.github.io/zoo/c/c90/sdf/extracted/index.html#Statement), [Lox](https://craftinginterpreters.com/) and Scala.
 
@@ -120,38 +122,40 @@ statement:
   iteration-statement
   selection-statement
   return-statement
-  expression-statement
-  assignment-statement
   print-statement
+  assignment-statement
+  expression-statement # if this is a call expresison or an identifier, check next character. If next is  a "." 
 
 declaration:
   var-declaration
   val-declaration
 
 var-declaration:
-  "var" identifier ( "=" expression )?  ";"
+  "var" identifier ";"
+  "var" identifier "=" expression  ";"
 
 val-declaration:
   "val" identifier "=" expression ";"
 
 block-statement:
-  "{" statement* "}" ";"
-  block-expression
+  "{" statement* "}"
 
 iteration-statement:
   "while" "(" expression ")" block-statement
 
 selection-statement:
-  "if" "(" expression ")" statement ( "else" statement )?
+  "if" "(" expression ")" statement 
+  "if" "(" expression ")" statement "else" statement
 
 return-statement:
-  "return" ( expression )? ";"
+  "return" ";"
+  "return" expression ";"
   
 expression-statement:
   expression ";"
 
-assignment-statement:
-  postfix-expression "=" expression
+assignment-statement: 
+  expression "=" expression  # the compiler ensures the expression is a valid target of assigment.
 
 print-statement:
   "print" expression ";"
@@ -178,14 +182,14 @@ struct-declaration:
 
 
 function-expression:
-  "(" (parameter-list)? ")" "=>" "{" statement "}"
+  "(" ")" "=>" "{" statement "}"
+  "(" parameter-list ")" "=>" "{" statement "}"
   
 parameter-list:
   identifier ( "," identifier )*
 
 argument-list:
   expression ( "," expression )*
-
 
 
 block-expression:
@@ -212,30 +216,30 @@ multiplicative-expression:
   unary-expression ( ( "/" | "*" ) unary-expression )* 
 
 unary-expression:
-  ( "!"* | "-"* )? postfix-expression
+  postfix-call-expression
+  ( "!" )* postfix-call-expression
+  ( "-" )* postfix-call-expression
 
-postfix-expression:
+postfix-call-expression:
   primary-expression
-  postfix-expression "." identifier  
+  "this" "." postfix-call-expression
+  identifier "." postfix-call-expression
+  identifier "(" argument-list? ")"  "." postfix-call-expression
 
 primary-expression:
   number-literal
   string-literal
-  block-expression
   identifier
+  block-expression
   ( expression )
   "true"
   "false"
   "null"
-  "this"
 
-call-expression:
-  unary-expression
-	
 
 number-literal      # terminal
 string-literal      # terminal
-identifier-literal  # terminal
+identifier          # terminal
 ```
 
 #### Example
@@ -331,16 +335,17 @@ The following features are necessary a proper v1.0 release, in rough order:
  - [X] Add support for variable declaration and access
  - [X] Implement print statements
  - [X] Implement additive expression
- - [X] Implement all other "simple" expressions, i.e. excluding call-expressions
+ - [X] Implement all other "simple" expressions, i.e. excluding postfix-call-expressions
  - [X] Implement string literals
  - [X] Implement block statements
  - [X] Add [_FAST](https://stackoverflow.com/questions/74998947/whats-pythons-load-fast-bytecode-instruction-fast-at) local variables
  - [X] Implement selection statement (`if`s)
  - [X] Add conditional debugging/logging for tests that fail
  - [X] Implement block expressions
- - [ ] Implement functions and returns
+ - [X] Implement assignment statements
+ - [X] Implement non-constant variables
  - [ ] Implement iteration statement (loops)
- - [ ] Implement assignment statements
+ - [ ] Implement functions and returns
  - [ ] Implement the rest of the parser for the whole syntax grammar
  - [ ] Add CLI argument to enable or disable debugging logs in the REPL.
  - [ ] Improve error logs; print line and column

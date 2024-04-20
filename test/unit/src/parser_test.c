@@ -892,3 +892,95 @@ int test_parser_block_expression_as_if_condition() {
     freeSource(source);
     return SUCCESS_RETURN_CODE;
 }
+
+int test_parser_var_declaration() {
+    // var a;
+    Token tokensArray[] = {
+        createToken(TOKEN_VAR, "var"),
+        createToken(TOKEN_IDENTIFIER, "a"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 4,
+        .size = 4};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == VAR_DECLARATION_STATEMENT);
+
+    VarDeclarationStatement* varDecl = statement->as.varDeclarationStatement;
+    ASSERT(strcmp(varDecl->identifier->token.start, "a") == 0);
+    ASSERT(varDecl->maybeExpression == NULL);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_var_declaration_with_initializer() {
+    // var a = 42;
+    Token tokensArray[] = {
+        createToken(TOKEN_VAR, "var"),
+        createToken(TOKEN_IDENTIFIER, "a"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_NUMBER, "42"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 6,
+        .size = 6};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == VAR_DECLARATION_STATEMENT);
+
+    VarDeclarationStatement* varDecl = statement->as.varDeclarationStatement;
+    ASSERT(strcmp(varDecl->identifier->token.start, "a") == 0);
+    ASSERT(varDecl->maybeExpression != NULL);
+    ASSERT(varDecl->maybeExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(varDecl->maybeExpression->as.primaryExpression->literal->type == NUMBER_LITERAL);
+    ASSERT(strcmp(varDecl->maybeExpression->as.primaryExpression->literal->as.numberLiteral->token.start, "42") == 0);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_assignment() {
+    // a = 2;
+    Token tokensArray[] = {
+        createToken(TOKEN_IDENTIFIER, "a"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_NUMBER, "2"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 5,
+        .size = 5};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == ASSIGNMENT_STATEMENT);
+
+    AssignmentStatement* assignmentStmt = statement->as.assignmentStatement;
+    ASSERT(assignmentStmt->target->type == PRIMARY_EXPRESSION);
+    ASSERT(assignmentStmt->target->as.primaryExpression->literal->type == IDENTIFIER_LITERAL);
+    ASSERT(strcmp(assignmentStmt->target->as.primaryExpression->literal->as.identifierLiteral->token.start, "a") == 0);
+
+    ASSERT(assignmentStmt->value->type == PRIMARY_EXPRESSION);
+    ASSERT(assignmentStmt->value->as.primaryExpression->literal->type == NUMBER_LITERAL);
+    ASSERT(strcmp(assignmentStmt->value->as.primaryExpression->literal->as.numberLiteral->token.start, "2") == 0);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}

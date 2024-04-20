@@ -7,6 +7,7 @@ false
 true
 null
 val
+var
 print
 
 // Identifier

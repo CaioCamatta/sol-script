@@ -42,6 +42,9 @@ static void all_tests() {
     RUN_TEST(test_parser_block_expression_nested);
     RUN_TEST(test_parser_block_expression_with_statements);
     RUN_TEST(test_parser_block_expression_as_if_condition);
+    RUN_TEST(test_parser_var_declaration);
+    RUN_TEST(test_parser_var_declaration_with_initializer);
+    RUN_TEST(test_parser_assignment);
 
     // Compiler tests
     RUN_TEST(test_compiler);
@@ -66,6 +69,9 @@ static void all_tests() {
     RUN_TEST(test_compiler_block_expression_simple);
     RUN_TEST(test_compiler_block_expression_nested);
     RUN_TEST(test_compiler_block_expression_with_statements);
+    RUN_TEST(test_compiler_var_declaration_and_assignment_global);
+    RUN_TEST(test_compiler_var_declaration_and_assignment_local);
+    RUN_TEST(test_compiler_global_declaration_and_local_assignment);
 
     // VM tests
     RUN_TEST(test_vm_addition);
@@ -84,6 +90,12 @@ static void all_tests() {
     RUN_TEST(test_vm_simple_block_expression);
     RUN_TEST(test_vm_block_expression_with_statements);
     RUN_TEST(test_vm_block_expression_as_if_condition);
+    RUN_TEST(test_vm_var_declaration_and_assignment_global);
+    RUN_TEST(test_vm_var_declaration_and_assignment_local);
+    RUN_TEST(test_vm_block_expression_with_val_declarations);
+    RUN_TEST(test_vm_var_val_declarations_in_nested_blocks);
+    RUN_TEST(test_vm_var_assignment_global_and_local);
+    RUN_TEST(test_vm_global_declaration_and_local_assignment);
 }
 
 int main(int argc, char **argv) {

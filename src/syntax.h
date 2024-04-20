@@ -9,7 +9,9 @@ typedef struct ExpressionStatement ExpressionStatement;
 typedef struct PrintStatement PrintStatement;
 typedef struct BlockStatement BlockStatement;
 typedef struct ValDeclarationStatement ValDeclarationStatement;
+typedef struct VarDeclarationStatement VarDeclarationStatement;
 typedef struct SelectionStatement SelectionStatement;
+typedef struct AssignmentStatement AssignmentStatement;
 typedef struct LogicalOrExpression LogicalOrExpression;
 typedef struct LogicalAndExpression LogicalAndExpression;
 typedef struct EqualityExpression EqualityExpression;
@@ -29,9 +31,11 @@ typedef struct StringLiteral StringLiteral;
 typedef enum {
     EXPRESSION_STATEMENT,       // Stack effect: 0
     VAL_DECLARATION_STATEMENT,  // Stack effect: +1 if local, 0 if global.
+    VAR_DECLARATION_STATEMENT,  // Stack effect: +1 if local, 0 if global.
     PRINT_STATEMENT,            // Stack effect: 0
     BLOCK_STATEMENT,            // Stack effect: 0
-    SELECTION_STATEMENT         // Stack effect: 1
+    SELECTION_STATEMENT,        // Stack effect: 1
+    ASSIGNMENT_STATEMENT        // Stack effect: 0
 } StatementType;
 
 typedef enum {
@@ -59,9 +63,11 @@ typedef struct {
     union {
         ExpressionStatement *expressionStatement;
         ValDeclarationStatement *valDeclarationStatement;
+        VarDeclarationStatement *varDeclarationStatement;
         PrintStatement *printStatement;
         BlockStatement *blockStatement;
         SelectionStatement *selectionStatement;
+        AssignmentStatement *assignmentStatement;
     } as;
 } Statement;
 
@@ -114,10 +120,20 @@ struct ValDeclarationStatement {
     Expression *expression;
 };
 
+struct VarDeclarationStatement {
+    IdentifierLiteral *identifier;
+    Expression *maybeExpression;
+};
+
 struct SelectionStatement {
     Expression *conditionExpression;
     Statement *trueStatement;   // The parser will enforce that these statements are BlockStatements
     Statement *falseStatement;  // NULL if there's no else
+};
+
+struct AssignmentStatement {
+    Expression *target;
+    Expression *value;
 };
 
 struct LogicalOrExpression {
