@@ -203,6 +203,10 @@ void step(VM* vm) {
             push(vm, BOOL_VAL(true));
             break;
         }
+        case OP_NULL: {
+            push(vm, NULL_VAL());
+            break;
+        }
         case OP_FALSE: {
             push(vm, BOOL_VAL(false));
             break;

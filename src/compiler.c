@@ -75,7 +75,8 @@ static void increaseStackHeight(Compiler* compiler) {
     if (compiler->currentStackHeight == UCHAR_MAX) {
         errorAndExit(
             "StackOverflowError: The Compiler has predicted that this code will "
-            "cause the VM stack to overflow.");
+            "cause the VM stack to overflow.");  // This error often indicates that something is wrong
+                                                 // with how the compiler tracks the predicted stack height
     }
 
     compiler->currentStackHeight++;
@@ -86,7 +87,10 @@ static void increaseStackHeight(Compiler* compiler) {
  * of the height. For example, an addition decreases the height of the stack by 1 (pop, pop, push).
  */
 static void decreaseStackHeight(Compiler* compiler) {
-    compiler->currentStackHeight--;
+    if (compiler->currentStackHeight > 0)
+        compiler->currentStackHeight--;
+    else
+        errorAndExit("InvalidStateException: the Compiler attempted to decrease the predicted stack height below 0.")
 }
 
 static double tokenTodouble(Token token) {
@@ -428,7 +432,8 @@ static void visitVarDeclarationStatement(Compiler* compiler, VarDeclarationState
 
         emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAR, constantIndex));
 
-        decreaseStackHeight(compiler);  // Globals are popped from the stack after they're set.
+        if (varDeclarationStatement->maybeExpression != NULL)
+            decreaseStackHeight(compiler);  // The value assigned to the Global is popped from the stack after we set the Global.
     } else {
         if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit("Error: var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
 
