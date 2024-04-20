@@ -166,6 +166,13 @@ void step(VM* vm) {
             push(vm, value);
             break;
         }
+        case OP_SET_GLOBAL_VAR: {
+            Value value = pop(vm);
+            size_t constantIndex = instruction->maybeOperand1;
+            Constant constant = vm->compiledCode.constantPool.values[constantIndex];
+            hashTableInsert(&vm->globals, constant.as.string, value);
+            break;
+        }
         case OP_DEFINE_LOCAL_VAL_FAST:
         case OP_DEFINE_LOCAL_VAR_FAST:
             break;  // no action necessary to set locals. The compiler handles everything. 🤯
@@ -179,7 +186,7 @@ void step(VM* vm) {
         case OP_SET_LOCAL_VAR_FAST: {
             // Copy the value at the top of the stack onto the slot corresponding to the local var
             size_t stackIndex = instruction->maybeOperand1;
-            vm->stack[stackIndex] = peek(vm, 0);
+            vm->stack[stackIndex] = pop(vm);
             break;
         }
         case OP_POPN: {
