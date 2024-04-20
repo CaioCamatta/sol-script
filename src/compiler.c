@@ -11,6 +11,7 @@
 #include "debug.h"
 #include "parser.h"
 #include "syntax.h"
+#include "util/hash_table.h"
 #include "vm.h"
 
 void initCompiler(Compiler* compiler, Source* ASTSource) {
@@ -23,6 +24,7 @@ void initCompiler(Compiler* compiler, Source* ASTSource) {
     compiler->constantPool = constantPool;
     compiler->currentStackHeight = 0;
     compiler->isInGlobalScope = true;
+    initHashTable(&compiler->tempGlobals);
 
     for (int i = 0; i < STACK_MAX; i++) {
         compiler->tempStack[i].name = NULL;
@@ -145,6 +147,36 @@ static size_t addConstantToPool(Compiler* compiler, Constant constant) {
 }
 
 /**
+ * Add a global variable to the compiler's table of globals.
+ */
+static void addGlobalToTable(Compiler* compiler, char* name, bool isConstant) {
+    hashTableInsert(&compiler->tempGlobals, name, (Value){.as.booleanVal = isConstant});
+}
+/**
+ * Check if a global variable in the compiler's table of globals is constant (i.e. `val`).
+ * Throws an error if the global doesn't exist.
+ */
+static bool isGlobalInTable(Compiler* compiler, char* name) {
+    HashTableEntry* entry = hashTableGet(&compiler->tempGlobals, name);
+    return entry->key != NULL;
+}
+
+/**
+ * Check if a global variable in the compiler's table of globals is constant (i.e. `val`).
+ * Throws an error if the global doesn't exist.
+ */
+static bool isGlobalConstant(Compiler* compiler, char* name) {
+    HashTableEntry* entry = hashTableGet(&compiler->tempGlobals, name);
+    if (entry) {
+        return entry->value.as.booleanVal;
+    } else {
+        errorAndExit(
+            "InvalidStateException: Attempted to check if a global variable is constant, but the "
+            "global doesn't exist in the Compiler's hash table.")
+    }
+}
+
+/**
  * Given a local variable name, find its position in the stack. (We can determine at compile time
  * where that local will be in the stack.)
  *
@@ -165,9 +197,9 @@ static int findLocalByName(Compiler* compiler, char* name) {
 /**
  * Add a local variable to the Compiler's temporary stack.
  */
-static void addLocalToTempStack(Compiler* compiler, char* name) {
+static void addLocalToTempStack(Compiler* compiler, char* name, bool isConstant) {
     // The local will be right below the current stack height
-    compiler->tempStack[compiler->currentStackHeight - 1] = (Local){.name = name};
+    compiler->tempStack[compiler->currentStackHeight - 1] = (Local){.name = name, .isConstant = isConstant};
 }
 
 /**
@@ -311,10 +343,19 @@ static void visitAssignmentStatement(Compiler* compiler, AssignmentStatement* as
             char* identifierName = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
 
             if (compiler->isInGlobalScope) {
-                // Global variable assignment
-                Constant constant = IDENTIFIER_CONST(identifierName);
-                size_t constantIndex = addConstantToPool(compiler, constant);
-                emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAR, constantIndex));
+                if (isGlobalInTable(compiler, identifierName)) {
+                    if (isGlobalConstant(compiler, identifierName)) {
+                        errorAndExit("Error: Cannot modify constant '%s'.", identifierName);
+                    }
+
+                    // Global variable assignment
+                    Constant constant = IDENTIFIER_CONST(identifierName);
+                    size_t constantIndex = addConstantToPool(compiler, constant);
+                    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAR, constantIndex));
+                } else {
+                    errorAndExit("Error: identifier '%s' not declared.", identifierName);
+                }
+
             } else {
                 // Local variable assignment
                 size_t stackIndex = findLocalByName(compiler, identifierName);
@@ -348,18 +389,21 @@ static void visitValDeclarationStatement(Compiler* compiler, ValDeclarationState
     Constant constant = IDENTIFIER_CONST(copyStringToHeap(valDeclarationStatement->identifier->token.start,
                                                           valDeclarationStatement->identifier->token.length));
 
+    bool isVariableConstant = true;  // Vals cannot be modified
+
     if (compiler->isInGlobalScope) {
-        // TODO: Remove duplicated check; addConstantToPool already runs findConstantInPool.
-        if (findConstantInPool(compiler, constant) != -1) errorAndExit("Error: val \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
+        if (isGlobalInTable(compiler, constant.as.string)) errorAndExit("Error: val \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
 
         size_t constantIndex = addConstantToPool(compiler, constant);
+        addGlobalToTable(compiler, constant.as.string, isVariableConstant);  // We also keep track that this global exists so we can prevent redeclaration later.
+
         emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, constantIndex));
 
         decreaseStackHeight(compiler);  // Globals are popped from the stack.
     } else {
         if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit("Error: val \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
 
-        addLocalToTempStack(compiler, constant.as.string);
+        addLocalToTempStack(compiler, constant.as.string, isVariableConstant);
         emitBytecode(compiler, BYTECODE(OP_DEFINE_LOCAL_VAL_FAST));
     }
 }
@@ -373,18 +417,22 @@ static void visitVarDeclarationStatement(Compiler* compiler, VarDeclarationState
     Constant constant = IDENTIFIER_CONST(copyStringToHeap(varDeclarationStatement->identifier->token.start,
                                                           varDeclarationStatement->identifier->token.length));
 
+    bool isVariableConstant = false;  // Vars can be modified
+
     if (compiler->isInGlobalScope) {
-        // TODO: Remove duplicated check; addConstantToPool already runs findConstantInPool.
-        if (findConstantInPool(compiler, constant) != -1) errorAndExit("Error: var \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
+        // Preventing global redeclaration is an arbitrary choice.
+        if (isGlobalInTable(compiler, constant.as.string)) errorAndExit("Error: var \"%s\" is already declared. Redeclaration is not permitted as it often leads to confusion.", constant.as.string);
 
         size_t constantIndex = addConstantToPool(compiler, constant);
+        addGlobalToTable(compiler, constant.as.string, isVariableConstant);  // We also keep track that this global exists so we can prevent redeclaration later.
+
         emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAR, constantIndex));
 
         decreaseStackHeight(compiler);  // Globals are popped from the stack after they're set.
     } else {
         if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit("Error: var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
 
-        addLocalToTempStack(compiler, constant.as.string);
+        addLocalToTempStack(compiler, constant.as.string, isVariableConstant);
         emitBytecode(compiler, BYTECODE(OP_DEFINE_LOCAL_VAR_FAST));
     }
 }
@@ -531,12 +579,12 @@ static void visitIdentifierLiteral(Compiler* compiler, IdentifierLiteral* identi
     char* identifierNameNullTerminated = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
 
     if (compiler->isInGlobalScope) {
-        // Find address of this identifier in the constant pool
         Constant constant = (Constant){
             .type = CONST_TYPE_IDENTIFIER,
             .as = {identifierNameNullTerminated}};
         size_t index = findConstantInPool(compiler, constant);
-        if (index == -1) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
+
+        if (!isGlobalInTable(compiler, identifierNameNullTerminated)) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
 
         // Generate bytecode to get the variable
         Bytecode bytecodeToGetVariable = BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index);

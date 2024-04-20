@@ -6,16 +6,31 @@
 #include "bytecode.h"
 #include "syntax.h"
 #include "token.h"
+#include "util/hash_table.h"
 
 #define STACK_MAX 256
 
 /**
  * Represents a local variable in the temporary stack maintained by the compiler.
- * This exists so we can optimize local variable access.
+ *
+ * The original reason for this struct to exist is to allow SolScript to treat Local vs Global access
+ * differently so we can optimize local variable access for speed.
  */
 typedef struct {
     char* name;  // Null-terminated
+    bool isConstant;
 } Local;
+
+/**
+ * Represents a global variable in the temporary hash table maintained by the compiler.
+ *
+ * The original reason for this struct to exist is to allow the compiler to prevent globals from being re-defined
+ * and `val`s from being updated.
+ */
+typedef struct {
+    char* name;
+    bool isConstant;
+} Global;
 
 /**
  * Compiler struct to facilitate compiling an AST into bytecode.
@@ -32,8 +47,9 @@ typedef struct {
                            // This is used to distinguish between local variables and global variables.
 
     u_int8_t currentStackHeight;  // The next empty spot on the stack
-    Local tempStack[STACK_MAX];   // A copy of the VM's stack so we can know at compile time what position
+    Local tempStack[STACK_MAX];   // A predictive copy of the VM's stack so we can know at compile time what position
                                   // local variables will be in. Holds only strings for variable names.
+    HashTable tempGlobals;        // A hash table to keep track of globals to prevent redefinition and enforce constant `val`s.
 } Compiler;
 
 /* Initialize a Compiler with an AST to be parsed */
