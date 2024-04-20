@@ -206,11 +206,38 @@ static int findLocalByName(Compiler* compiler, char* name) {
 }
 
 /**
- * Add a local variable to the Compiler's temporary stack.
+ * Check if a local variable in the compiler's table of locals is constant (i.e. `val`).
+ * Throws an error if the local doesn't exist.
+ */
+static int isLocalConstant(Compiler* compiler, char* name) {
+    int index = findLocalByName(compiler, name);
+    if (index == -1)
+        errorAndExit(
+            "InvalidStateException: Attempted to check if a local variable is constant, but the "
+            "local doesn't exist.") else {
+            return compiler->tempStack[index].isConstant;
+        }
+}
+/**
+ * Check if a local variable in the compiler's table of locals is constant (i.e. `val`).
+ * Throws an error if the local doesn't exist.
+ */
+static int isLocalConstantByIndex(Compiler* compiler, int indexInTempStack) {
+    if (indexInTempStack == -1)
+        errorAndExit(
+            "InvalidStateException: Attempted to check if a local variable is constant, but the "
+            "local doesn't exist.") else {
+            return compiler->tempStack[indexInTempStack].isConstant;
+        }
+}
+
+/**
+ * Add a local variable to the Compiler's temporary stack and increase stack height.
  */
 static void addLocalToTempStack(Compiler* compiler, char* name, bool isConstant) {
     // The local will be right below the current stack height
-    compiler->tempStack[compiler->currentStackHeight - 1] = (Local){.name = name, .isConstant = isConstant};
+    compiler->tempStack[compiler->currentStackHeight] = (Local){.name = name, .isConstant = isConstant};
+    increaseStackHeight(compiler);
 }
 
 /**
@@ -356,7 +383,7 @@ static void visitAssignmentStatement(Compiler* compiler, AssignmentStatement* as
             if (compiler->isInGlobalScope) {
                 if (isGlobalInTable(compiler, identifierName)) {
                     if (isGlobalConstant(compiler, identifierName)) {
-                        errorAndExit("Error: Cannot modify constant '%s'.", identifierName);
+                        errorAndExit("Error: Cannot modify global constant '%s'.", identifierName);
                     }
 
                     // Global variable assignment
@@ -370,6 +397,11 @@ static void visitAssignmentStatement(Compiler* compiler, AssignmentStatement* as
             } else {
                 // Local variable assignment
                 size_t stackIndex = findLocalByName(compiler, identifierName);
+
+                if (isLocalConstantByIndex(compiler, stackIndex)) {
+                    errorAndExit("Error: Cannot modify local constant '%s'.", identifierName);
+                }
+
                 if (stackIndex != -1) {
                     emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_LOCAL_VAR_FAST, stackIndex));
                 } else {
@@ -420,10 +452,12 @@ static void visitValDeclarationStatement(Compiler* compiler, ValDeclarationState
 }
 
 static void visitVarDeclarationStatement(Compiler* compiler, VarDeclarationStatement* varDeclarationStatement) {
-    if (varDeclarationStatement->maybeExpression != NULL)
+    bool isValueNull = varDeclarationStatement->maybeExpression != NULL;
+    if (isValueNull)
         visitExpression(compiler, varDeclarationStatement->maybeExpression);
-    else
+    else {
         emitBytecode(compiler, BYTECODE(OP_NULL));
+    }
 
     Constant constant = IDENTIFIER_CONST(copyStringToHeap(varDeclarationStatement->identifier->token.start,
                                                           varDeclarationStatement->identifier->token.length));
@@ -439,12 +473,13 @@ static void visitVarDeclarationStatement(Compiler* compiler, VarDeclarationState
 
         emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAR, constantIndex));
 
-        if (varDeclarationStatement->maybeExpression != NULL)
+        if (isValueNull)
             decreaseStackHeight(compiler);  // The value assigned to the Global is popped from the stack after we set the Global.
     } else {
         if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit("Error: var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
 
         addLocalToTempStack(compiler, constant.as.string, isVariableConstant);
+
         emitBytecode(compiler, BYTECODE(OP_DEFINE_LOCAL_VAR_FAST));
     }
 }
@@ -599,7 +634,9 @@ static void visitIdentifierLiteral(Compiler* compiler, IdentifierLiteral* identi
         if (!isGlobalInTable(compiler, identifierNameNullTerminated)) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
 
         // Generate bytecode to get the variable
-        Bytecode bytecodeToGetVariable = BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index);
+        Bytecode bytecodeToGetVariable = isGlobalConstant(compiler, identifierNameNullTerminated)
+                                             ? BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index)
+                                             : BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, index);
         emitBytecode(compiler, bytecodeToGetVariable);
     } else {
         size_t stackIndex = findLocalByName(compiler, identifierNameNullTerminated);
@@ -613,10 +650,14 @@ static void visitIdentifierLiteral(Compiler* compiler, IdentifierLiteral* identi
             if (index == -1) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
 
             // If we found a global, emit the appropriate bytecode
-            Bytecode bytecodeToGetVariable = BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index);
+            Bytecode bytecodeToGetVariable = isGlobalConstant(compiler, identifierNameNullTerminated)
+                                                 ? BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index)
+                                                 : BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, index);
             emitBytecode(compiler, bytecodeToGetVariable);
         } else {
-            Bytecode bytecodeToGetVariable = BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, stackIndex);
+            Bytecode bytecodeToGetVariable = isLocalConstant(compiler, identifierNameNullTerminated)
+                                                 ? BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, stackIndex)
+                                                 : BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, stackIndex);
             emitBytecode(compiler, bytecodeToGetVariable);
         }
     }

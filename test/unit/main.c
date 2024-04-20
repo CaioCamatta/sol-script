@@ -69,6 +69,8 @@ static void all_tests() {
     RUN_TEST(test_compiler_block_expression_simple);
     RUN_TEST(test_compiler_block_expression_nested);
     RUN_TEST(test_compiler_block_expression_with_statements);
+    RUN_TEST(test_compiler_var_declaration_and_assignment_global);
+    RUN_TEST(test_compiler_var_declaration_and_assignment_local);
 
     // VM tests
     RUN_TEST(test_vm_addition);

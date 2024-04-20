@@ -317,37 +317,37 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
                 printf("LOAD_CONSTANT #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_DEFINE_GLOBAL_VAL:
-                printf("OP_DEFINE_GLOBAL_VAL #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                printf("DEFINE_GLOBAL_VAL #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_GET_GLOBAL_VAL:
-                printf("OP_GET_GLOBAL_VAL #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                printf("GET_GLOBAL_VAL #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_DEFINE_LOCAL_VAL_FAST:
-                printf("OP_DEFINE_LOCAL_VAL_FAST\n");
+                printf("DEFINE_LOCAL_VAL_FAST\n");
                 break;
             case OP_GET_LOCAL_VAL_FAST:
-                printf("OP_GET_LOCAL_VAL_FAST #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                printf("GET_LOCAL_VAL_FAST #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_DEFINE_GLOBAL_VAR:
-                printf("OP_DEFINE_GLOBAL_VAR #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                printf("DEFINE_GLOBAL_VAR #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_GET_GLOBAL_VAR:
-                printf("OP_GET_GLOBAL_VAR #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                printf("GET_GLOBAL_VAR #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_DEFINE_LOCAL_VAR_FAST:
-                printf("OP_DEFINE_LOCAL_VAR_FAST\n");
+                printf("DEFINE_LOCAL_VAR_FAST\n");
                 break;
             case OP_GET_LOCAL_VAR_FAST:
-                printf("OP_GET_LOCAL_VAR_FAST #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                printf("GET_LOCAL_VAR_FAST #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_SET_GLOBAL_VAR:
-                printf("OP_SET_GLOBAL_VAR #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                printf("SET_GLOBAL_VAR #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_SET_LOCAL_VAR_FAST:
-                printf("OP_SET_LOCAL_VAR_FAST #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                printf("SET_LOCAL_VAR_FAST #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_POPN:
-                printf("OP_POPN %zu\n", bytecodeArray.values[i].maybeOperand1);
+                printf("POPN %zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_PRINT:
                 printf("PRINT\n");
@@ -404,13 +404,13 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
                 printf("BINARY_NOT_EQUAL\n");
                 break;
             case OP_JUMP_IF_FALSE:
-                printf("OP_JUMP_IF_FALSE #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                printf("JUMP_IF_FALSE #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_JUMP:
-                printf("OP_JUMP #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                printf("JUMP #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
             case OP_SWAP:
-                printf("OP_SWAP #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                printf("SWAP #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
         }
     }

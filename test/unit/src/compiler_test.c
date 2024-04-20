@@ -168,6 +168,25 @@
         }                                                                                                               \
     }
 
+#define VAR_DECLARATION_STATEMENT(identifierName, expressionInput)                                                      \
+    &(Statement) {                                                                                                      \
+        .type = VAR_DECLARATION_STATEMENT,                                                                              \
+        .as.varDeclarationStatement = &(VarDeclarationStatement) {                                                      \
+            .identifier = &(IdentifierLiteral){                                                                         \
+                .token = (Token){.type = TOKEN_IDENTIFIER, .start = identifierName, .length = strlen(identifierName)}}, \
+            .maybeExpression = expressionInput                                                                          \
+        }                                                                                                               \
+    }
+
+#define ASSIGNMENT_STATEMENT(targetExpression, valueExpression) \
+    &(Statement) {                                              \
+        .type = ASSIGNMENT_STATEMENT,                           \
+        .as.assignmentStatement = &(AssignmentStatement) {      \
+            .target = targetExpression,                         \
+            .value = valueExpression                            \
+        }                                                       \
+    }
+
 #define EXPRESSION_STATEMENT(expressionInput)              \
     &(Statement) {                                         \
         .type = EXPRESSION_STATEMENT,                      \
@@ -1096,6 +1115,71 @@ int test_compiler_block_expression_with_statements() {
     ASSERT(compiledCode.constantPool.values[1].as.number == 3);
     ASSERT(strcmp(compiledCode.constantPool.values[2].as.string, "a") == 0);
 
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_var_declaration_and_assignment_global() {
+    Source testSource = {
+        .rootStatements = {
+            VAR_DECLARATION_STATEMENT("a", NULL),
+            ASSIGNMENT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("a")), PRIMARY_EXPRESSION(NUMBER_LITERAL("10"))),
+            PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("a")))},
+        .numberOfStatements = 3,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    // Verify bytecode
+    Bytecode expectedBytecode[] = {
+        BYTECODE(OP_NULL),
+        BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAR, 0),
+        BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 1),
+        BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAR, 0),
+        BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, 0),
+        BYTECODE(OP_PRINT),
+    };
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 6};
+
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+
+    // Clean up
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+// Test var declaration and assignment in local scope
+int test_compiler_var_declaration_and_assignment_local() {
+    Source testSource = {
+        .rootStatements = {
+            BLOCK_STATEMENT(
+                VAR_DECLARATION_STATEMENT("a", NULL),
+                ASSIGNMENT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("a")), PRIMARY_EXPRESSION(NUMBER_LITERAL("10"))),
+                PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("a"))))},
+        .numberOfStatements = 1,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    // Verify bytecode
+    Bytecode expectedBytecode[] = {
+        BYTECODE(OP_NULL),
+        BYTECODE(OP_DEFINE_LOCAL_VAR_FAST),
+        BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0),
+        BYTECODE_OPERAND_1(OP_SET_LOCAL_VAR_FAST, 0),
+        BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, 0),
+        BYTECODE(OP_PRINT),
+        BYTECODE_OPERAND_1(OP_POPN, 1),
+    };
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 7};
+
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+
+    // Clean up
     FREE_ARRAY(compiledCode.bytecodeArray);
     FREE_ARRAY(compiledCode.constantPool);
 
