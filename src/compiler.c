@@ -43,11 +43,22 @@ static void visitLiteral(Compiler* compiler, Literal* literal);
  * TODO: make it so we don't crash completely. It should be simple to print and error, move to compiling the next statement,
  * then after all statements have been compiled print all errors and exit the program.
  */
+#if DEBUG_COMPILER
+#define errorAndExit(...)                                \
+    {                                                    \
+        printCompiledCode((CompiledCode){                \
+            .bytecodeArray = compiler->compiledBytecode, \
+            .constantPool = compiler->constantPool});    \
+        fprintf(stderr, __VA_ARGS__);                    \
+        exit(EXIT_FAILURE);                              \
+    }
+#else
 #define errorAndExit(...)             \
     {                                 \
         fprintf(stderr, __VA_ARGS__); \
         exit(EXIT_FAILURE);           \
     }
+#endif
 
 // Add bytecode to the compiled program.
 static void emitBytecode(Compiler* compiler, Bytecode bytecode) {
@@ -60,7 +71,9 @@ static void emitBytecode(Compiler* compiler, Bytecode bytecode) {
  */
 static void increaseStackHeight(Compiler* compiler) {
     if (compiler->currentStackHeight == UCHAR_MAX) {
-        errorAndExit("CompilerStackOverflowError: VM stack will overflow.");
+        errorAndExit(
+            "StackOverflowError: The Compiler has predicted that this code will "
+            "cause the VM stack to overflow.");
     }
 
     compiler->currentStackHeight++;
@@ -287,8 +300,8 @@ static void visitAssignmentStatement(Compiler* compiler, AssignmentStatement* as
     // Compile the code to compute the new value
     visitExpression(compiler, assignmentStatement->value);
 
-    // Visit the target expression to determine the assignment target
-    visitExpression(compiler, assignmentStatement->target);  // (TODO: this might not be needed at all)
+    // We don't need to visit the target expression.
+    // visitExpression(compiler, assignmentStatement->target);
 
     // Emit bytecode based on the target type
     if (assignmentStatement->target->type == PRIMARY_EXPRESSION) {
@@ -320,9 +333,7 @@ static void visitAssignmentStatement(Compiler* compiler, AssignmentStatement* as
         errorAndExit("Invalid assignment target.");
     }
 
-    // Remove both the target and the new value from the stack.
-    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_POPN, 2));
-    decreaseStackHeight(compiler);
+    // The new value is already popped by the `OP_SET_*` operation, so we just need to update the stack height.
     decreaseStackHeight(compiler);
 }
 
@@ -664,10 +675,6 @@ CompiledCode compile(Compiler* compiler) {
         Statement* statement = compiler->ASTSource->rootStatements[i];
         visitStatement(compiler, statement);
     }
-
-    // #if DEBUG_COMPILER
-    //     printBytecodeArray(compiler->compiledBytecode);
-    // #endif
 
 #if DEBUG_COMPILER
     clock_t endTime = clock();
