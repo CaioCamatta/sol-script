@@ -85,11 +85,18 @@ static void increaseStackHeight(Compiler* compiler) {
 /**
  * The compiler can know in advance how tall the VM stack will be at any point. This function helps keep track
  * of the height. For example, an addition decreases the height of the stack by 1 (pop, pop, push).
+ *
+ * When reducing the stack height, this function also clears the slots the were freed.
+ * Example:
+ *  Stack: [A B C D(top) X X]
+ *  decreaseStackHeight(1)
+ *  Stack: [A B C(top) X X X]
  */
 static void decreaseStackHeight(Compiler* compiler) {
-    if (compiler->currentStackHeight > 0)
+    if (compiler->currentStackHeight > 0) {
+        compiler->tempStack[compiler->currentStackHeight - 1].name = NULL;
         compiler->currentStackHeight--;
-    else
+    } else
         errorAndExit("InvalidStateException: the Compiler attempted to decrease the predicted stack height below 0.")
 }
 
