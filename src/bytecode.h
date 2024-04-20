@@ -14,13 +14,15 @@
 typedef enum {
     OP_LOAD_CONSTANT,          // load a constant from the compiled constant pool onto the stack
     OP_DEFINE_GLOBAL_VAL,      // expects an identifier at the top of the stack, and a value right below it
+    OP_DEFINE_GLOBAL_VAR,      // expects an identifier at the top of the stack, and a value right below it (TODO: remove. This is redundant; same as OP_DEFINE_GLOBAL_VAL, exists only to facilitate testing.)
     OP_GET_GLOBAL_VAL,         // expects an identifier at the top of the stack
-    OP_DEFINE_LOCAL_VAL_FAST,  // turn the value at the top of the stack into a local constant variable.
+    OP_GET_GLOBAL_VAR,         // expects an identifier at the top of the stack (TODO: remove. This is redundant; same as OP_GET_GLOBAL_VAL, exists only to facilitate testing.)
+    OP_SET_GLOBAL_VAR,         //
+    OP_GET_LOCAL_VAR_FAST,     // load a local variable that's already in the stack  (TODO: remove. This is redundant; same as OP_GET_LOCAL_VAL_FAST, exists only to facilitate testing.)
     OP_GET_LOCAL_VAL_FAST,     // load a local variable that's already in the stack
-    OP_DEFINE_GLOBAL_VAR,      // expects an identifier at the top of the stack, and a value right below it
-    OP_GET_GLOBAL_VAR,         // expects an identifier at the top of the stack
-    OP_DEFINE_LOCAL_VAR_FAST,  // turn the value at the top of the stack into a local variable.
-    OP_GET_LOCAL_VAR_FAST,     // load a local variable that's already in the stack
+    OP_DEFINE_LOCAL_VAL_FAST,  // turn the value at the top of the stack into a local constant variable. (TODO: remove. Unnecessary, no-op opcode; exists only to facilitate testing.)
+    OP_DEFINE_LOCAL_VAR_FAST,  // turn the value at the top of the stack into a local variable. (TODO: remove. Unnecessary, no-op opcode; exists only to facilitate testing.)
+    OP_SET_LOCAL_VAR_FAST,     //
     OP_NULL,                   // put Value false on the stack
     OP_TRUE,                   // put Value true on the stack
     OP_FALSE,                  // put Value false on the stack

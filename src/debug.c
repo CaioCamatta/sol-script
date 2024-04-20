@@ -340,6 +340,12 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
             case OP_GET_LOCAL_VAR_FAST:
                 printf("OP_GET_LOCAL_VAR_FAST #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
+            case OP_SET_GLOBAL_VAR:
+                printf("OP_SET_GLOBAL_VAR #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                break;
+            case OP_SET_LOCAL_VAR_FAST:
+                printf("OP_SET_LOCAL_VAR_FAST #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                break;
             case OP_POPN:
                 printf("OP_POPN %zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;

@@ -134,6 +134,8 @@ static size_t addConstantToPool(Compiler* compiler, Constant constant) {
 /**
  * Given a local variable name, find its position in the stack. (We can determine at compile time
  * where that local will be in the stack.)
+ *
+ * Returns either the stack index if found, or -1 if not found.
  */
 static int findLocalByName(Compiler* compiler, char* name) {
     for (int i = compiler->currentStackHeight; i >= 0; i--) {
@@ -286,9 +288,9 @@ static void visitAssignmentStatement(Compiler* compiler, AssignmentStatement* as
     visitExpression(compiler, assignmentStatement->value);
 
     // Visit the target expression to determine the assignment target
-    visitExpression(compiler, assignmentStatement->target);
+    visitExpression(compiler, assignmentStatement->target);  // (TODO: this might not be needed at all)
 
-    // Emit bytecode based on the target type (e.g., identifier, property access)
+    // Emit bytecode based on the target type
     if (assignmentStatement->target->type == PRIMARY_EXPRESSION) {
         PrimaryExpression* primaryExpr = assignmentStatement->target->as.primaryExpression;
         if (primaryExpr->literal->type == IDENTIFIER_LITERAL) {
@@ -299,12 +301,12 @@ static void visitAssignmentStatement(Compiler* compiler, AssignmentStatement* as
                 // Global variable assignment
                 Constant constant = IDENTIFIER_CONST(identifierName);
                 size_t constantIndex = addConstantToPool(compiler, constant);
-                emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAR, constantIndex));
+                emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAR, constantIndex));
             } else {
                 // Local variable assignment
                 size_t stackIndex = findLocalByName(compiler, identifierName);
                 if (stackIndex != -1) {
-                    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_LOCAL_VAR_FAST, stackIndex));
+                    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_LOCAL_VAR_FAST, stackIndex));
                 } else {
                     errorAndExit("Error: identifier '%s' not declared.", identifierName);
                 }
@@ -312,12 +314,15 @@ static void visitAssignmentStatement(Compiler* compiler, AssignmentStatement* as
 
             free(identifierName);
         } else {
-            errorAndExit("Invalid assignment target.");
+            errorAndExit("Invalid assignment target. Invalid type of primary-expression.");
         }
     } else {
         errorAndExit("Invalid assignment target.");
     }
 
+    // Remove both the target and the new value from the stack.
+    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_POPN, 2));
+    decreaseStackHeight(compiler);
     decreaseStackHeight(compiler);
 }
 
