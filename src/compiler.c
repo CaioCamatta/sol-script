@@ -397,14 +397,21 @@ static void visitAssignmentStatement(Compiler* compiler, AssignmentStatement* as
                 // Local variable assignment
                 size_t stackIndex = findLocalByName(compiler, identifierName);
 
-                if (isLocalConstantByIndex(compiler, stackIndex)) {
-                    errorAndExit("Error: Cannot modify local constant '%s'.", identifierName);
-                }
-
-                if (stackIndex != -1) {
-                    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_LOCAL_VAR_FAST, stackIndex));
+                if (stackIndex == -1) {
+                    // If the local isn't found, we check if its a global
+                    Constant constant = IDENTIFIER_CONST(identifierName);
+                    size_t constantIndex = addConstantToPool(compiler, constant);
+                    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAR, constantIndex));
                 } else {
-                    errorAndExit("Error: identifier '%s' not declared.", identifierName);
+                    if (isLocalConstantByIndex(compiler, stackIndex)) {
+                        errorAndExit("Error: Cannot modify local constant '%s'.", identifierName);
+                    }
+
+                    if (stackIndex != -1) {
+                        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_LOCAL_VAR_FAST, stackIndex));
+                    } else {
+                        errorAndExit("Error: identifier '%s' not declared.", identifierName);
+                    }
                 }
             }
 

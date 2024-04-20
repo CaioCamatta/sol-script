@@ -898,8 +898,7 @@ int test_vm_var_assignment_global_and_local() {
     return SUCCESS_RETURN_CODE;
 }
 
-// Test global declaration and local definition
-int test_vm_global_declaration_and_local_definition() {
+int test_vm_global_declaration_and_local_assignment() {
     CompiledCode code = (CompiledCode){
         .constantPool = (ConstantPool){},
         .bytecodeArray = (BytecodeArray){}};

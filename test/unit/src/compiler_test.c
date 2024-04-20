@@ -1186,7 +1186,7 @@ int test_compiler_var_declaration_and_assignment_local() {
     return SUCCESS_RETURN_CODE;
 }
 
-int test_compiler_global_declaration_and_local_definition() {
+int test_compiler_global_declaration_and_local_assignment() {
     Source testSource = {
         .rootStatements = {
             VAR_DECLARATION_STATEMENT("a", NULL),
