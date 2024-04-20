@@ -1,1 +1,6 @@
-{ var a; a=10; print a;}
+var a;
+{
+  a = 1;
+  print a;
+}
+print a;

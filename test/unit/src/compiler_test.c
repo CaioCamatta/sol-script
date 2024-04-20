@@ -1185,3 +1185,44 @@ int test_compiler_var_declaration_and_assignment_local() {
 
     return SUCCESS_RETURN_CODE;
 }
+
+int test_compiler_global_declaration_and_local_definition() {
+    Source testSource = {
+        .rootStatements = {
+            VAR_DECLARATION_STATEMENT("a", NULL),
+            BLOCK_STATEMENT(
+                ASSIGNMENT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("a")), PRIMARY_EXPRESSION(NUMBER_LITERAL("1"))),
+                PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("a")))),
+            PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("a")))},
+        .numberOfStatements = 3,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    // Verify bytecode
+    Bytecode expectedBytecode[] = {
+        BYTECODE(OP_NULL),
+        BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAR, 0),
+        BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 1),
+        BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAR, 0),
+        BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, 0),
+        BYTECODE(OP_PRINT),
+        BYTECODE_OPERAND_1(OP_POPN, 0),
+        BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, 0),
+        BYTECODE(OP_PRINT),
+    };
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 9};
+
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+
+    // Verify constant pool
+    ASSERT(compiledCode.constantPool.used == 2);
+    ASSERT(strcmp(compiledCode.constantPool.values[0].as.string, "a") == 0);
+    ASSERT(compiledCode.constantPool.values[1].as.number == 1);
+
+    // Clean up
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}

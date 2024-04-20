@@ -232,12 +232,11 @@ static int isLocalConstantByIndex(Compiler* compiler, int indexInTempStack) {
 }
 
 /**
- * Add a local variable to the Compiler's temporary stack and increase stack height.
+ * Add a local variable to the Compiler's temporary stack..
  */
 static void addLocalToTempStack(Compiler* compiler, char* name, bool isConstant) {
     // The local will be right below the current stack height
-    compiler->tempStack[compiler->currentStackHeight] = (Local){.name = name, .isConstant = isConstant};
-    increaseStackHeight(compiler);
+    compiler->tempStack[compiler->currentStackHeight - 1] = (Local){.name = name, .isConstant = isConstant};
 }
 
 /**
@@ -452,11 +451,12 @@ static void visitValDeclarationStatement(Compiler* compiler, ValDeclarationState
 }
 
 static void visitVarDeclarationStatement(Compiler* compiler, VarDeclarationStatement* varDeclarationStatement) {
-    bool isValueNull = varDeclarationStatement->maybeExpression != NULL;
-    if (isValueNull)
+    bool isValueNull = varDeclarationStatement->maybeExpression == NULL;
+    if (!isValueNull)
         visitExpression(compiler, varDeclarationStatement->maybeExpression);
     else {
         emitBytecode(compiler, BYTECODE(OP_NULL));
+        increaseStackHeight(compiler);
     }
 
     Constant constant = IDENTIFIER_CONST(copyStringToHeap(varDeclarationStatement->identifier->token.start,
@@ -473,8 +473,7 @@ static void visitVarDeclarationStatement(Compiler* compiler, VarDeclarationState
 
         emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAR, constantIndex));
 
-        if (isValueNull)
-            decreaseStackHeight(compiler);  // The value assigned to the Global is popped from the stack after we set the Global.
+        decreaseStackHeight(compiler);  // The value assigned to the Global is popped from the stack after we set the Global.
     } else {
         if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit("Error: var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
 

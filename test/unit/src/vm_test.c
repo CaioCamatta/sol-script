@@ -677,3 +677,264 @@ int test_vm_block_expression_as_if_condition() {
 
     return SUCCESS_RETURN_CODE;
 }
+
+// Test simple var declaration and assignment in global scope
+int test_vm_var_declaration_and_assignment_global() {
+    CompiledCode code = (CompiledCode){
+        .constantPool = (ConstantPool){},
+        .bytecodeArray = (BytecodeArray){}};
+    INIT_ARRAY(code.bytecodeArray, Bytecode);
+    INIT_ARRAY(code.constantPool, Constant);
+
+    // var a;
+    // a = 10;
+    // print a;
+    INSERT_ARRAY(code.constantPool, IDENTIFIER_CONST("a"), Constant);  // Index 0
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(10), Constant);       // Index 1
+
+    ADD_BYTECODES(&code.bytecodeArray,
+                  BYTECODE(OP_NULL),
+                  BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAR, 0),
+                  BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 1),
+                  BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAR, 0),
+                  BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, 0),
+                  BYTECODE(OP_PRINT));
+
+    VM vm;
+    initVM(&vm, code);
+    CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "10.000000\n") == 0); });
+
+    FREE_ARRAY(code.bytecodeArray);
+    FREE_ARRAY(code.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+// Test simple var declaration and assignment in local scope
+int test_vm_var_declaration_and_assignment_local() {
+    CompiledCode code = (CompiledCode){
+        .constantPool = (ConstantPool){},
+        .bytecodeArray = (BytecodeArray){}};
+    INIT_ARRAY(code.bytecodeArray, Bytecode);
+    INIT_ARRAY(code.constantPool, Constant);
+
+    // {
+    //   var a;
+    //   a = 10;
+    //   print a;
+    // }
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(10), Constant);  // Index 0
+
+    ADD_BYTECODES(&code.bytecodeArray,
+                  BYTECODE(OP_NULL),
+                  BYTECODE(OP_DEFINE_LOCAL_VAR_FAST),
+                  BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0),
+                  BYTECODE_OPERAND_1(OP_SET_LOCAL_VAR_FAST, 0),
+                  BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, 0),
+                  BYTECODE(OP_PRINT),
+                  BYTECODE_OPERAND_1(OP_POPN, 1));
+
+    VM vm;
+    initVM(&vm, code);
+    CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "10.000000\n") == 0); });
+
+    FREE_ARRAY(code.bytecodeArray);
+    FREE_ARRAY(code.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+// Test block expression with val declarations
+int test_vm_block_expression_with_val_declarations() {
+    CompiledCode code = (CompiledCode){
+        .constantPool = (ConstantPool){},
+        .bytecodeArray = (BytecodeArray){}};
+    INIT_ARRAY(code.bytecodeArray, Bytecode);
+    INIT_ARRAY(code.constantPool, Constant);
+
+    // val a = { val c = 1; c + 2; }
+    // val b = { val c = 10; c + 2; }
+    // print a;
+    // print b;
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(1), Constant);        // Index 0
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(2), Constant);        // Index 1
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(10), Constant);       // Index 2
+    INSERT_ARRAY(code.constantPool, IDENTIFIER_CONST("a"), Constant);  // Index 3
+    INSERT_ARRAY(code.constantPool, IDENTIFIER_CONST("b"), Constant);  // Index 4
+
+    ADD_BYTECODES(&code.bytecodeArray,
+                  // Block for 'a'
+                  BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0),
+                  BYTECODE(OP_DEFINE_LOCAL_VAL_FAST),
+                  BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, 0),
+                  BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 1),
+                  BYTECODE(OP_BINARY_ADD),
+                  BYTECODE_OPERAND_1(OP_SWAP, 1),
+                  BYTECODE_OPERAND_1(OP_POPN, 1),
+                  // End of block for 'a'
+                  BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, 3),
+                  // Block for 'b'
+                  BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 2),
+                  BYTECODE(OP_DEFINE_LOCAL_VAL_FAST),
+                  BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, 0),
+                  BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 1),
+                  BYTECODE(OP_BINARY_ADD),
+                  BYTECODE_OPERAND_1(OP_SWAP, 1),
+                  BYTECODE_OPERAND_1(OP_POPN, 1),
+                  // End of block for 'b'
+                  BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, 4),
+                  // Print 'a' and 'b'
+                  BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 3),
+                  BYTECODE(OP_PRINT),
+                  BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 4),
+                  BYTECODE(OP_PRINT));
+
+    VM vm;
+    initVM(&vm, code);
+    CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "3.000000\n12.000000\n") == 0); });
+
+    FREE_ARRAY(code.bytecodeArray);
+    FREE_ARRAY(code.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+// Test var and val declarations in nested blocks
+int test_vm_var_val_declarations_in_nested_blocks() {
+    CompiledCode code = (CompiledCode){
+        .constantPool = (ConstantPool){},
+        .bytecodeArray = (BytecodeArray){}};
+    INIT_ARRAY(code.bytecodeArray, Bytecode);
+    INIT_ARRAY(code.constantPool, Constant);
+
+    // {
+    //   var a = 1;
+    //   {
+    //     val b = 2;
+    //     print a;
+    //     print b;
+    //   }
+    //   print a;
+    // }
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(1), Constant);  // Index 0
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(2), Constant);  // Index 1
+
+    ADD_BYTECODES(&code.bytecodeArray,
+                  // Outer block
+                  BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0),
+                  BYTECODE(OP_DEFINE_LOCAL_VAR_FAST),
+                  // Inner block
+                  BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 1),
+                  BYTECODE(OP_DEFINE_LOCAL_VAL_FAST),
+                  BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, 0),
+                  BYTECODE(OP_PRINT),
+                  BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, 1),
+                  BYTECODE(OP_PRINT),
+                  BYTECODE_OPERAND_1(OP_POPN, 1),
+                  // End of inner block
+                  BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, 0),
+                  BYTECODE(OP_PRINT),
+                  BYTECODE_OPERAND_1(OP_POPN, 1));
+    // End of outer block
+
+    VM vm;
+    initVM(&vm, code);
+    CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "1.000000\n2.000000\n1.000000\n") == 0); });
+
+    FREE_ARRAY(code.bytecodeArray);
+    FREE_ARRAY(code.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+// Test assignment to var in global and local scopes
+int test_vm_var_assignment_global_and_local() {
+    CompiledCode code = (CompiledCode){
+        .constantPool = (ConstantPool){},
+        .bytecodeArray = (BytecodeArray){}};
+    INIT_ARRAY(code.bytecodeArray, Bytecode);
+    INIT_ARRAY(code.constantPool, Constant);
+
+    // var a;
+    // a = 1;
+    // print a;
+    // {
+    //   var b;
+    //   b = 2;
+    //   print b;
+    // }
+    // print a;
+    INSERT_ARRAY(code.constantPool, IDENTIFIER_CONST("a"), Constant);  // Index 0
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(1), Constant);        // Index 1
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(2), Constant);        // Index 2
+
+    ADD_BYTECODES(&code.bytecodeArray,
+                  // Global var 'a'
+                  BYTECODE(OP_NULL),
+                  BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAR, 0),
+                  BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 1),
+                  BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAR, 0),
+                  BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, 0),
+                  BYTECODE(OP_PRINT),
+                  // Local var 'b'
+                  BYTECODE(OP_NULL),
+                  BYTECODE(OP_DEFINE_LOCAL_VAR_FAST),
+                  BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 2),
+                  BYTECODE_OPERAND_1(OP_SET_LOCAL_VAR_FAST, 0),
+                  BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, 0),
+                  BYTECODE(OP_PRINT),
+                  BYTECODE_OPERAND_1(OP_POPN, 1),
+                  // Print global var 'a' again
+                  BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, 0),
+                  BYTECODE(OP_PRINT));
+
+    VM vm;
+    initVM(&vm, code);
+    CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "1.000000\n2.000000\n1.000000\n") == 0); });
+
+    FREE_ARRAY(code.bytecodeArray);
+    FREE_ARRAY(code.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+// Test global declaration and local definition
+int test_vm_global_declaration_and_local_definition() {
+    CompiledCode code = (CompiledCode){
+        .constantPool = (ConstantPool){},
+        .bytecodeArray = (BytecodeArray){}};
+    INIT_ARRAY(code.bytecodeArray, Bytecode);
+    INIT_ARRAY(code.constantPool, Constant);
+
+    // var a;
+    // {
+    //   a = 1;
+    //   print a;
+    // }
+    // print a;
+    INSERT_ARRAY(code.constantPool, IDENTIFIER_CONST("a"), Constant);  // Index 0
+    INSERT_ARRAY(code.constantPool, DOUBLE_CONST(1), Constant);        // Index 1
+
+    ADD_BYTECODES(&code.bytecodeArray,
+                  // Global var declaration
+                  BYTECODE(OP_NULL),
+                  BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAR, 0),
+                  // Local block
+                  BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 1),
+                  BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAR, 0),
+                  BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, 0),
+                  BYTECODE(OP_PRINT),
+                  BYTECODE_OPERAND_1(OP_POPN, 0),
+                  // Print global var 'a' again
+                  BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, 0),
+                  BYTECODE(OP_PRINT));
+
+    VM vm;
+    initVM(&vm, code);
+    CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "1.000000\n1.000000\n") == 0); });
+
+    FREE_ARRAY(code.bytecodeArray);
+    FREE_ARRAY(code.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
