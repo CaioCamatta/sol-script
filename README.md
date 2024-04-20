@@ -342,7 +342,8 @@ The following features are necessary a proper v1.0 release, in rough order:
  - [X] Implement selection statement (`if`s)
  - [X] Add conditional debugging/logging for tests that fail
  - [X] Implement block expressions
- - [ ] Implement assignment statements
+ - [X] Implement assignment statements
+ - [X] Implement non-constant variables
  - [ ] Implement iteration statement (loops)
  - [ ] Implement functions and returns
  - [ ] Implement the rest of the parser for the whole syntax grammar
