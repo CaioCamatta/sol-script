@@ -379,7 +379,10 @@ static void visitAssignmentStatement(Compiler* compiler, AssignmentStatement* as
             IdentifierLiteral* identifierLiteral = primaryExpr->literal->as.identifierLiteral;
             char* identifierName = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
 
-            if (compiler->isInGlobalScope) {
+            // Check if its a local variable
+            size_t stackIndex = findLocalByName(compiler, identifierName);
+
+            if (stackIndex == -1) {  // Not a local variable
                 if (isGlobalInTable(compiler, identifierName)) {
                     if (isGlobalConstant(compiler, identifierName)) {
                         errorAndExit("Error: Cannot modify global constant '%s'.", identifierName);
@@ -392,26 +395,15 @@ static void visitAssignmentStatement(Compiler* compiler, AssignmentStatement* as
                 } else {
                     errorAndExit("Error: identifier '%s' not declared.", identifierName);
                 }
-
             } else {
-                // Local variable assignment
-                size_t stackIndex = findLocalByName(compiler, identifierName);
+                if (isLocalConstantByIndex(compiler, stackIndex)) {
+                    errorAndExit("Error: Cannot modify local constant '%s'.", identifierName);
+                }
 
-                if (stackIndex == -1) {
-                    // If the local isn't found, we check if its a global
-                    Constant constant = IDENTIFIER_CONST(identifierName);
-                    size_t constantIndex = addConstantToPool(compiler, constant);
-                    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAR, constantIndex));
+                if (stackIndex != -1) {
+                    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_LOCAL_VAR_FAST, stackIndex));
                 } else {
-                    if (isLocalConstantByIndex(compiler, stackIndex)) {
-                        errorAndExit("Error: Cannot modify local constant '%s'.", identifierName);
-                    }
-
-                    if (stackIndex != -1) {
-                        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_LOCAL_VAR_FAST, stackIndex));
-                    } else {
-                        errorAndExit("Error: identifier '%s' not declared.", identifierName);
-                    }
+                    errorAndExit("Error: identifier '%s' not declared.", identifierName);
                 }
             }
 
@@ -631,7 +623,10 @@ static void visitBooleanLiteral(Compiler* compiler, BooleanLiteral* booleanLiter
 static void visitIdentifierLiteral(Compiler* compiler, IdentifierLiteral* identifierLiteral) {
     char* identifierNameNullTerminated = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
 
-    if (compiler->isInGlobalScope) {
+    // Check if the identifier is a local variable
+    size_t stackIndex = findLocalByName(compiler, identifierNameNullTerminated);
+
+    if (stackIndex == -1) {  // Its not a local variable
         Constant constant = (Constant){
             .type = CONST_TYPE_IDENTIFIER,
             .as = {identifierNameNullTerminated}};
@@ -639,33 +634,15 @@ static void visitIdentifierLiteral(Compiler* compiler, IdentifierLiteral* identi
 
         if (!isGlobalInTable(compiler, identifierNameNullTerminated)) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
 
-        // Generate bytecode to get the variable
         Bytecode bytecodeToGetVariable = isGlobalConstant(compiler, identifierNameNullTerminated)
                                              ? BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index)
                                              : BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, index);
         emitBytecode(compiler, bytecodeToGetVariable);
     } else {
-        size_t stackIndex = findLocalByName(compiler, identifierNameNullTerminated);
-
-        if (stackIndex == -1) {
-            // If the local isn't found, we check if its a global
-            Constant constant = (Constant){
-                .type = CONST_TYPE_IDENTIFIER,
-                .as = {identifierNameNullTerminated}};
-            size_t index = findConstantInPool(compiler, constant);
-            if (index == -1) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
-
-            // If we found a global, emit the appropriate bytecode
-            Bytecode bytecodeToGetVariable = isGlobalConstant(compiler, identifierNameNullTerminated)
-                                                 ? BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index)
-                                                 : BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, index);
-            emitBytecode(compiler, bytecodeToGetVariable);
-        } else {
-            Bytecode bytecodeToGetVariable = isLocalConstant(compiler, identifierNameNullTerminated)
-                                                 ? BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, stackIndex)
-                                                 : BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, stackIndex);
-            emitBytecode(compiler, bytecodeToGetVariable);
-        }
+        Bytecode bytecodeToGetVariable = isLocalConstant(compiler, identifierNameNullTerminated)
+                                             ? BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, stackIndex)
+                                             : BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, stackIndex);
+        emitBytecode(compiler, bytecodeToGetVariable);
     }
 
     increaseStackHeight(compiler);
