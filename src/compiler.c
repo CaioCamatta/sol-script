@@ -568,8 +568,8 @@ static void visitSelectionStatement(Compiler* compiler, SelectionStatement* sele
     size_t jumpIfFalsePosition = compiler->compiledBytecode.used;
     emitBytecode(compiler, BYTECODE_OPERAND_1(OP_JUMP_IF_FALSE, 999999));
 
-    // Visiting the expression causes the stack to grow, but OP_JUMP_IF_FALSE pops it,
-    // so we need to decrease the stack height to compensate for that.
+    // Visiting the expression grows the stack, but running OP_JUMP_IF_FALSE in the VM will
+    // decrease it.
     decreaseStackHeight(compiler);
 
     // Visit the true (a.k.a. "then") branch.
@@ -591,6 +591,43 @@ static void visitSelectionStatement(Compiler* compiler, SelectionStatement* sele
         // Back-patch the jump-to-end position.
         compiler->compiledBytecode.values[jumpToEndPosition].maybeOperand1 = compiler->compiledBytecode.used;
     }
+}
+
+/**
+ * Here's an example of the bytecode produced by SolScript while-loops:
+ *  42    : loop condition expression
+ *  43    : if condition expression is falsey, skip the body of the loop (go to 68)
+ *  44-66 : loop body
+ *  67    : jump to condition expression (42)
+ *  68    : ...
+ *
+ * TODO: benchmark having condition at the end of the loop and doing a jump-if-true to start
+ */
+static void visitIterationStatement(Compiler* compiler, IterationStatement* iterationStatement) {
+    // Keep a pointer to the condition expression so we can jump to it later
+    size_t expressionInstructionPosition = compiler->compiledBytecode.used;
+
+    // Compile the actual expression
+    visitExpression(compiler, iterationStatement->conditionExpression);
+
+    // In the VM, if the expression is falsey, we need to jump past the body of the loop.
+    // '999999' is a placeholder; at this point we don't know how much bytecode the body will
+    // emit, so we need to use placeholder and patch it later.
+    size_t jumpIfFalsePosition = compiler->compiledBytecode.used;
+    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_JUMP_IF_FALSE, 999999));
+
+    // Visiting the expression grows the stack, but running OP_JUMP_IF_FALSE in the VM will
+    // decrease it.
+    decreaseStackHeight(compiler);
+
+    // Visit the body of the loop
+    visitStatement(compiler, iterationStatement->bodyStatement);
+
+    // Jump to condition expression so we can re-evaluate it
+    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_JUMP, expressionInstructionPosition));
+
+    // Now that we've compiled the body, we can patch the jump-if-false instruction
+    compiler->compiledBytecode.values[jumpIfFalsePosition].maybeOperand1 = compiler->compiledBytecode.used;
 }
 
 // Add number to constant pool and emit bytecode to load it onto the stack
@@ -741,6 +778,9 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
             break;
         case SELECTION_STATEMENT:
             visitSelectionStatement(compiler, statement->as.selectionStatement);
+            break;
+        case ITERATION_STATEMENT:
+            visitIterationStatement(compiler, statement->as.iterationStatement);
             break;
         default:
             fprintf(stderr, "Unimplemented statement type %d.\n", statement->type);

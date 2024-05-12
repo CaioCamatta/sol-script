@@ -148,6 +148,13 @@ static void printStatement(const Statement* statement, int depth) {
             printStatement(stmt->falseStatement, depth + 1);
             break;
         }
+        case ITERATION_STATEMENT: {
+            IterationStatement* stmt = statement->as.iterationStatement;
+            printf("IterationStatement\n");
+            printExpression(stmt->conditionExpression, depth + 1);
+            printStatement(stmt->bodyStatement, depth + 1);
+            break;
+        }
         case ASSIGNMENT_STATEMENT: {
             AssignmentStatement* stmt = statement->as.assignmentStatement;
             printf("AssignmentStatement\n");

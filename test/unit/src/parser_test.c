@@ -984,3 +984,101 @@ int test_parser_assignment() {
     freeSource(source);
     return SUCCESS_RETURN_CODE;
 }
+
+int test_parser_iteration_statement_no_curlys() {
+    // while true print 3;
+    Token tokensArray[] = {
+        createToken(TOKEN_WHILE, "while"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_TRUE, "true"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_PRINT, "print"),
+        createToken(TOKEN_NUMBER, "3"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = sizeof(tokensArray) / sizeof(Token),
+        .size = sizeof(tokensArray) / sizeof(Token)};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* iterationStmt = source->rootStatements[0];
+    ASSERT(iterationStmt->type == ITERATION_STATEMENT);
+
+    IterationStatement* iterStmt = iterationStmt->as.iterationStatement;
+    ASSERT(iterStmt->conditionExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(iterStmt->bodyStatement->type == PRINT_STATEMENT);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_iteration_statement_no_parentheses_no_curlys() {
+    // while true print 3;
+    Token tokensArray[] = {
+        createToken(TOKEN_WHILE, "while"),
+        createToken(TOKEN_TRUE, "true"),
+        createToken(TOKEN_PRINT, "print"),
+        createToken(TOKEN_NUMBER, "3"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = sizeof(tokensArray) / sizeof(Token),
+        .size = sizeof(tokensArray) / sizeof(Token)};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* iterationStmt = source->rootStatements[0];
+    ASSERT(iterationStmt->type == ITERATION_STATEMENT);
+
+    IterationStatement* iterStmt = iterationStmt->as.iterationStatement;
+    ASSERT(iterStmt->conditionExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(iterStmt->bodyStatement->type == PRINT_STATEMENT);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_iteration_statement_with_block() {
+    // while (true) {print 3; print 4;};
+    Token tokensArray[] = {
+        createToken(TOKEN_WHILE, "while"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_TRUE, "true"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_PRINT, "print"),
+        createToken(TOKEN_NUMBER, "3"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_PRINT, "print"),
+        createToken(TOKEN_NUMBER, "4"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = sizeof(tokensArray) / sizeof(Token),
+        .size = sizeof(tokensArray) / sizeof(Token)};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* iterationStmt = source->rootStatements[0];
+    ASSERT(iterationStmt->type == ITERATION_STATEMENT);
+
+    IterationStatement* iterStmt = iterationStmt->as.iterationStatement;
+    ASSERT(iterStmt->conditionExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(iterStmt->bodyStatement->type == BLOCK_STATEMENT);
+    ASSERT(iterStmt->bodyStatement->as.blockStatement->statementArray.used == 2);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}

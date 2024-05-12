@@ -672,6 +672,27 @@ static Statement* selectionStatement(ASTParser* parser) {
 }
 
 /**
+ * iteration-statement:
+ *  "while" "(" expression ")" block-statement
+ */
+static Statement* iterationStatement(ASTParser* parser) {
+    consume(parser, TOKEN_WHILE, "InvalidStateException: Expected \"while\" in while statement.");
+    Expression* conditionExpression = expression(parser);
+
+    Statement* bodyStatement = statement(parser);
+
+    IterationStatement* iterationStatement = allocateASTNode(IterationStatement);
+    iterationStatement->conditionExpression = conditionExpression;
+    iterationStatement->bodyStatement = bodyStatement;
+
+    Statement* stmt = allocateASTNode(Statement);
+    stmt->type = ITERATION_STATEMENT;
+    stmt->as.iterationStatement = iterationStatement;
+
+    return stmt;
+}
+
+/**
  * statement:
  *  declaration
  *  block-statement
@@ -698,8 +719,8 @@ static Statement* statement(ASTParser* parser) {
             return printStatement(parser);
         case TOKEN_LEFT_CURLY:
             return blockStatement(parser);
-        // case TOKEN_WHILE:
-        //     return iterationStatement(parser);
+        case TOKEN_WHILE:
+            return iterationStatement(parser);
         case TOKEN_IF:
             return selectionStatement(parser);
         // case TOKEN_RETURN:

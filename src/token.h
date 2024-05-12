@@ -14,6 +14,7 @@ typedef enum {
     TOKEN_VAL,
     TOKEN_VAR,
     TOKEN_PRINT,
+    TOKEN_WHILE,
 
     // Identifier
     TOKEN_IDENTIFIER,

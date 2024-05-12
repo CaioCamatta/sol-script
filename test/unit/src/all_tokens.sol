@@ -9,6 +9,7 @@ null
 val
 var
 print
+while
 
 // Identifier
 valName

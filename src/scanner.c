@@ -146,6 +146,8 @@ static Token identifierOrKeyword(Scanner* scanner) {
             matchKeyword(scanner, "true", TOKEN_TRUE);
         case 's':
             matchKeyword(scanner, "struct", TOKEN_STRUCT);
+        case 'w':
+            matchKeyword(scanner, "while", TOKEN_WHILE);
         default:
             return makeToken(scanner, TOKEN_IDENTIFIER);
     }

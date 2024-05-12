@@ -247,6 +247,15 @@
         }                                                                    \
     }
 
+#define ITERATION_STATEMENT(conditionExpr, bodyStmt)     \
+    &(Statement) {                                       \
+        .type = ITERATION_STATEMENT,                     \
+        .as.iterationStatement = &(IterationStatement) { \
+            .conditionExpression = conditionExpr,        \
+            .bodyStatement = bodyStmt                    \
+        }                                                \
+    }
+
 // ------------------------------------------------------------------------
 // ---------------------------- Test utilities ----------------------------
 // ------------------------------------------------------------------------
@@ -1221,6 +1230,83 @@ int test_compiler_global_declaration_and_local_assignment() {
     ASSERT(compiledCode.constantPool.values[1].as.number == 1);
 
     // Clean up
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_iteration_statement_simple() {
+    // while (true) print "Loop";
+    Source testSource = {
+        .rootStatements = {
+            ITERATION_STATEMENT(
+                PRIMARY_EXPRESSION(BOOLEAN_LITERAL(true)),
+                PRINT_STATEMENT(PRIMARY_EXPRESSION(STRING_LITERAL("\"Loop\""))))},
+        .numberOfStatements = 1,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    Bytecode expectedBytecode[] = {
+        BYTECODE(OP_TRUE),  // Condition
+        BYTECODE_OPERAND_1(OP_JUMP_IF_FALSE, 7),
+        BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0),
+        BYTECODE(OP_PRINT),
+        BYTECODE_OPERAND_1(OP_JUMP, 0),  // Jump to condition
+    };
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
+
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_iteration_statement_with_variable() {
+    // var i = 0; while (i < 3) { print i; i = i + 1; }
+    Source testSource = {
+        .rootStatements = {
+            VAR_DECLARATION_STATEMENT("i", PRIMARY_EXPRESSION(NUMBER_LITERAL("0"))),
+            ITERATION_STATEMENT(
+                COMPARISON_EXPRESSION(
+                    PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("i")),
+                    PRIMARY_EXPRESSION(NUMBER_LITERAL("3")),
+                    TOKEN(TOKEN_LESSER)),
+                BLOCK_STATEMENT(
+                    PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("i"))),
+                    ASSIGNMENT_STATEMENT(
+                        PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("i")),
+                        ADDITIVE_EXPRESSION(
+                            PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("i")),
+                            TOKEN(TOKEN_PLUS),
+                            PRIMARY_EXPRESSION(NUMBER_LITERAL("1"))))))},
+        .numberOfStatements = 2,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    Bytecode expectedBytecode[] = {
+        BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0),   // Load 0
+        BYTECODE(OP_DEFINE_GLOBAL_VAR),            // Define variable 'i'
+        BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, 1),  // Get 'i'
+        BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 2),   // Load 3
+        BYTECODE(OP_BINARY_LT),                    // Compare 'i' < 3
+        BYTECODE_OPERAND_1(OP_JUMP_IF_FALSE, 15),  // Jump to end if false
+        BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, 1),  // Get 'i'
+        BYTECODE(OP_PRINT),                        // Print 'i'
+        BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, 1),  // Get 'i'
+        BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 3),   // Load 1
+        BYTECODE(OP_BINARY_ADD),                   // Add 'i' + 1
+        BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAR, 1),  // Set 'i' to 'i' + 1
+        BYTECODE_OPERAND_1(OP_POPN, 0),            // Clean up the stack
+        BYTECODE_OPERAND_1(OP_JUMP, 2),            // Jump back to condition
+    };
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+
     FREE_ARRAY(compiledCode.bytecodeArray);
     FREE_ARRAY(compiledCode.constantPool);
 

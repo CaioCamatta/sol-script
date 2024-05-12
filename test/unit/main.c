@@ -45,6 +45,9 @@ static void all_tests() {
     RUN_TEST(test_parser_var_declaration);
     RUN_TEST(test_parser_var_declaration_with_initializer);
     RUN_TEST(test_parser_assignment);
+    RUN_TEST(test_parser_iteration_statement_no_curlys);
+    RUN_TEST(test_parser_iteration_statement_no_parentheses_no_curlys);
+    RUN_TEST(test_parser_iteration_statement_with_block);
 
     // Compiler tests
     RUN_TEST(test_compiler);
@@ -72,6 +75,8 @@ static void all_tests() {
     RUN_TEST(test_compiler_var_declaration_and_assignment_global);
     RUN_TEST(test_compiler_var_declaration_and_assignment_local);
     RUN_TEST(test_compiler_global_declaration_and_local_assignment);
+    RUN_TEST(test_compiler_iteration_statement_simple);
+    RUN_TEST(test_compiler_iteration_statement_with_variable);
 
     // VM tests
     RUN_TEST(test_vm_addition);
@@ -96,6 +101,9 @@ static void all_tests() {
     RUN_TEST(test_vm_var_val_declarations_in_nested_blocks);
     RUN_TEST(test_vm_var_assignment_global_and_local);
     RUN_TEST(test_vm_global_declaration_and_local_assignment);
+    RUN_TEST(test_vm_iteration_statement_simple);
+    RUN_TEST(test_vm_iteration_statement_with_variable);
+    RUN_TEST(test_vm_nested_iteration_statements);
 }
 
 int main(int argc, char **argv) {
