@@ -937,3 +937,140 @@ int test_vm_global_declaration_and_local_assignment() {
 
     return SUCCESS_RETURN_CODE;
 }
+
+int test_vm_iteration_statement_simple() {
+    // while (true) print "Loop";
+    Source testSource = {
+        .rootStatements = {
+            ITERATION_STATEMENT(
+                PRIMARY_EXPRESSION(BOOLEAN_LITERAL(true)),
+                PRINT_STATEMENT(PRIMARY_EXPRESSION(STRING_LITERAL("\"Loop\""))))},
+        .numberOfStatements = 1,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    VM vm;
+    initVM(&vm, compiledCode);
+
+    // Redirect stdout to a buffer
+    char buffer[256];
+    memset(buffer, 0, sizeof(buffer));
+    FILE* originalStdout = stdout;
+    stdout = fmemopen(buffer, sizeof(buffer), "w");
+
+    // Run the VM for a limited number of instructions to avoid infinite loop
+    for (int i = 0; i < 26; i++) {
+        step(&vm);
+    }
+
+    // Restore stdout
+    fflush(stdout);
+    fclose(stdout);
+    stdout = originalStdout;
+
+    // Check the output
+    ASSERT(strncmp(buffer, "Loop\nLoop\nLoop\nLoop\nLoop\n", 25) == 0);
+
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_vm_iteration_statement_with_variable() {
+    // var i = 0; while (i < 3) { print i; i = i + 1; }
+    Source testSource = {
+        .rootStatements = {
+            VAR_DECLARATION_STATEMENT("i", PRIMARY_EXPRESSION(NUMBER_LITERAL("0"))),
+            ITERATION_STATEMENT(
+                COMPARISON_EXPRESSION(
+                    PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("i")),
+                    PRIMARY_EXPRESSION(NUMBER_LITERAL("3")),
+                    TOKEN(TOKEN_LESSER)),
+                BLOCK_STATEMENT(
+                    PRINT_STATEMENT(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("i"))),
+                    ASSIGNMENT_STATEMENT(
+                        PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("i")),
+                        ADDITIVE_EXPRESSION(
+                            PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("i")),
+                            TOKEN(TOKEN_PLUS),
+                            PRIMARY_EXPRESSION(NUMBER_LITERAL("1"))))))},
+        .numberOfStatements = 2,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    VM vm;
+    initVM(&vm, compiledCode);
+
+    // Redirect stdout to a buffer
+    char buffer[256];
+    memset(buffer, 0, sizeof(buffer));
+    FILE* originalStdout = stdout;
+    stdout = fmemopen(buffer, sizeof(buffer), "w");
+
+    run(&vm);
+
+    // Restore stdout
+    fflush(stdout);
+    fclose(stdout);
+    stdout = originalStdout;
+
+    // Check the output
+    ASSERT(strcmp(buffer, "0.000000\n1.000000\n2.000000\n") == 0);
+
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_vm_nested_iteration_statements() {
+    // var i = 0; while (i < 3) { var j = 0; while (j < 2) { print i + j; j = j + 1; } i = i + 1; }
+    Source testSource = {
+        .rootStatements = {
+            VAR_DECLARATION_STATEMENT("i", PRIMARY_EXPRESSION(NUMBER_LITERAL("0"))),
+            ITERATION_STATEMENT(
+                COMPARISON_EXPRESSION(
+                    PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("i")),
+                    PRIMARY_EXPRESSION(NUMBER_LITERAL("3")),
+                    TOKEN(TOKEN_LESSER)),
+                BLOCK_STATEMENT(
+                    VAR_DECLARATION_STATEMENT("j", PRIMARY_EXPRESSION(NUMBER_LITERAL("0"))),
+                    ITERATION_STATEMENT(
+                        COMPARISON_EXPRESSION(
+                            PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("j")),
+                            PRIMARY_EXPRESSION(NUMBER_LITERAL("2")),
+                            TOKEN(TOKEN_LESSER)),
+                        BLOCK_STATEMENT(
+                            PRINT_STATEMENT(
+                                ADDITIVE_EXPRESSION(
+                                    PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("i")),
+                                    TOKEN(TOKEN_PLUS),
+                                    PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("j")))),
+                            ASSIGNMENT_STATEMENT(
+                                PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("j")),
+                                ADDITIVE_EXPRESSION(
+                                    PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("j")),
+                                    TOKEN(TOKEN_PLUS),
+                                    PRIMARY_EXPRESSION(NUMBER_LITERAL("1")))))),
+                    ASSIGNMENT_STATEMENT(
+                        PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("i")),
+                        ADDITIVE_EXPRESSION(
+                            PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("i")),
+                            TOKEN(TOKEN_PLUS),
+                            PRIMARY_EXPRESSION(NUMBER_LITERAL("1"))))))},
+        .numberOfStatements = 2,
+    };
+
+    COMPILE_TEST_SOURCE
+    VM vm;
+    initVM(&vm, compiledCode);
+
+    CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "0.000000\n1.000000\n1.000000\n2.000000\n2.000000\n3.000000\n") == 0); });
+
+    FREE_ARRAY(compiledCode.bytecodeArray);
+    FREE_ARRAY(compiledCode.constantPool);
+    return SUCCESS_RETURN_CODE;
+}

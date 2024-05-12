@@ -101,6 +101,9 @@ static void all_tests() {
     RUN_TEST(test_vm_var_val_declarations_in_nested_blocks);
     RUN_TEST(test_vm_var_assignment_global_and_local);
     RUN_TEST(test_vm_global_declaration_and_local_assignment);
+    RUN_TEST(test_vm_iteration_statement_simple);
+    RUN_TEST(test_vm_iteration_statement_with_variable);
+    RUN_TEST(test_vm_nested_iteration_statements);
 }
 
 int main(int argc, char **argv) {
