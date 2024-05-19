@@ -180,10 +180,9 @@ struct-declaration:
   "prototype" ":" identifier
 
 
-
 function-expression:
-  "(" ")" "=>" "{" statement "}"
-  "(" parameter-list ")" "=>" "{" statement "}"
+  "lambda" "(" ")" "{" statement "}"
+  "lambda" "(" parameter-list ")" "{" statement "}"
   
 parameter-list:
   identifier ( "," identifier )*
@@ -194,7 +193,6 @@ argument-list:
 
 block-expression:
   "{" statement* expression "}"
-
 
 
 logical-or-expression:
