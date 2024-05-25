@@ -1082,3 +1082,169 @@ int test_parser_iteration_statement_with_block() {
     freeSource(source);
     return SUCCESS_RETURN_CODE;
 }
+
+int test_parser_lambda_expression_no_parameters() {
+    // "lambda () { 42; };"
+    Token tokensArray[] = {
+        createToken(TOKEN_LAMBDA, "lambda"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_NUMBER, "42"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 9,
+        .size = 9};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == EXPRESSION_STATEMENT);
+
+    Expression* expression = statement->as.expressionStatement->expression;
+    ASSERT(expression->type == LAMBDA_EXPRESSION);
+
+    LambdaExpression* lambdaExpr = expression->as.lambdaExpression;
+    ASSERT(lambdaExpr->parameters->used == 0);  // No parameters
+
+    ASSERT(lambdaExpr->bodyBlock->statementArray.used == 0);
+    ASSERT(lambdaExpr->bodyBlock->lastExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(lambdaExpr->bodyBlock->lastExpression->as.primaryExpression->literal->type == NUMBER_LITERAL);
+    ASSERT(strcmp(lambdaExpr->bodyBlock->lastExpression->as.primaryExpression->literal->as.numberLiteral->token.start, "42") == 0);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_lambda_expression_single_parameter() {
+    // "lambda (x) { x; };"
+    Token tokensArray[] = {
+        createToken(TOKEN_LAMBDA, "lambda"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "x"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_IDENTIFIER, "x"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 10,
+        .size = 10};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == EXPRESSION_STATEMENT);
+
+    Expression* expression = statement->as.expressionStatement->expression;
+    ASSERT(expression->type == LAMBDA_EXPRESSION);
+
+    LambdaExpression* lambdaExpr = expression->as.lambdaExpression;
+    ASSERT(lambdaExpr->parameters->used == 1);
+    ASSERT(strcmp(lambdaExpr->parameters->values[0].token.start, "x") == 0);
+
+    ASSERT(lambdaExpr->bodyBlock->statementArray.used == 0);
+    ASSERT(lambdaExpr->bodyBlock->lastExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(lambdaExpr->bodyBlock->lastExpression->as.primaryExpression->literal->type == IDENTIFIER_LITERAL);
+    ASSERT(strcmp(lambdaExpr->bodyBlock->lastExpression->as.primaryExpression->literal->as.identifierLiteral->token.start, "x") == 0);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_lambda_expression_multiple_parameters() {
+    // "lambda (x,y) { x + y; };"
+    Token tokensArray[] = {
+        createToken(TOKEN_LAMBDA, "lambda"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "x"),
+        createToken(TOKEN_COMMA, ","),
+        createToken(TOKEN_IDENTIFIER, "y"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_IDENTIFIER, "x"),
+        createToken(TOKEN_PLUS, "+"),
+        createToken(TOKEN_IDENTIFIER, "y"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 14,
+        .size = 14};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == EXPRESSION_STATEMENT);
+
+    Expression* expression = statement->as.expressionStatement->expression;
+    ASSERT(expression->type == LAMBDA_EXPRESSION);
+
+    LambdaExpression* lambdaExpr = expression->as.lambdaExpression;
+    ASSERT(lambdaExpr->parameters->used == 2);
+    ASSERT(strcmp(lambdaExpr->parameters->values[0].token.start, "x") == 0);
+    ASSERT(strcmp(lambdaExpr->parameters->values[1].token.start, "y") == 0);
+
+    ASSERT(lambdaExpr->bodyBlock->statementArray.used == 0);
+    ASSERT(lambdaExpr->bodyBlock->lastExpression->type == ADDITIVE_EXPRESSION);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_lambda_expression_no_last_expression_in_block() {
+    // "lambda () { print "Hello"; };"
+    Token tokensArray[] = {
+        createToken(TOKEN_LAMBDA, "lambda"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_PRINT, "print"),
+        createToken(TOKEN_STRING, "\"Hello\""),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 12,
+        .size = 12};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == EXPRESSION_STATEMENT);
+
+    Expression* expression = statement->as.expressionStatement->expression;
+    ASSERT(expression->type == LAMBDA_EXPRESSION);
+
+    LambdaExpression* lambdaExpr = expression->as.lambdaExpression;
+    ASSERT(lambdaExpr->parameters->used == 0);  // No parameters
+
+    ASSERT(lambdaExpr->bodyBlock->statementArray.used == 1);
+    ASSERT(lambdaExpr->bodyBlock->statementArray.values[0]->type == PRINT_STATEMENT);
+    ASSERT(lambdaExpr->bodyBlock->statementArray.values[0]->as.printStatement->expression->type == PRIMARY_EXPRESSION);
+    ASSERT(lambdaExpr->bodyBlock->statementArray.values[0]->as.printStatement->expression->as.primaryExpression->literal->type == STRING_LITERAL);
+
+    ASSERT(lambdaExpr->bodyBlock->lastExpression == NULL);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}

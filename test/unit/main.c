@@ -48,6 +48,10 @@ static void all_tests() {
     RUN_TEST(test_parser_iteration_statement_no_curlys);
     RUN_TEST(test_parser_iteration_statement_no_parentheses_no_curlys);
     RUN_TEST(test_parser_iteration_statement_with_block);
+    RUN_TEST(test_parser_lambda_expression_no_parameters);
+    RUN_TEST(test_parser_lambda_expression_single_parameter);
+    RUN_TEST(test_parser_lambda_expression_multiple_parameters);
+    RUN_TEST(test_parser_lambda_expression_no_last_expression_in_block);
 
     // Compiler tests
     RUN_TEST(test_compiler);
