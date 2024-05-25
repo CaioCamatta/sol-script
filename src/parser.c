@@ -128,9 +128,6 @@ static bool match(ASTParser* parser, TokenType type) {
 
 /**
  * Check that there is a semicolon after an expression.
- *
- * Exception: semicolons are optional after the block expressions. This is a quality of
- * life thing to allow users to write "val a = { 2; }" for example.
  * */
 static void checkSemicolonAfterExpression(ASTParser* parser, Expression* maybeLatestExpression, char* message) {
     if (maybeLatestExpression && maybeLatestExpression->type == BLOCK_EXPRESSION) {
@@ -478,31 +475,42 @@ static Expression* blockExpression(ASTParser* parser) {
         Statement* statementNode = statement(parser);
 
         if (statementNode != NULL) {
-            // If the statement we just parsed is the last one in the block, we backtrack to check that it's also
-            // parseable as an expression (e.g., maybe it was an ExpressionStatement or nested block.)
+            INSERT_ARRAY(blockExpr->statementArray, statementNode, Statement*);
+
+            // If the statement we just parsed is the last one in the block, we try to
+            // convert it to an expression by backtrackind and re-parsing.
             if (check(parser, TOKEN_RIGHT_CURLY)) {
-                // Backtrack
-                parser->current = parserPositionBeforeStatement;
-                parser->previous = parser->current - 1;
+                // There default case is that there's no expression at the end of the block.
+                // Scala would return a Unit here; we leave it as NULL.
+                Expression* lastExpression = NULL;
 
-                // Parse expression
-                Expression* lastExpression = expression(parser);
-                checkSemicolonAfterExpression(parser, lastExpression, "Impossible. Expected ';' after block expression.");
+                Statement* lastStatementInThisBlock = statementNode;
+                if (lastStatementInThisBlock != NULL) {
+                    // Expression statements and block statements can be converted
+                    // to expressions.
+                    if (lastStatementInThisBlock->type == EXPRESSION_STATEMENT || lastStatementInThisBlock->type == BLOCK_STATEMENT) {
+                        // Backtrack
+                        parser->current = parserPositionBeforeStatement;
+                        parser->previous = parser->current - 1;
 
+                        // Parse expression
+                        lastExpression = expression(parser);
+                        checkSemicolonAfterExpression(parser, lastExpression, "Impossible. Expected ';' after block expression.");
+
+                        // Remove the last statement since we're adding it as the last expression.
+                        blockExpr->statementArray.used--;
+                    }
+                }
                 blockExpr->lastExpression = lastExpression;
                 break;
-            } else {
-                // If the statement isn't the last one, we just add it to the array.
-                INSERT_ARRAY(blockExpr->statementArray, statementNode, Statement*);
             }
-
         } else {
             errorAtCurrent(parser, "Error parsing statement in block expression.");
         }
     }
     consume(parser, TOKEN_RIGHT_CURLY, "Unclosed block expression. Expected '}'.");
 
-    // Block expressions must have at one expression in them.
+    // Block expressions must have at least one expression in them.
     if (!blockExpr->statementArray.used && !blockExpr->lastExpression) errorAtCurrent(parser, "Encountered an empty block-expression.");
 
     // Make the last ExpressionStatement the block's `lastExpression`
