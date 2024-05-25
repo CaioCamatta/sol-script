@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "syntax.h"
+#include "util/colors.h"
 
 // ---------------------------------------------------------------------------
 // ------------------------- PARSER HELPER FUNCTIONS -------------------------
@@ -31,7 +32,39 @@ void freeSource(Source* source) {
 
 // Print error at current token, halt execution
 static void errorAtCurrent(ASTParser* parser, const char* message) {
-    fprintf(stderr, "Error at line %d, column %d: %s", parser->current->lineNo, parser->current->colNo, message);
+    Token* token = parser->current;
+    fprintf(stderr, KRED "ParserError" KGRY "(%d:%d)" RESET, token->lineNo, token->colNo);
+
+    if (token->type == TOKEN_EOF) {
+        fprintf(stderr, " at end");
+    } else if (token->type != TOKEN_ERROR) {
+        fprintf(stderr, " at '%.*s'", token->length, token->start);
+    }
+
+    fprintf(stderr, ": %s\n", message);
+
+    // Find the beginning of the line
+    const char* lineStart = token->start;
+    while (lineStart > parser->tokenArray.values[0].start && lineStart[-1] != '\n') {
+        lineStart--;
+    }
+
+    // Find the end of the line
+    const char* lineEnd = token->start;
+    while (lineEnd < parser->tokenArray.values[parser->tokenArray.used - 1].start + parser->tokenArray.values[parser->tokenArray.used - 1].length && *lineEnd != '\n') {
+        lineEnd++;
+    }
+
+    // Print the line
+    int lineLength = lineEnd - lineStart;
+    fprintf(stderr, "    %.*s\n", lineLength, lineStart);
+
+    // Print the pointer to the error column
+    for (int i = 0; i < token->colNo - 1; i++) {
+        fprintf(stderr, " ");
+    }
+    fprintf(stderr, "^\n");
+
     // TODO: Change this so we instead of exiting, we track that there are errors and move to the
     // next statement. Then after all statements are parsed we report the errors. This is a better UX.
     exit(EXIT_FAILURE);
