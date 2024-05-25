@@ -33,7 +33,6 @@ void freeSource(Source* source) {
 // Print error at current token, halt execution
 static void errorAtCurrent(ASTParser* parser, const char* message) {
     Token* token = parser->current;
-    fprintf(stderr, KRED "ParserError" KGRY "(%d:%d)" RESET, token->lineNo, token->colNo);
 
     if (token->type == TOKEN_EOF) {
         fprintf(stderr, " at end");

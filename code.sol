@@ -1,6 +1,1 @@
-var a;
-{
-  a = 1;
-  print a;
-}
-print a;
+val b = lambda (test) { 0; };
