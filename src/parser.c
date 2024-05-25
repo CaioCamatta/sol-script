@@ -34,6 +34,16 @@ void freeSource(Source* source) {
 static void errorAtCurrent(ASTParser* parser, const char* message) {
     Token* token = parser->current;
 
+    // Error tokens come from the scanner, so we handle it differently.
+    if (token->type == TOKEN_ERROR) {
+        fprintf(stderr, KRED "ScannerError" KGRY "[%d:%d]" RESET, token->lineNo, token->colNo);
+
+        fprintf(stderr, ": %.*s\n", token->length, token->start);
+        exit(EXIT_FAILURE);
+    }
+
+    fprintf(stderr, KRED "ParserError" KGRY "[%d:%d]" RESET, token->lineNo, token->colNo);
+
     if (token->type == TOKEN_EOF) {
         fprintf(stderr, " at end");
     } else if (token->type != TOKEN_ERROR) {
@@ -62,7 +72,7 @@ static void errorAtCurrent(ASTParser* parser, const char* message) {
     for (int i = 0; i < token->colNo - 1; i++) {
         fprintf(stderr, " ");
     }
-    fprintf(stderr, "^\n");
+    fprintf(stderr, "    ^\n");
 
     // TODO: Change this so we instead of exiting, we track that there are errors and move to the
     // next statement. Then after all statements are parsed we report the errors. This is a better UX.
@@ -504,6 +514,36 @@ static Expression* blockExpression(ASTParser* parser) {
     return expr;
 }
 
+static IdentifierArray* parameterList(ASTParser* parser) {
+    IdentifierArray* parameters = (IdentifierArray*)malloc(sizeof(IdentifierArray));
+    INIT_ARRAY((*parameters), Token);
+
+    if (peek(parser)->type == TOKEN_IDENTIFIER) {
+        do {
+            Literal* literal = identifierLiteral(parser);
+            INSERT_ARRAY((*parameters), *(literal->as.identifierLiteral), IdentifierLiteral);
+        } while (match(parser, TOKEN_COMMA));
+    }
+    return parameters;
+}
+
+static Expression* lambdaExpression(ASTParser* parser) {
+    consume(parser, TOKEN_LAMBDA, "Expected 'lambda' keyword in lambda expression.");
+
+    consume(parser, TOKEN_LEFT_PAREN, "Expected '(' after 'lambda'.");
+    LambdaExpression* lambdaExpr = allocateASTNode(LambdaExpression);
+    lambdaExpr->parameters = parameterList(parser);
+    consume(parser, TOKEN_RIGHT_PAREN, "Expected ')' after lambda parameters.");
+
+    lambdaExpr->bodyBlock = blockExpression(parser)->as.blockExpression;
+
+    Expression* expr = allocateASTNode(Expression);
+    expr->type = LAMBDA_EXPRESSION;
+    expr->as.lambdaExpression = lambdaExpr;
+
+    return expr;
+}
+
 /**
  * expression:
  *  struct-expression
@@ -511,7 +551,12 @@ static Expression* blockExpression(ASTParser* parser) {
  *  logical-or-expression
  */
 static Expression* expression(ASTParser* parser) {
-    return logicalOrExpression(parser);
+    switch (peek(parser)->type) {
+        case TOKEN_LAMBDA:
+            return lambdaExpression(parser);
+        default:
+            return logicalOrExpression(parser);
+    }
 }
 
 /**

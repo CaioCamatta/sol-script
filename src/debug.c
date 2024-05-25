@@ -260,6 +260,25 @@ static void printExpression(const Expression* expression, int depth) {
             }
             printExpression(blockExpr->lastExpression, depth + 1);
             break;
+        case LAMBDA_EXPRESSION: {
+            LambdaExpression* lambdaExpr = expression->as.lambdaExpression;
+
+            printf("LambdaExpression\n");
+
+            printIndent(depth + 1);
+            printf("ParameterList" KGRY "(numberOfParameters=%zu)\n" RESET, lambdaExpr->parameters->used);
+            for (int i = 0; i < lambdaExpr->parameters->used; i++) {
+                printIndent(depth + 1);
+                printf("IdentifierLiteral" KGRY "(token=\"%.*s\")\n" RESET, lambdaExpr->parameters->values[i].token.length, lambdaExpr->parameters->values[i].token.start);
+            }
+
+            Expression* blockExpr = (Expression*)malloc(sizeof(Expression));
+            blockExpr->type = BLOCK_EXPRESSION;
+            blockExpr->as.blockExpression = lambdaExpr->bodyBlock;
+            printExpression(blockExpr, depth + 1);
+            free(blockExpr);
+            break;
+        }
     }
 }
 

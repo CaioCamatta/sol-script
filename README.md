@@ -181,8 +181,8 @@ struct-declaration:
 
 
 function-expression:
-  "lambda" "(" ")" "{" statement "}"
-  "lambda" "(" parameter-list ")" "{" statement "}"
+  "lambda" "(" ")" "{" block-expression "}"
+  "lambda" "(" parameter-list ")" "{" block-expression "}"
   
 parameter-list:
   identifier ( "," identifier )*

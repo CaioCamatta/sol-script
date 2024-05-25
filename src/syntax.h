@@ -22,6 +22,7 @@ typedef struct MultiplicativeExpression MultiplicativeExpression;
 typedef struct BlockExpression BlockExpression;
 typedef struct UnaryExpression UnaryExpression;
 typedef struct PrimaryExpression PrimaryExpression;
+typedef struct LambdaExpression LambdaExpression;
 typedef struct BooleanLiteral BooleanLiteral;
 typedef struct NumberLiteral NumberLiteral;
 typedef struct IdentifierLiteral IdentifierLiteral;
@@ -49,7 +50,8 @@ typedef enum {
     MULTIPLICATIVE_EXPRESSION,  // Stack effect: -1
     BLOCK_EXPRESSION,           // Stack effect: 0 per se
     UNARY_EXPRESSION,           // Stack effect: 0
-    PRIMARY_EXPRESSION          // Stack effect: 0 per se
+    PRIMARY_EXPRESSION,         // Stack effect: 0 per se
+    LAMBDA_EXPRESSION           // Stack effect: 1
 } ExpressionType;
 
 typedef enum {
@@ -86,6 +88,7 @@ typedef struct {
         BlockExpression *blockExpression;
         UnaryExpression *unaryExpression;
         PrimaryExpression *primaryExpression;
+        LambdaExpression *lambdaExpression;
     } as;
 } Expression;
 
@@ -190,6 +193,18 @@ struct UnaryExpression {
 
 struct PrimaryExpression {
     Literal *literal;
+};
+
+typedef struct {
+    IdentifierLiteral *values;
+    size_t used;
+    size_t size;
+} IdentifierArray;
+
+// Lambda expression = lambda function
+struct LambdaExpression {
+    IdentifierArray *parameters;  // Could be an empty array
+    BlockExpression *bodyBlock;
 };
 
 struct BooleanLiteral {

@@ -1,1 +1,1 @@
-val b = lambda (test) { 0; };
+val a = lambda () { print "Hello, World!"; };
