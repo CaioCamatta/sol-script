@@ -52,6 +52,14 @@ static void all_tests() {
     RUN_TEST(test_parser_lambda_expression_single_parameter);
     RUN_TEST(test_parser_lambda_expression_multiple_parameters);
     RUN_TEST(test_parser_lambda_expression_no_last_expression_in_block);
+    RUN_TEST(test_parser_call_with_args);
+    RUN_TEST(test_parser_call_in_binary_expression);
+    RUN_TEST(test_parser_call_no_args);
+    RUN_TEST(test_parser_recursive_call);
+    RUN_TEST(test_parser_call_with_block_expression_arg);
+    RUN_TEST(test_parser_nested_calls);
+    RUN_TEST(test_parser_call_with_expression_args);
+    RUN_TEST(test_parser_call_in_if_condition);
 
     // Compiler tests
     RUN_TEST(test_compiler);

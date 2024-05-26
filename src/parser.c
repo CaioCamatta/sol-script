@@ -109,6 +109,11 @@ static bool check(ASTParser* parser, TokenType type) {
     return parser->current->type == type;
 }
 
+/* Check if the next token is of a given type. */
+static bool checkNext(ASTParser* parser, TokenType type) {
+    return (parser->current->type != TOKEN_EOF && (parser->current + 1)->type == type);
+}
+
 /* Consume current token if it's of a given type. Returns true if a token was consumed and false otherwise. */
 static bool match(ASTParser* parser, TokenType type) {
     if (check(parser, type)) {
@@ -299,21 +304,65 @@ static Expression* primaryExpression(ASTParser* parser) {
 }
 
 /**
+ * argument-list:
+ *  expression ( "," expression )*
+ */
+static ExpressionArray* argumentList(ASTParser* parser) {
+    ExpressionArray* arguments = (ExpressionArray*)malloc(sizeof(ExpressionArray));
+    INIT_ARRAY((*arguments), Expression*);
+
+    if (peek(parser)->type != TOKEN_RIGHT_PAREN) {
+        do {
+            Expression* expr = expression(parser);
+            INSERT_ARRAY((*arguments), expr, Expression);
+        } while (match(parser, TOKEN_COMMA));
+    }
+    return arguments;
+}
+
+/**
  * postfix-call-expression:
  *  primary-expression
- *  "this" "." postfix-call-expression
- *  identifier "." postfix-call-expression
- *  identifier "(" argument-list? ")"  "." postfix-call-expression
+ *  identifier "(" ")"
+ *  identifier "(" argument-list ")"
  */
 static Expression* postfixCallExpression(ASTParser* parser) {
+    if (check(parser, TOKEN_IDENTIFIER) && checkNext(parser, TOKEN_LEFT_PAREN)) {
+        CallExpression* postfixCallExpr = allocateASTNode(CallExpression);
+
+        // Parse function name
+        postfixCallExpr->lambdaFunctionName = identifierLiteral(parser)->as.identifierLiteral;
+
+        // Parse optional arguments
+        consume(parser, TOKEN_LEFT_PAREN, "Impossible. Expected '(' in postfix-call-expression.");
+        postfixCallExpr->arguments = argumentList(parser);
+        consume(parser, TOKEN_RIGHT_PAREN, "Expected ')' after lambda parameters.");
+
+        Expression* expr = allocateASTNode(Expression);
+        expr->type = CALL_EXPRESSION;
+        expr->as.callExpression = postfixCallExpr;
+
+        return expr;
+    }
     return primaryExpression(parser);
 }
 
 /**
- * unary-expression:
+ * postfix-expression:
  *  postfix-call-expression
- *  ( "!" )* postfix-call-expression
- *  ( "-" )* postfix-call-expression
+ *  postfix-call-expression "." postfix-expression
+ *  "this" "." postfix-expression
+ *  identifier "." postfix-expression
+ */
+static Expression* postfixExpression(ASTParser* parser) {
+    return postfixCallExpression(parser);
+}
+
+/**
+ * unary-expression:
+ *  postfix-expression
+ *  ( "!" )* postfix-expression
+ *  ( "-" )* postfix-expression
  */
 static Expression* unaryExpression(ASTParser* parser) {
     if (match(parser, TOKEN_EXCLAMATION) || match(parser, TOKEN_MINUS)) {
@@ -330,7 +379,7 @@ static Expression* unaryExpression(ASTParser* parser) {
 
         return expression;
     }
-    return postfixCallExpression(parser);
+    return postfixExpression(parser);
 }
 
 /**

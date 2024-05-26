@@ -18,7 +18,7 @@ var uniqueNumberGenerator = struct {
   currNumber: 0;
 
   // Print N new unique numbers and return the last unique one.
-  printNewNumbers: (var count) => {
+  printNewNumbers: lambda (var count) {
     while (count > 0){
       print count;
       this.currNumber = this.currNumber +1;
@@ -214,15 +214,20 @@ multiplicative-expression:
   unary-expression ( ( "/" | "*" ) unary-expression )* 
 
 unary-expression:
+  postfix-expression
+  ( "!" )* postfix-expression
+  ( "-" )* postfix-expression
+
+postfix-expression:
   postfix-call-expression
-  ( "!" )* postfix-call-expression
-  ( "-" )* postfix-call-expression
+  postfix-call-expression "." postfix-expression
+  "this" "." postfix-expression
+  identifier "." postfix-expression
 
 postfix-call-expression:
   primary-expression
-  "this" "." postfix-call-expression
-  identifier "." postfix-call-expression
-  identifier "(" argument-list? ")"  "." postfix-call-expression
+  identifier "(" ")"  
+  identifier "(" argument-list ")"  
 
 primary-expression:
   number-literal

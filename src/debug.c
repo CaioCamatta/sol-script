@@ -268,7 +268,7 @@ static void printExpression(const Expression* expression, int depth) {
             printIndent(depth + 1);
             printf("ParameterList" KGRY "(numberOfParameters=%zu)\n" RESET, lambdaExpr->parameters->used);
             for (int i = 0; i < lambdaExpr->parameters->used; i++) {
-                printIndent(depth + 1);
+                printIndent(depth + 2);
                 printf("IdentifierLiteral" KGRY "(token=\"%.*s\")\n" RESET, lambdaExpr->parameters->values[i].token.length, lambdaExpr->parameters->values[i].token.start);
             }
 
@@ -277,6 +277,25 @@ static void printExpression(const Expression* expression, int depth) {
             blockExpr->as.blockExpression = lambdaExpr->bodyBlock;
             printExpression(blockExpr, depth + 1);
             free(blockExpr);
+            break;
+        }
+        case CALL_EXPRESSION: {
+            CallExpression* callExpr = expression->as.callExpression;
+            printf("CallExpression" KGRY "(numberOfArguments=%zu)\n" RESET, callExpr->arguments->used);
+            printIndent(depth + 1);
+            printf("FunctionName\n");
+
+            Literal* tempLiteral = (Literal*)malloc(sizeof(Literal));
+            tempLiteral->type = IDENTIFIER_LITERAL;
+            tempLiteral->as.identifierLiteral = callExpr->lambdaFunctionName;
+            printLiteral(tempLiteral, depth + 2);
+            free(tempLiteral);
+
+            printIndent(depth + 1);
+            printf("Arguments" KGRY "(numberOfArguments=%zu)\n" RESET, callExpr->arguments->used);
+            for (int i = 0; i < callExpr->arguments->used; i++) {
+                printExpression(callExpr->arguments->values[i], depth + 2);
+            }
             break;
         }
     }
