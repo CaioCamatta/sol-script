@@ -1,0 +1,1 @@
+val a = lambda () { print "Hello, World!"; };"

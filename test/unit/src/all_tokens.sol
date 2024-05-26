@@ -10,6 +10,7 @@ val
 var
 print
 while
+lambda
 
 // Identifier
 valName

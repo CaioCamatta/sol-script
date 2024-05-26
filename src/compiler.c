@@ -501,8 +501,12 @@ static void visitBlockExpression(Compiler* compiler, BlockExpression* blockExpre
         visitStatement(compiler, statement);
     }
 
-    // Final expression
-    visitExpression(compiler, blockExpression->lastExpression);
+    // If there's a final expression, visit it. Otherwise emit a NULL.
+    if (blockExpression->lastExpression) {
+        visitExpression(compiler, blockExpression->lastExpression);
+    } else {
+        emitBytecode(compiler, BYTECODE(OP_NULL));
+    }
 
     // Calculate the stack effect of this entire block so we can clean up at the end of the block.
     uint8_t stackHeightAfterBlockStmt = compiler->currentStackHeight;

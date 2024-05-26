@@ -132,6 +132,8 @@ static Token identifierOrKeyword(Scanner* scanner) {
             matchKeyword(scanner, "false", TOKEN_FALSE);
         case 'i':
             matchKeyword(scanner, "if", TOKEN_IF);
+        case 'l':
+            matchKeyword(scanner, "lambda", TOKEN_LAMBDA);
         case 'n':
             matchKeyword(scanner, "null", TOKEN_NULL);
         case 'v': {

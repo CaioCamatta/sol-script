@@ -1,0 +1,1 @@
+val calculate = lambda (x) { val result = x * 2; if (result > 10) { result + 1; } else { result - 1; } };
