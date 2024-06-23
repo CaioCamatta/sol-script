@@ -33,6 +33,18 @@ typedef struct {
 } Global;
 
 /**
+ * During Compiler execution, we use this struct to predict what the VM stack will look like.
+ *
+ * This is necessary for various reasons. For example, local variables are references via
+ * their position on the stack. So, to compile a variable access we need to predict what the VM
+ * stack will look like during execution.
+ */
+typedef struct {
+    u_int8_t currentStackHeight;  // The next empty spot on the stack
+    Local tempStack[STACK_MAX];
+} PredictedStack;
+
+/**
  * Compiler struct to facilitate compiling an AST into bytecode.
  *
  * @param currentStackHeight tracks the height of the VM stack at this point of compilation, starting at zero. (The compiler
@@ -46,10 +58,9 @@ typedef struct {
     bool isInGlobalScope;  // Track whether the compiler is currently in the global scope instead of in a block.
                            // This is used to distinguish between local variables and global variables.
 
-    u_int8_t currentStackHeight;  // The next empty spot on the stack
-    Local tempStack[STACK_MAX];   // A predictive copy of the VM's stack so we can know at compile time what position
-                                  // local variables will be in. Holds only strings for variable names.
-    HashTable tempGlobals;        // A hash table to keep track of globals to prevent redefinition and enforce constant `val`s.
+    PredictedStack* predictedStack;  // A predictive copy of the VM's stack so we can know at compile time what position
+                                     // local variables will be in. Holds only strings for variable names.
+    HashTable tempGlobals;           // A hash table to keep track of globals to prevent redefinition and enforce constant `val`s.
 } Compiler;
 
 /* Initialize a Compiler with an AST to be parsed */

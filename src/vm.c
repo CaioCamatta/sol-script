@@ -146,6 +146,7 @@ void step(VM* vm) {
     printStack(vm->SP, &(vm->stack[0]));
 #endif
 
+    // TODO: re-order switch based on frequency.
     switch (instruction->type) {
         case OP_LOAD_CONSTANT:
             push(vm, bytecodeConstantToValue(vm, instruction->maybeOperand1));

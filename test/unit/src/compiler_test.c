@@ -739,7 +739,7 @@ int test_compiler_stack_height_expression_and_val() {
 
     // The expression and print statements shouldn't add to the height.
     // The val declaration also shouldn't add anything because it's a global variable.
-    ASSERT(compiler.currentStackHeight == 0);
+    ASSERT(compiler.predictedStack->currentStackHeight == 0);
 
     // Clean up
     FREE_ARRAY(compiledCode.bytecodeArray);

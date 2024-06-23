@@ -14,6 +14,17 @@
 #include "util/hash_table.h"
 #include "vm.h"
 
+/**
+ * Initialize PredictedStack with null values and stack height zero.
+ */
+static void initPredictedStack(PredictedStack* predictedStack) {
+    predictedStack->currentStackHeight = 0;
+
+    for (int i = 0; i < STACK_MAX; i++) {
+        predictedStack->tempStack[i].name = NULL;
+    }
+}
+
 void initCompiler(Compiler* compiler, Source* ASTSource) {
     BytecodeArray bytecodeArray;
     INIT_ARRAY(bytecodeArray, Bytecode);
@@ -22,14 +33,16 @@ void initCompiler(Compiler* compiler, Source* ASTSource) {
     compiler->compiledBytecode = bytecodeArray;
     compiler->ASTSource = ASTSource;
     compiler->constantPool = constantPool;
-    compiler->currentStackHeight = 0;
     compiler->isInGlobalScope = true;
     initHashTable(&compiler->tempGlobals);
 
-    for (int i = 0; i < STACK_MAX; i++) {
-        compiler->tempStack[i].name = NULL;
-    }
+    PredictedStack* predictedStack = malloc(sizeof(PredictedStack));
+    compiler->predictedStack = predictedStack;
+    initPredictedStack(predictedStack);
 }
+
+// TODO: add function to free compiler and use it in tests
+// void freeCompiler();
 
 /* FORWARD DECLARATIONS */
 
@@ -72,14 +85,14 @@ static void emitBytecode(Compiler* compiler, Bytecode bytecode) {
  * of the height. For example, a local variable declaration increases the stack by 1 (locals live on the stack).
  */
 static void increaseStackHeight(Compiler* compiler) {
-    if (compiler->currentStackHeight == UCHAR_MAX) {
+    if (compiler->predictedStack->currentStackHeight == UCHAR_MAX) {
         errorAndExit(
             "StackOverflowError: The Compiler has predicted that this code will "
             "cause the VM stack to overflow.");  // This error often indicates that something is wrong
                                                  // with how the compiler tracks the predicted stack height
     }
 
-    compiler->currentStackHeight++;
+    compiler->predictedStack->currentStackHeight++;
 }
 
 /**
@@ -93,9 +106,9 @@ static void increaseStackHeight(Compiler* compiler) {
  *  Stack: [A B C(top) X X X]
  */
 static void decreaseStackHeight(Compiler* compiler) {
-    if (compiler->currentStackHeight > 0) {
-        compiler->tempStack[compiler->currentStackHeight - 1].name = NULL;
-        compiler->currentStackHeight--;
+    if (compiler->predictedStack->currentStackHeight > 0) {
+        compiler->predictedStack->tempStack[compiler->predictedStack->currentStackHeight - 1].name = NULL;
+        compiler->predictedStack->currentStackHeight--;
     } else
         errorAndExit("InvalidStateException: the Compiler attempted to decrease the predicted stack height below 0.")
 }
@@ -194,13 +207,13 @@ static bool isGlobalConstant(Compiler* compiler, char* name) {
  * Returns either the stack index if found, or -1 if not found.
  */
 static int findLocalByName(Compiler* compiler, char* name) {
-    for (int i = compiler->currentStackHeight; i >= 0; i--) {
+    for (int i = compiler->predictedStack->currentStackHeight; i >= 0; i--) {
         // Skip NULL entries. (These may exists because our temp stack only keeps track of locals.
         // Anything else that's on the stack is a NULL here)
-        if (compiler->tempStack[i].name == NULL) continue;
+        if (compiler->predictedStack->tempStack[i].name == NULL) continue;
 
         // See if name matches
-        if (strcmp(name, compiler->tempStack[i].name) == 0) return i;
+        if (strcmp(name, compiler->predictedStack->tempStack[i].name) == 0) return i;
     }
     return -1;  // Not declared
 }
@@ -215,7 +228,7 @@ static int isLocalConstant(Compiler* compiler, char* name) {
         errorAndExit(
             "InvalidStateException: Attempted to check if a local variable is constant, but the "
             "local doesn't exist.") else {
-            return compiler->tempStack[index].isConstant;
+            return compiler->predictedStack->tempStack[index].isConstant;
         }
 }
 /**
@@ -227,7 +240,7 @@ static int isLocalConstantByIndex(Compiler* compiler, int indexInTempStack) {
         errorAndExit(
             "InvalidStateException: Attempted to check if a local variable is constant, but the "
             "local doesn't exist.") else {
-            return compiler->tempStack[indexInTempStack].isConstant;
+            return compiler->predictedStack->tempStack[indexInTempStack].isConstant;
         }
 }
 
@@ -236,18 +249,18 @@ static int isLocalConstantByIndex(Compiler* compiler, int indexInTempStack) {
  */
 static void addLocalToTempStack(Compiler* compiler, char* name, bool isConstant) {
     // The local will be right below the current stack height
-    compiler->tempStack[compiler->currentStackHeight - 1] = (Local){.name = name, .isConstant = isConstant};
+    compiler->predictedStack->tempStack[compiler->predictedStack->currentStackHeight - 1] = (Local){.name = name, .isConstant = isConstant};
 }
 
 /**
  * Remove N locals from the top of the Compiler's temporary stack.
  */
 static void removeLocalsFromTempStack(Compiler* compiler, int N) {
-    for (int i = compiler->currentStackHeight; i > compiler->currentStackHeight - N; i--) {
+    for (int i = compiler->predictedStack->currentStackHeight; i > compiler->predictedStack->currentStackHeight - N; i--) {
         if (N < 0) {
             errorAndExit("Attempted to remove more local variables than exist in the stack. This should be impossible.");
         }
-        compiler->tempStack[i - 1].name = NULL;  // Setting the name to NULL frees up the spot
+        compiler->predictedStack->tempStack[i - 1].name = NULL;  // Setting the name to NULL frees up the spot
     }
 }
 
@@ -494,7 +507,7 @@ static void visitBlockExpression(Compiler* compiler, BlockExpression* blockExpre
     compiler->isInGlobalScope = false;
 
     // Keep track of the stack height so we can later pop all the variables etc defined in it.
-    uint8_t stackHeightBeforeBlockStmt = compiler->currentStackHeight;
+    uint8_t stackHeightBeforeBlockStmt = compiler->predictedStack->currentStackHeight;
 
     for (size_t i = 0; i < blockExpression->statementArray.used; i++) {
         Statement* statement = blockExpression->statementArray.values[i];
@@ -509,7 +522,7 @@ static void visitBlockExpression(Compiler* compiler, BlockExpression* blockExpre
     }
 
     // Calculate the stack effect of this entire block so we can clean up at the end of the block.
-    uint8_t stackHeightAfterBlockStmt = compiler->currentStackHeight;
+    uint8_t stackHeightAfterBlockStmt = compiler->predictedStack->currentStackHeight;
     uint8_t blockStmtStackEffect = stackHeightAfterBlockStmt - stackHeightBeforeBlockStmt;
 
     // Swap the value at the top of the stack (the Value produced by the expression) with the first value
@@ -528,7 +541,7 @@ static void visitBlockExpression(Compiler* compiler, BlockExpression* blockExpre
     removeLocalsFromTempStack(compiler, blockStmtStackEffect - 1);
 
     // Undo stack height, except for final expression
-    compiler->currentStackHeight = stackHeightBeforeBlockStmt + 1;
+    compiler->predictedStack->currentStackHeight = stackHeightBeforeBlockStmt + 1;
 
     compiler->isInGlobalScope = wasCompilerInGlobalScopeBeforeThisBlock;
 }
@@ -538,7 +551,7 @@ static void visitBlockStatement(Compiler* compiler, BlockStatement* blockStateme
     compiler->isInGlobalScope = false;
 
     // Keep track of the stack height so we can later pop all the variables etc defined in it.
-    uint8_t stackHeightBeforeBlockStmt = compiler->currentStackHeight;
+    uint8_t stackHeightBeforeBlockStmt = compiler->predictedStack->currentStackHeight;
 
     for (size_t i = 0; i < blockStatement->statementArray.used; i++) {
         Statement* statement = blockStatement->statementArray.values[i];
@@ -546,7 +559,7 @@ static void visitBlockStatement(Compiler* compiler, BlockStatement* blockStateme
     }
 
     // Calculate the stack effect of this entire block so we can clean up at the end of the block.
-    uint8_t stackHeightAfterBlockStmt = compiler->currentStackHeight;
+    uint8_t stackHeightAfterBlockStmt = compiler->predictedStack->currentStackHeight;
     uint8_t blockStmtStackEffect = stackHeightAfterBlockStmt - stackHeightBeforeBlockStmt;
 
     // Pop all the Values that were put in the VM stack in the block.
@@ -557,7 +570,7 @@ static void visitBlockStatement(Compiler* compiler, BlockStatement* blockStateme
     removeLocalsFromTempStack(compiler, blockStmtStackEffect);
 
     // Undo stack height
-    compiler->currentStackHeight = stackHeightBeforeBlockStmt;
+    compiler->predictedStack->currentStackHeight = stackHeightBeforeBlockStmt;
 
     compiler->isInGlobalScope = wasCompilerInGlobalScopeBeforeThisBlock;
 }

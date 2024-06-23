@@ -560,7 +560,7 @@ static Expression* blockExpression(ASTParser* parser) {
     consume(parser, TOKEN_RIGHT_CURLY, "Unclosed block expression. Expected '}'.");
 
     // Block expressions must have at least one expression in them.
-    if (!blockExpr->statementArray.used && !blockExpr->lastExpression) errorAtCurrent(parser, "Encountered an empty block-expression.");
+    if (!blockExpr->statementArray.used && !blockExpr->lastExpression) errorAtCurrent(parser, "Encountered an empty block-expression. This isn't allowed in SolScript.");
 
     // Make the last ExpressionStatement the block's `lastExpression`
 
