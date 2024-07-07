@@ -19,7 +19,7 @@
  * @param SP the stack pointer (we use an actual pointer instead of an int index for faster dereferencing)
  * */
 typedef struct {
-    CompiledCode compiledCode;
+    CompiledCodeObject compiledCode;
     Bytecode* IP;
     Value stack[STACK_MAX];
     HashTable globals;

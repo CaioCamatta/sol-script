@@ -13,6 +13,7 @@ char const* tokenTypeToString(TokenType tokenType);
 void printAST(const Source* source);
 
 void printCompiledCode(CompiledCode compiledCode);
+void printCompiledCodeObject(CompiledCodeObject compiledCodeObject);
 
 void printStack(const Value* topOfStack, const Value* bottomOfStack);
 

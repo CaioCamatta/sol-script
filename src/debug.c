@@ -465,8 +465,14 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
 
 void printCompiledCode(CompiledCode compiledCode) {
     printf("Compiled code:\n");
-    printConstantPool(compiledCode.constantPool);
-    printBytecodeArray(compiledCode.bytecodeArray);
+    printCompiledCodeObject(compiledCode.topLevelCodeObject);
+    printf("\n");
+}
+
+void printCompiledCodeObject(CompiledCodeObject compiledCodeObject) {
+    printf("Compiled code object:\n");
+    printConstantPool(compiledCodeObject.constantPool);
+    printBytecodeArray(compiledCodeObject.bytecodeArray);
     printf("\n");
 }
 
