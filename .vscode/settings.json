@@ -69,7 +69,8 @@
     "vm.h": "c",
     "typeinfo": "c",
     "limits.h": "c",
-    "stddef.h": "c"
+    "stddef.h": "c",
+    "utils.h": "c"
   },
   "C_Cpp.errorSquiggles": "enabled"
 }

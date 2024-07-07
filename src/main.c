@@ -13,16 +13,15 @@
 
 static void repl() {
     // Use the same Compiler throughout the REPL session so we can add to the same constant pool
-    Compiler compiler;
-    initRootCompiler(&compiler, NULL);
+    CompilerState compiler;
+    initCompilerState(&compiler, NULL);
 
     // Use the same VM throughout the REPL session so we can maintain runtime values
     VM vm;
     BytecodeArray bytecodeArray;
     INIT_ARRAY(bytecodeArray, Bytecode);
     CompiledCode compiledCode = (CompiledCode){
-        .bytecodeArray = bytecodeArray,
-        .constantPool = compiler.constantPool};
+        .topLevelCodeObject = compiler.currentCompilerUnit.compiledCodeObject};
 
     initVM(&vm, compiledCode);
 
@@ -44,14 +43,14 @@ static void repl() {
         printAST(source);
 
         // Reset compiled bytecode and feed new AST, but maintain same constant pool
-        INIT_ARRAY(compiler.compiledBytecode, Bytecode);
+        INIT_ARRAY(compiler.currentCompilerUnit.compiledCodeObject.bytecodeArray, Bytecode);
         compiler.ASTSource = source;
         CompiledCode newCode = compile(&compiler);
         printCompiledCode(newCode);
 
         // Add new bytecode to VM
-        for (int i = 0; i < newCode.bytecodeArray.used; i++) {
-            vm.compiledCode.bytecodeArray.values[vm.compiledCode.bytecodeArray.used] = newCode.bytecodeArray.values[i];
+        for (int i = 0; i < newCode.topLevelCodeObject.bytecodeArray.used; i++) {
+            vm.compiledCode.bytecodeArray.values[vm.compiledCode.bytecodeArray.used] = newCode.topLevelCodeObject.bytecodeArray.values[i];
             vm.compiledCode.bytecodeArray.used++;
         }
         run(&vm);
@@ -79,8 +78,8 @@ static void executeFile(const char* path) {
     printAST(source);
 
     // Then, compile the AST into bytecode.
-    Compiler compiler;
-    initRootCompiler(&compiler, source);
+    CompilerState compiler;
+    initCompilerState(&compiler, source);
     CompiledCode compiledCode = compile(&compiler);
     printCompiledCode(compiledCode);
 

@@ -15,7 +15,7 @@
  * Initialize VM with some source code.
  */
 void initVM(VM* vm, CompiledCode compiledCode) {
-    vm->compiledCode = compiledCode;
+    vm->compiledCode = compiledCode.topLevelCodeObject;
     vm->IP = vm->compiledCode.bytecodeArray.values;  // Set instruction pointer to the beginning of bytecode
     vm->SP = vm->stack;                              // Set stack pointer to the top of the stack
     initHashTable(&vm->globals);

@@ -129,8 +129,16 @@ typedef struct {
  * This is all the information the VM needs to run.
  */
 typedef struct {
-    ConstantPool constantPool;
+    ConstantPool constantPool;  // May contain nested CodeObjects (e.g. if a function is defined within another)
     BytecodeArray bytecodeArray;
+} CompiledCodeObject;
+
+/**
+ * SolScript's compiled code consists of compiled code + metadata.
+ */
+typedef struct {
+    CompiledCodeObject topLevelCodeObject;
+    // Other metadata can go in here
 } CompiledCode;
 
 #endif
