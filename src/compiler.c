@@ -57,8 +57,17 @@ void initCompilerState(CompilerState* compilerState, Source* ASTSource) {
 }
 
 void freeCompilerUnit(CompilerUnit compilerUnit) {
-    FREE_ARRAY(compilerUnit.compiledCodeObject.bytecodeArray);
+    // First we free the constants
+    for (size_t i = 0; i < compilerUnit.compiledCodeObject.constantPool.used; i++) {
+        Constant* constant = &compilerUnit.compiledCodeObject.constantPool.values[i];
+        if (constant->type == CONST_TYPE_LAMBDA) {
+            free(constant->as.function->code);
+            free(constant->as.function);
+        }
+    }
     FREE_ARRAY(compilerUnit.compiledCodeObject.constantPool);
+
+    FREE_ARRAY(compilerUnit.compiledCodeObject.bytecodeArray);
 }
 
 void freeCompilerState(CompilerState* compilerState) {
@@ -165,10 +174,13 @@ static size_t findConstantInPool(CompilerUnit* compiler, Constant constant) {
             case CONST_TYPE_IDENTIFIER:
                 if (strcmp(constant.as.string, compiler->compiledCodeObject.constantPool.values[i].as.string) == 0) return i;
                 break;
-
             case CONST_TYPE_DOUBLE:
                 if (constant.as.number == compiler->compiledCodeObject.constantPool.values[i].as.number) return i;
                 break;
+            case CONST_TYPE_LAMBDA:
+                errorAndExit(
+                    "InvalidStateException: the Compiler tried to find a constant of type Function. "
+                    "This should never be necessary or possible.")
         }
     }
     return -1;
@@ -192,8 +204,8 @@ static size_t addConstantToPool(CompilerUnit* compiler, Constant constant) {
 /**
  * Add a global variable to the compiler's table of globals.
  */
-static void addGlobalToTable(CompilerUnit* compiler, char* name, bool isConstant) {
-    hashTableInsert(compiler->globals, name, (Value){.as.booleanVal = isConstant});
+static void addGlobalToTable(CompilerUnit* compiler, char* name, bool isModifiable) {
+    hashTableInsert(compiler->globals, name, (Value){.as.booleanVal = isModifiable});
 }
 /**
  * Check if a global variable in the compiler's table of globals is constant (i.e. `val`).
@@ -247,7 +259,7 @@ static int isLocalConstant(CompilerUnit* compiler, char* name) {
         errorAndExit(
             "InvalidStateException: Attempted to check if a local variable is constant, but the "
             "local doesn't exist.") else {
-            return compiler->predictedStack.tempStack[index].isConstant;
+            return compiler->predictedStack.tempStack[index].isModifiable;
         }
 }
 /**
@@ -259,16 +271,16 @@ static int isLocalConstantByIndex(CompilerUnit* compiler, int indexInTempStack) 
         errorAndExit(
             "InvalidStateException: Attempted to check if a local variable is constant, but the "
             "local doesn't exist.") else {
-            return compiler->predictedStack.tempStack[indexInTempStack].isConstant;
+            return compiler->predictedStack.tempStack[indexInTempStack].isModifiable;
         }
 }
 
 /**
  * Add a local variable to the Compiler's temporary stack..
  */
-static void addLocalToTempStack(CompilerUnit* compiler, char* name, bool isConstant) {
+static void addLocalToTempStack(CompilerUnit* compiler, char* name, bool isModifiable) {
     // The local will be right below the current stack height
-    compiler->predictedStack.tempStack[compiler->predictedStack.currentStackHeight - 1] = (Local){.name = name, .isConstant = isConstant};
+    compiler->predictedStack.tempStack[compiler->predictedStack.currentStackHeight - 1] = (Local){.name = name, .isModifiable = isModifiable};
 }
 
 /**
@@ -438,8 +450,6 @@ static void visitAssignmentStatement(CompilerUnit* compiler, AssignmentStatement
                     errorAndExit("Error: identifier '%s' not declared.", identifierName);
                 }
             }
-
-            free(identifierName);
         } else {
             errorAndExit("Invalid assignment target. Invalid type of primary-expression.");
         }
@@ -462,13 +472,13 @@ static void visitValDeclarationStatement(CompilerUnit* compiler, ValDeclarationS
     Constant constant = IDENTIFIER_CONST(copyStringToHeap(valDeclarationStatement->identifier->token.start,
                                                           valDeclarationStatement->identifier->token.length));
 
-    bool isVariableConstant = true;  // Vals cannot be modified
+    bool isVariableModifiable = true;  // Vals cannot be modified
 
     if (compiler->isInGlobalScope) {
         if (isGlobalInTable(compiler, constant.as.string)) errorAndExit("Error: val \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
 
         size_t constantIndex = addConstantToPool(compiler, constant);
-        addGlobalToTable(compiler, constant.as.string, isVariableConstant);  // We also keep track that this global exists so we can prevent redeclaration later.
+        addGlobalToTable(compiler, constant.as.string, isVariableModifiable);  // We also keep track that this global exists so we can prevent redeclaration later.
 
         emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, constantIndex));
 
@@ -476,7 +486,7 @@ static void visitValDeclarationStatement(CompilerUnit* compiler, ValDeclarationS
     } else {
         if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit("Error: val \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
 
-        addLocalToTempStack(compiler, constant.as.string, isVariableConstant);
+        addLocalToTempStack(compiler, constant.as.string, isVariableModifiable);
         emitBytecode(compiler, BYTECODE(OP_DEFINE_LOCAL_VAL_FAST));
     }
 }
@@ -493,14 +503,14 @@ static void visitVarDeclarationStatement(CompilerUnit* compiler, VarDeclarationS
     Constant constant = IDENTIFIER_CONST(copyStringToHeap(varDeclarationStatement->identifier->token.start,
                                                           varDeclarationStatement->identifier->token.length));
 
-    bool isVariableConstant = false;  // Vars can be modified
+    bool isVariableModifiable = false;  // Vars can be modified
 
     if (compiler->isInGlobalScope) {
         // Preventing global redeclaration is an arbitrary choice.
         if (isGlobalInTable(compiler, constant.as.string)) errorAndExit("Error: var \"%s\" is already declared. Redeclaration is not permitted as it often leads to confusion.", constant.as.string);
 
         size_t constantIndex = addConstantToPool(compiler, constant);
-        addGlobalToTable(compiler, constant.as.string, isVariableConstant);  // We also keep track that this global exists so we can prevent redeclaration later.
+        addGlobalToTable(compiler, constant.as.string, isVariableModifiable);  // We also keep track that this global exists so we can prevent redeclaration later.
 
         emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAR, constantIndex));
 
@@ -508,7 +518,7 @@ static void visitVarDeclarationStatement(CompilerUnit* compiler, VarDeclarationS
     } else {
         if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit("Error: var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
 
-        addLocalToTempStack(compiler, constant.as.string, isVariableConstant);
+        addLocalToTempStack(compiler, constant.as.string, isVariableModifiable);
 
         emitBytecode(compiler, BYTECODE(OP_DEFINE_LOCAL_VAR_FAST));
     }
@@ -629,6 +639,106 @@ static void visitSelectionStatement(CompilerUnit* compiler, SelectionStatement* 
     }
 }
 
+static Function* createFunction(int parameterCount, CompiledCodeObject* code) {
+    Function* function = (Function*)malloc(sizeof(Function));
+    function->parameterCount = parameterCount;
+    function->code = code;
+    return function;
+}
+
+/**
+ * Compile a function and emit an OP_LAMBDA, which in the just puts the function Value on the stack.
+ *
+ * It's impossible to predict the size of the global stack at time of invocation, the best we can do is
+ * predict the size of the stack within the context of the invocation. so to compile a function we
+ * create a new CompilerUnit, with its own stack, and compile everything relative to the new stack.
+ *
+ * TODO: Handle closures. For now, only globals and variables that are local to the function can be referenced.
+ */
+static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lambdaExpression) {
+    CompilerUnit functionCompiler;
+    initCompilerUnit(&functionCompiler, compiler->globals);
+
+    // Define all parameters as locals
+    for (size_t i = 0; i < lambdaExpression->parameters->used; i++) {
+        Constant constant = IDENTIFIER_CONST(copyStringToHeap(lambdaExpression->parameters->values[i].token.start,
+                                                              lambdaExpression->parameters->values[i].token.length));
+        if (findLocalByName(&functionCompiler, constant.as.string) != -1)
+            errorAndExit("Error: var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
+        addLocalToTempStack(&functionCompiler, constant.as.string, false);
+        increaseStackHeight(&functionCompiler);
+    }
+
+    // Compile the function body
+    visitBlockExpression(compiler, lambdaExpression->bodyBlock);
+
+    // Emit OP_RETURN if not already present
+    if (functionCompiler.compiledCodeObject.bytecodeArray.values[functionCompiler.compiledCodeObject.bytecodeArray.used - 1].type != OP_RETURN) {
+        emitBytecode(&functionCompiler, (Bytecode){.type = OP_RETURN});
+    }
+
+    // Allocate the compiled code object on the heap and create a function object
+    CompiledCodeObject* heapCodeObject = (CompiledCodeObject*)malloc(sizeof(CompiledCodeObject));
+    *heapCodeObject = functionCompiler.compiledCodeObject;
+    Function* function = createFunction(lambdaExpression->parameters->used, heapCodeObject);
+
+    // Create a constant for the function
+    Constant functionConstant = LAMBDA_CONST(function);
+    size_t constantIndex = addConstantToPool(compiler, functionConstant);
+
+    // Emit bytecode to define the function
+    emitBytecode(compiler, (Bytecode){.type = OP_LAMBDA, .maybeOperand1 = constantIndex});
+
+    // The VM will be putting an ObjFunction in the stack, so we have to increase the height
+    increaseStackHeight(compiler);
+}
+
+/**
+ * Call a function.
+ *  1) Put all arguments on the stack; the bottommost one is the first argument.
+ *  2) Verify function exists in lexical scope
+ *  3) TODO: Check that identifier being called is actually a calalble
+ *  4) TODO: Check arity
+ *  5) Emit bytecode for put function object (referenced by the identifier) being caled on the stack
+ *  6) Emit bytecode to execute the function object
+ */
+static void visitCallExpression(CompilerUnit* compiler, CallExpression* callExpression) {
+    // Compile the arguments
+    for (size_t i = 0; i < callExpression->arguments->used; i++) {
+        visitExpression(compiler, callExpression->arguments->values[i]);
+    }
+
+    // Verify that the identifier being called exists in the lexical scope
+    char* identifierNameNullTerminated = strndup(callExpression->lambdaFunctionName->token.start, callExpression->lambdaFunctionName->token.length);
+    size_t functionIndex = findLocalByName(compiler, identifierNameNullTerminated);
+    Constant functionNameConstant = IDENTIFIER_CONST(identifierNameNullTerminated);
+
+    if (functionIndex == -1) {
+        // It's not a local variable, so we check if it's a global
+        size_t index = findConstantInPool(compiler, functionNameConstant);
+        if (!isGlobalInTable(compiler, functionNameConstant.as.string)) errorAndExit("Error: identifier '%s' referenced before declaration.", functionNameConstant.as.string);
+
+        // Emit bytecode to load the function object onto the stack
+        Bytecode bytecodeToGetVariable = isGlobalConstant(compiler, functionNameConstant.as.string)
+                                             ? BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index)
+                                             : BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, index);
+        emitBytecode(compiler, bytecodeToGetVariable);
+    } else {
+        Bytecode bytecodeToGetVariable = isLocalConstant(compiler, functionNameConstant.as.string)
+                                             ? BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, functionIndex)
+                                             : BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, functionIndex);
+        emitBytecode(compiler, bytecodeToGetVariable);
+    }
+
+    // TODO: Add compile-time type check. Only functions should be callable. (This could be done by adding
+    // a type field to the Local struct)
+
+    // TODO: Add arity check.
+
+    // Emit bytecode for the function call
+    emitBytecode(compiler, BYTECODE(OP_CALL));
+}
+
 /**
  * Here's an example of the bytecode produced by SolScript while-loops:
  *  42    : loop condition expression
@@ -694,9 +804,8 @@ static void visitBooleanLiteral(CompilerUnit* compiler, BooleanLiteral* booleanL
 }
 
 static void visitIdentifierLiteral(CompilerUnit* compiler, IdentifierLiteral* identifierLiteral) {
-    char* identifierNameNullTerminated = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
-
     // Check if the identifier is a local variable
+    char* identifierNameNullTerminated = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
     size_t stackIndex = findLocalByName(compiler, identifierNameNullTerminated);
 
     if (stackIndex == -1) {  // Its not a local variable
@@ -784,6 +893,12 @@ static void visitExpression(CompilerUnit* compiler, Expression* expression) {
             break;
         case BLOCK_EXPRESSION:
             visitBlockExpression(compiler, expression->as.blockExpression);
+            break;
+        case LAMBDA_EXPRESSION:
+            visitLambdaExpression(compiler, expression->as.lambdaExpression);
+            break;
+        case CALL_EXPRESSION:
+            visitCallExpression(compiler, expression->as.callExpression);
             break;
         default:
             fprintf(stderr, "Unimplemented expression type %d.", expression->type);

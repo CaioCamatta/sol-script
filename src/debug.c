@@ -350,6 +350,9 @@ static void printConstantPool(ConstantPool constantPool) {
             case CONST_TYPE_IDENTIFIER:
                 printf("(identifier) \"%s\"\n", value.as.string);
                 break;
+            case CONST_TYPE_LAMBDA:
+                printf("(function) <0x%p parameterCount=%d>\n", value.as.function->code, value.as.function->parameterCount);
+                break;
         }
     }
 }
@@ -458,6 +461,15 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
                 break;
             case OP_SWAP:
                 printf("SWAP #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                break;
+            case OP_LAMBDA:
+                printf("LAMBDA #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                break;
+            case OP_CALL:
+                printf("CALL\n");
+                break;
+            case OP_RETURN:
+                printf("RETURN\n");
                 break;
         }
     }

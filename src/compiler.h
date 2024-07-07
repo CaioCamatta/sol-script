@@ -18,7 +18,7 @@
  */
 typedef struct {
     char* name;  // Null-terminated
-    bool isConstant;
+    bool isModifiable;
 } Local;
 
 /**
@@ -29,7 +29,7 @@ typedef struct {
  */
 typedef struct {
     char* name;
-    bool isConstant;
+    bool isModifiable;
 } Global;
 
 /**
