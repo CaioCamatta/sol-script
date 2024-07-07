@@ -25,7 +25,7 @@ static void initPredictedStack(PredictedStack* predictedStack) {
     }
 }
 
-void initCompiler(Compiler* compiler, Source* ASTSource) {
+void initRootCompiler(Compiler* compiler, Source* ASTSource) {
     BytecodeArray bytecodeArray;
     INIT_ARRAY(bytecodeArray, Bytecode);
     ConstantPool constantPool;
@@ -36,6 +36,21 @@ void initCompiler(Compiler* compiler, Source* ASTSource) {
     compiler->isInGlobalScope = true;
     initHashTable(&compiler->tempGlobals);
 
+    PredictedStack* predictedStack = malloc(sizeof(PredictedStack));
+    compiler->predictedStack = predictedStack;
+    initPredictedStack(predictedStack);
+}
+
+Compiler* initFunctionCompiler(Compiler* enclosingCompiler) {
+    Compiler* compiler = malloc(sizeof(Compiler));
+
+    // Use same as parent:
+    compiler->compiledBytecode = enclosingCompiler->compiledBytecode;
+    compiler->ASTSource = enclosingCompiler->ASTSource;
+    compiler->constantPool = enclosingCompiler->constantPool;
+    compiler->isInGlobalScope = false;  // Only the root compiler can be in global scope.
+
+    // Use a separate stack for the function
     PredictedStack* predictedStack = malloc(sizeof(PredictedStack));
     compiler->predictedStack = predictedStack;
     initPredictedStack(predictedStack);
@@ -101,9 +116,9 @@ static void increaseStackHeight(Compiler* compiler) {
  *
  * When reducing the stack height, this function also clears the slots the were freed.
  * Example:
- *  Stack: [A B C D(top) X X]
+ *  Stack: [A B C D(top) ? ?]
  *  decreaseStackHeight(1)
- *  Stack: [A B C(top) X X X]
+ *  Stack: [A B C(top) ? ? ?]
  */
 static void decreaseStackHeight(Compiler* compiler) {
     if (compiler->predictedStack->currentStackHeight > 0) {
@@ -806,15 +821,15 @@ static void visitStatement(Compiler* compiler, Statement* statement) {
     }
 }
 
-CompiledCode compile(Compiler* compiler) {
+CompiledCode compile(Compiler* rootCompiler) {
 #if DEBUG_COMPILER
     clock_t startTime = clock();
     printf("Started compiling.\n");
 #endif
 
-    for (int i = 0; i < compiler->ASTSource->numberOfStatements; i++) {
-        Statement* statement = compiler->ASTSource->rootStatements[i];
-        visitStatement(compiler, statement);
+    for (int i = 0; i < rootCompiler->ASTSource->numberOfStatements; i++) {
+        Statement* statement = rootCompiler->ASTSource->rootStatements[i];
+        visitStatement(rootCompiler, statement);
     }
 
 #if DEBUG_COMPILER
@@ -824,8 +839,8 @@ CompiledCode compile(Compiler* compiler) {
 #endif
 
     CompiledCode code = (CompiledCode){
-        .bytecodeArray = compiler->compiledBytecode,
-        .constantPool = compiler->constantPool};
+        .bytecodeArray = rootCompiler->compiledBytecode,
+        .constantPool = rootCompiler->constantPool};
 
     return code;
 }

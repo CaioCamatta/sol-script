@@ -14,7 +14,7 @@
 static void repl() {
     // Use the same Compiler throughout the REPL session so we can add to the same constant pool
     Compiler compiler;
-    initCompiler(&compiler, NULL);
+    initRootCompiler(&compiler, NULL);
 
     // Use the same VM throughout the REPL session so we can maintain runtime values
     VM vm;
@@ -80,7 +80,7 @@ static void executeFile(const char* path) {
 
     // Then, compile the AST into bytecode.
     Compiler compiler;
-    initCompiler(&compiler, source);
+    initRootCompiler(&compiler, source);
     CompiledCode compiledCode = compile(&compiler);
     printCompiledCode(compiledCode);
 

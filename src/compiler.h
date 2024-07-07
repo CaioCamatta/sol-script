@@ -46,9 +46,6 @@ typedef struct {
 
 /**
  * Compiler struct to facilitate compiling an AST into bytecode.
- *
- * @param currentStackHeight tracks the height of the VM stack at this point of compilation, starting at zero. (The compiler
- *                          can know in advance how tall the stack will be.)
  */
 typedef struct {
     BytecodeArray compiledBytecode;
@@ -64,7 +61,7 @@ typedef struct {
 } Compiler;
 
 /* Initialize a Compiler with an AST to be parsed */
-void initCompiler(Compiler* compiler, Source* ASTSource);
+void initRootCompiler(Compiler* compiler, Source* ASTSource);
 
 /**
  * Compile an AST into bytecode.

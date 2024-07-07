@@ -279,7 +279,7 @@ static int compareTypesInBytecodeArrays(BytecodeArray expected, BytecodeArray ac
 // Assumes the source is named `testSource`; creates a variable called `compiledCode`.
 #define COMPILE_TEST_SOURCE                         \
     Compiler compiler;                              \
-    initCompiler(&compiler, &testSource);           \
+    initRootCompiler(&compiler, &testSource);       \
     CompiledCode compiledCode = compile(&compiler); \
     printCompiledCode(compiledCode);
 
