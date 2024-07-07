@@ -134,8 +134,7 @@ typedef struct {
 } CompiledCodeObject;
 
 /**
- * SolScript's compiled code consists of a constant pool and the bytecode.
- * This is all the information the VM needs to run.
+ * SolScript's compiled code consists of compiled code + metadata.
  */
 typedef struct {
     CompiledCodeObject topLevelCodeObject;
