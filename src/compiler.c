@@ -34,14 +34,8 @@ static PredictedStack newPredictedStack() {
 CompilerUnit initCompilerUnit(CompilerUnit* maybeEnclosingCompilerUnit, HashTable* globals) {
     CompilerUnit compilerUnit;
 
-    BytecodeArray bytecodeArray;
-    INIT_ARRAY(bytecodeArray, Bytecode);
-    ConstantPool constantPool;
-    INIT_ARRAY(constantPool, Constant);
-
-    compilerUnit.compiledCodeObject = (CompiledCodeObject){
-        .bytecodeArray = bytecodeArray,
-        .constantPool = constantPool};
+    INIT_ARRAY(compilerUnit.compiledCodeObject.bytecodeArray, Bytecode);
+    INIT_ARRAY(compilerUnit.compiledCodeObject.constantPool, Constant);
     compilerUnit.predictedStack = newPredictedStack();
     compilerUnit.isInGlobalScope = maybeEnclosingCompilerUnit == NULL;  // Only the root compiler can be in global scope.
     compilerUnit.globals = globals;
@@ -656,8 +650,7 @@ static Function* createFunction(int parameterCount, CompiledCodeObject* code) {
  * TODO: Handle closures. For now, only globals and variables that are local to the function can be referenced.
  */
 static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lambdaExpression) {
-    CompilerUnit functionCompiler;
-    initCompilerUnit(&functionCompiler, compiler->globals);
+    CompilerUnit functionCompiler = initCompilerUnit(compiler, compiler->globals);
 
     // Define all parameters as locals
     for (size_t i = 0; i < lambdaExpression->parameters->used; i++) {
@@ -670,7 +663,7 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
     }
 
     // Compile the function body
-    visitBlockExpression(compiler, lambdaExpression->bodyBlock);
+    visitBlockExpression(&functionCompiler, lambdaExpression->bodyBlock);
 
     // Emit OP_RETURN if not already present
     if (functionCompiler.compiledCodeObject.bytecodeArray.values[functionCompiler.compiledCodeObject.bytecodeArray.used - 1].type != OP_RETURN) {

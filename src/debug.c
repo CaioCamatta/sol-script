@@ -351,7 +351,7 @@ static void printConstantPool(ConstantPool constantPool) {
                 printf("(identifier) \"%s\"\n", value.as.string);
                 break;
             case CONST_TYPE_LAMBDA:
-                printf("(function) <0x%p parameterCount=%d>\n", value.as.function->code, value.as.function->parameterCount);
+                printf("(function) <%p parameterCount=%d>\n", value.as.function->code, value.as.function->parameterCount);
                 break;
         }
     }

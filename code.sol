@@ -1,1 +1,1 @@
-print a();
+val a = lambda(){print 1;};
