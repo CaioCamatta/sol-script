@@ -544,6 +544,7 @@ static void visitBlockExpression(CompilerUnit* compiler, BlockExpression* blockE
         visitExpression(compiler, blockExpression->lastExpression);
     } else {
         emitBytecode(compiler, BYTECODE(OP_NULL));
+        increaseStackHeight(compiler);
     }
 
     // Calculate the stack effect of this entire block so we can clean up at the end of the block.
@@ -555,7 +556,7 @@ static void visitBlockExpression(CompilerUnit* compiler, BlockExpression* blockE
     // Before: [ X X X BlockValue_0 BlockValue_1 BlockValue_2]
     // Apply: SWAP(2)
     // After:  [ X X X BlockValue_2 BlockValue_1 BlockValue_0]
-    if (blockStmtStackEffect)
+    if (blockStmtStackEffect > 1)
         emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SWAP, blockStmtStackEffect - 1));
 
     // Pop all the Values that were put in the VM stack in the block, except the Value produced by the expression

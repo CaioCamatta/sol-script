@@ -1023,11 +1023,10 @@ int test_compiler_block_expression_simple() {
 
     Bytecode expectedBytecode[] = {
         {.type = OP_LOAD_CONSTANT, .maybeOperand1 = 0},
-        {.type = OP_SWAP, .maybeOperand1 = 0},
         {.type = OP_POPN, .maybeOperand1 = 0},
         {.type = OP_DEFINE_GLOBAL_VAL, .maybeOperand1 = 1},
     };
-    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 4};
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 3};
 
     ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
     ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].as.number == 3);
@@ -1058,15 +1057,12 @@ int test_compiler_block_expression_nested() {
 
     Bytecode expectedBytecode[] = {
         {.type = OP_LOAD_CONSTANT, .maybeOperand1 = 0},
-        {.type = OP_SWAP, .maybeOperand1 = 0},
         {.type = OP_POPN, .maybeOperand1 = 0},
-        {.type = OP_SWAP, .maybeOperand1 = 0},
         {.type = OP_POPN, .maybeOperand1 = 0},
-        {.type = OP_SWAP, .maybeOperand1 = 0},
         {.type = OP_POPN, .maybeOperand1 = 0},
         {.type = OP_DEFINE_GLOBAL_VAL, .maybeOperand1 = 1},
     };
-    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 8};
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 5};
 
     ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
     ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].as.number == 3);
