@@ -81,7 +81,7 @@ void printToken(Token token) {
 }
 
 void printTokenList(TokenArray tokenArray) {
-    printf("Tokens:\n");
+    printf(KBOLD KCYN "Tokens\n" RESET KBOFF);
 
     for (int i = 0; i < tokenArray.used; i++) {
         printf(" ");
@@ -107,7 +107,7 @@ void printAST(const Source* source) {
         return;
     }
 
-    printf("AST\n");
+    printf(KBOLD KCYN "AST\n" RESET KBOFF);
     printf("Source" KGRY "(numberOfStatements=%d)\n" RESET, source->numberOfStatements);
     for (int i = 0; i < source->numberOfStatements; ++i) {
         printIndent(0);
@@ -335,8 +335,34 @@ static void printLiteral(const Literal* literal, int depth) {
 // -------------------------------- COMPILER ---------------------------------
 // ---------------------------------------------------------------------------
 
-static void printConstantPool(ConstantPool constantPool) {
-    printf("Constant Pool \n");
+// New structure to keep track of functions to print later
+typedef struct {
+    Function** functions;
+    size_t used;
+    size_t size;
+} FunctionArray;
+
+static void initFunctionArray(FunctionArray* array) {
+    array->functions = malloc(sizeof(Function*) * 8);
+    array->used = 0;
+    array->size = 8;
+}
+
+static void insertFunction(FunctionArray* array, Function* function) {
+    if (array->used == array->size) {
+        array->size *= 2;
+        array->functions = realloc(array->functions, sizeof(Function*) * array->size);
+    }
+    array->functions[array->used++] = function;
+}
+
+static void freeFunctionArray(FunctionArray* array) {
+    free(array->functions);
+    array->functions = NULL;
+    array->used = array->size = 0;
+}
+
+static void printConstantPool(ConstantPool constantPool, FunctionArray* arrayFunctionsToPrintLater) {
     for (size_t i = 0; i < constantPool.used; i++) {
         Constant value = constantPool.values[i];
         printf(KGRY " #%-3zu " RESET, i);
@@ -351,15 +377,15 @@ static void printConstantPool(ConstantPool constantPool) {
                 printf("(identifier) \"%s\"\n", value.as.string);
                 break;
             case CONST_TYPE_LAMBDA:
-                printf("(function) <%p parameterCount=%d>\n", value.as.function->code, value.as.function->parameterCount);
+                printf("(function) <%p parameterCount=%d>\n",
+                       (void*)value.as.function, value.as.function->parameterCount);
+                insertFunction(arrayFunctionsToPrintLater, value.as.function);
                 break;
         }
     }
 }
 
 static void printBytecodeArray(BytecodeArray bytecodeArray) {
-    printf("Bytecode\n");
-
     for (int i = 0; i < bytecodeArray.used; i++) {
         printf(KGRY " %-4d " RESET, i);
         switch (bytecodeArray.values[i].type) {
@@ -476,16 +502,30 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
 }
 
 void printCompiledCode(CompiledCode compiledCode) {
-    printf("Compiled code:\n");
-    printCompiledCodeObject(compiledCode.topLevelCodeObject);
-    printf("\n");
+    printf(KBOLD KCYN "Compiled code\n" RESET KBOFF);
+    printCompiledCodeObject(compiledCode.topLevelCodeObject, "main");
 }
 
-void printCompiledCodeObject(CompiledCodeObject compiledCodeObject) {
-    printf("Compiled code object:\n");
-    printConstantPool(compiledCodeObject.constantPool);
-    printBytecodeArray(compiledCodeObject.bytecodeArray);
+void printCompiledCodeObject(CompiledCodeObject compiledCodeObject, const char* name) {
+    printf(KCYN "%s\n" RESET, name);
+    FunctionArray functionsToPrint;
+    initFunctionArray(&functionsToPrint);
+
+    printConstantPool(compiledCodeObject.constantPool, &functionsToPrint);
     printf("\n");
+    printBytecodeArray(compiledCodeObject.bytecodeArray);
+
+    printf("\n");
+
+    // Print all collected functions
+    for (size_t i = 0; i < functionsToPrint.used; i++) {
+        Function* function = functionsToPrint.functions[i];
+        char functionName[32];
+        snprintf(functionName, sizeof(functionName), "%p", (void*)function);
+        printCompiledCodeObject(*(function->code), functionName);
+    }
+
+    freeFunctionArray(&functionsToPrint);
 }
 
 // ---------------------------------------------------------------------------

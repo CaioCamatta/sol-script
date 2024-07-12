@@ -83,11 +83,13 @@ static void visitLiteral(CompilerUnit* compiler, Literal* literal);
  * then after all statements have been compiled print all errors and exit the program.
  */
 #if DEBUG_COMPILER
-#define errorAndExit(...)                                      \
-    {                                                          \
-        printCompiledCodeObject(compiler->compiledCodeObject); \
-        fprintf(stderr, __VA_ARGS__);                          \
-        exit(EXIT_FAILURE);                                    \
+#define errorAndExit(...)                                                                                                          \
+    {                                                                                                                              \
+        char pointerToObject[8];                                                                                                   \
+        sprintf(pointerToObject, "%p", compiler);                                                                                  \
+        printCompiledCodeObject(compiler->compiledCodeObject, compiler->enclosingCompilerUnit == NULL ? "main" : pointerToObject); \
+        fprintf(stderr, __VA_ARGS__);                                                                                              \
+        exit(EXIT_FAILURE);                                                                                                        \
     }
 #else
 #define errorAndExit(...)             \
