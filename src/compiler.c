@@ -85,7 +85,7 @@ static void visitLiteral(CompilerUnit* compiler, Literal* literal);
 #if DEBUG_COMPILER
 #define errorAndExit(...)                                                                                                          \
     {                                                                                                                              \
-        char pointerToObject[8];                                                                                                   \
+        char pointerToObject[16];                                                                                                  \
         sprintf(pointerToObject, "%p", compiler);                                                                                  \
         printCompiledCodeObject(compiler->compiledCodeObject, compiler->enclosingCompilerUnit == NULL ? "main" : pointerToObject); \
         fprintf(stderr, __VA_ARGS__);                                                                                              \
@@ -174,9 +174,8 @@ static size_t findConstantInPool(CompilerUnit* compiler, Constant constant) {
                 if (constant.as.number == compiler->compiledCodeObject.constantPool.values[i].as.number) return i;
                 break;
             case CONST_TYPE_LAMBDA:
-                errorAndExit(
-                    "InvalidStateException: the Compiler tried to find a constant of type Function. "
-                    "This should never be necessary or possible.")
+                if (&constant.as.function == &compiler->compiledCodeObject.constantPool.values[i].as.function) return i;
+                break;
         }
     }
     return -1;
@@ -275,7 +274,8 @@ static int isLocalConstantByIndex(CompilerUnit* compiler, int indexInTempStack) 
  * Add a local variable to the Compiler's temporary stack..
  */
 static void addLocalToTempStack(CompilerUnit* compiler, char* name, bool isModifiable) {
-    // The local will be right below the current stack height
+    // The local will be right below the current stack height.
+    // It's assumed that, at this point, the stack height has already been incremented.
     compiler->predictedStack.tempStack[compiler->predictedStack.currentStackHeight - 1] = (Local){.name = name, .isModifiable = isModifiable};
 }
 
@@ -661,8 +661,8 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
                                                               lambdaExpression->parameters->values[i].token.length));
         if (findLocalByName(&functionCompiler, constant.as.string) != -1)
             errorAndExit("Error: var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
-        addLocalToTempStack(&functionCompiler, constant.as.string, false);
         increaseStackHeight(&functionCompiler);
+        addLocalToTempStack(&functionCompiler, constant.as.string, false);
     }
 
     // Compile the function body

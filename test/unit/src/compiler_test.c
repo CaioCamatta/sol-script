@@ -13,6 +13,9 @@
 #define TOKEN(typeArg) \
     (Token) { .type = typeArg, .start = "_", .length = 1 }
 
+#define IDENTIFIER_TOKEN(identifier) \
+    (Token) { .type = TOKEN_IDENTIFIER, .start = identifier, .length = 1 }
+
 #define NUMBER_LITERAL(numberAsString)                                                                           \
     &(Literal) {                                                                                                 \
         .type = NUMBER_LITERAL,                                                                                  \
@@ -254,6 +257,44 @@
             .conditionExpression = conditionExpr,        \
             .bodyStatement = bodyStmt                    \
         }                                                \
+    }
+
+#define LAMBDA_EXPRESSION(parametersArg, bodyExpression)                  \
+    &(Expression) {                                                       \
+        .type = LAMBDA_EXPRESSION,                                        \
+        .as.lambdaExpression = &(LambdaExpression) {                      \
+            .parameters = parametersArg,                                  \
+            .bodyBlock = &(BlockExpression) {                             \
+                .statementArray = (StatementArray){.used = 0, .size = 0}, \
+                .lastExpression = bodyExpression                          \
+            }                                                             \
+        }                                                                 \
+    }
+
+#define CALL_EXPRESSION(functionName, argumentsArg)                                                                 \
+    &(Expression) {                                                                                                 \
+        .type = CALL_EXPRESSION,                                                                                    \
+        .as.callExpression = &(CallExpression) {                                                                    \
+            .lambdaFunctionName = &(IdentifierLiteral){                                                             \
+                .token = (Token){.type = TOKEN_IDENTIFIER, .start = functionName, .length = strlen(functionName)}}, \
+            .arguments = argumentsArg                                                                               \
+        }                                                                                                           \
+    }
+
+// Helper macro for creating IdentifierArray
+#define IDENTIFIER_ARRAY(...)                                                           \
+    &(IdentifierArray) {                                                                \
+        .values = (IdentifierLiteral[]){__VA_ARGS__},                                   \
+        .used = sizeof((IdentifierLiteral[]){__VA_ARGS__}) / sizeof(IdentifierLiteral), \
+        .size = sizeof((IdentifierLiteral[]){__VA_ARGS__}) / sizeof(IdentifierLiteral)  \
+    }
+
+// Helper macro for creating ExpressionArray
+#define EXPRESSION_ARRAY(...)                                               \
+    &(ExpressionArray) {                                                    \
+        .values = (Expression*[]){__VA_ARGS__},                             \
+        .used = sizeof((Expression*[]){__VA_ARGS__}) / sizeof(Expression*), \
+        .size = sizeof((Expression*[]){__VA_ARGS__}) / sizeof(Expression*)  \
     }
 
 // ------------------------------------------------------------------------
@@ -1279,6 +1320,200 @@ int test_compiler_iteration_statement_with_variable() {
     };
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
     ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
+
+    FREE_COMPILER
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_lambda_expression_simple() {
+    Source testSource = {
+        .rootStatements = {
+            VAL_DECLARATION_STATEMENT(
+                "add",
+                LAMBDA_EXPRESSION(
+                    IDENTIFIER_ARRAY(
+                        {.token = IDENTIFIER_TOKEN("a")},
+                        {.token = IDENTIFIER_TOKEN("b")}),
+                    ADDITIVE_EXPRESSION(
+                        PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("a")),
+                        TOKEN(TOKEN_PLUS),
+                        PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("b")))))},
+        .numberOfStatements = 1,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    // Verify the constant pool contains the function
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.used == 2);  // 'add' and the function object
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].type == CONST_TYPE_LAMBDA);
+
+    // Verify the bytecode for defining the function
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[0].type == OP_LAMBDA);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[1].type == OP_DEFINE_GLOBAL_VAL);
+
+    // Verify the function's bytecode
+    Function* function = compiledCode.topLevelCodeObject.constantPool.values[0].as.function;
+    ASSERT(function->parameterCount == 2);
+    ASSERT(function->code->bytecodeArray.values[0].type == OP_GET_LOCAL_VAR_FAST);
+    ASSERT(function->code->bytecodeArray.values[1].type == OP_GET_LOCAL_VAR_FAST);
+    ASSERT(function->code->bytecodeArray.values[2].type == OP_BINARY_ADD);
+    ASSERT(function->code->bytecodeArray.values[3].type == OP_POPN);
+    ASSERT(function->code->bytecodeArray.values[4].type == OP_RETURN);
+
+    FREE_COMPILER
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_lambda_expression_nested() {
+    Source testSource = {
+        .rootStatements = {
+            VAL_DECLARATION_STATEMENT(
+                "makeAdder",
+                LAMBDA_EXPRESSION(
+                    IDENTIFIER_ARRAY(
+                        {.token = IDENTIFIER_TOKEN("x")}),
+                    LAMBDA_EXPRESSION(
+                        IDENTIFIER_ARRAY(
+                            {.token = IDENTIFIER_TOKEN("y")}),
+                        ADDITIVE_EXPRESSION(
+                            PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("y")),
+                            TOKEN(TOKEN_PLUS),
+                            PRIMARY_EXPRESSION(NUMBER_LITERAL("1"))))))},
+        .numberOfStatements = 1,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    // Verify the constant pool contains the outer function
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.used == 2);  // 'makeAdder' and the outer function object
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].type == CONST_TYPE_LAMBDA);
+
+    // Verify the bytecode for defining the outer function
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[0].type == OP_LAMBDA);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[1].type == OP_DEFINE_GLOBAL_VAL);
+
+    // Verify the outer function's bytecode
+    Function* outerFunction = compiledCode.topLevelCodeObject.constantPool.values[0].as.function;
+    ASSERT(outerFunction->parameterCount == 1);
+    ASSERT(outerFunction->code->bytecodeArray.values[0].type == OP_LAMBDA);
+    ASSERT(outerFunction->code->bytecodeArray.values[1].type == OP_POPN);
+    ASSERT(outerFunction->code->bytecodeArray.values[2].type == OP_RETURN);
+
+    // Verify the inner function's bytecode
+    Function* innerFunction = outerFunction->code->constantPool.values[0].as.function;
+    ASSERT(innerFunction->parameterCount == 1);
+    ASSERT(innerFunction->code->bytecodeArray.values[0].type == OP_GET_LOCAL_VAR_FAST);  // y
+    ASSERT(innerFunction->code->bytecodeArray.values[1].type == OP_LOAD_CONSTANT);       // 1
+    ASSERT(innerFunction->code->bytecodeArray.values[2].type == OP_BINARY_ADD);
+    ASSERT(innerFunction->code->bytecodeArray.values[3].type == OP_POPN);
+    ASSERT(innerFunction->code->bytecodeArray.values[4].type == OP_RETURN);
+
+    FREE_COMPILER
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_call_expression_simple() {
+    Source testSource = {
+        .rootStatements = {
+            VAL_DECLARATION_STATEMENT(
+                "add",
+                LAMBDA_EXPRESSION(
+                    IDENTIFIER_ARRAY(
+                        {.token = IDENTIFIER_TOKEN("a")},
+                        {.token = IDENTIFIER_TOKEN("b")}),
+                    ADDITIVE_EXPRESSION(
+                        PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("a")),
+                        TOKEN(TOKEN_PLUS),
+                        PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("b"))))),
+            VAL_DECLARATION_STATEMENT(
+                "result",
+                CALL_EXPRESSION(
+                    "add",
+                    EXPRESSION_ARRAY(
+                        PRIMARY_EXPRESSION(NUMBER_LITERAL("5")),
+                        PRIMARY_EXPRESSION(NUMBER_LITERAL("3")))))},
+        .numberOfStatements = 2,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    // Verify the constant pool
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.used == 5);  // 'add', lambda, 'result', 5, and 3
+
+    // Verify the bytecode for lambda definition
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[0].type == OP_LAMBDA);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[1].type == OP_DEFINE_GLOBAL_VAL);  // 'add'
+
+    // Verify the bytecode for function call
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[2].type == OP_LOAD_CONSTANT);   // 5
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[3].type == OP_LOAD_CONSTANT);   // 3
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[4].type == OP_GET_GLOBAL_VAL);  // 'add'
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[5].type == OP_CALL);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[6].type == OP_DEFINE_GLOBAL_VAL);  // 'result'
+
+    FREE_COMPILER
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_call_expression_nested() {
+    Source testSource = {
+        .rootStatements = {
+            VAL_DECLARATION_STATEMENT(
+                "add",
+                LAMBDA_EXPRESSION(
+                    IDENTIFIER_ARRAY(
+                        {.token = IDENTIFIER_TOKEN("a")},
+                        {.token = IDENTIFIER_TOKEN("b")}),
+                    ADDITIVE_EXPRESSION(
+                        PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("a")),
+                        TOKEN(TOKEN_PLUS),
+                        PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("b"))))),
+            VAL_DECLARATION_STATEMENT(
+                "multiply",
+                LAMBDA_EXPRESSION(
+                    IDENTIFIER_ARRAY(
+                        {.token = IDENTIFIER_TOKEN("a")},
+                        {.token = IDENTIFIER_TOKEN("b")}),
+                    MULTIPLICATIVE_EXPRESSION(
+                        PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("a")),
+                        TOKEN(TOKEN_STAR),
+                        PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("b"))))),
+            VAL_DECLARATION_STATEMENT(
+                "result",
+                CALL_EXPRESSION("add",
+                                EXPRESSION_ARRAY(
+                                    PRIMARY_EXPRESSION(NUMBER_LITERAL("5")),
+                                    CALL_EXPRESSION("multiply",
+                                                    EXPRESSION_ARRAY(
+                                                        PRIMARY_EXPRESSION(NUMBER_LITERAL("3")),
+                                                        PRIMARY_EXPRESSION(NUMBER_LITERAL("2")))))))},
+        .numberOfStatements = 3,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    // Verify the constant pool
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.used == 8);  // 'add', 'multiply', their lambdas, 'result', 5, 3, and 2
+
+    // Verify the bytecode for lambda definitions
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[0].type == OP_LAMBDA);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[1].type == OP_DEFINE_GLOBAL_VAL);  // 'add'
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[2].type == OP_LAMBDA);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[3].type == OP_DEFINE_GLOBAL_VAL);  // 'multiply'
+
+    // Verify the bytecode for the nested function calls
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[4].type == OP_LOAD_CONSTANT);   // 5
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[5].type == OP_LOAD_CONSTANT);   // 3
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[6].type == OP_LOAD_CONSTANT);   // 2
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[7].type == OP_GET_GLOBAL_VAL);  // 'multiply'
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[8].type == OP_CALL);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[9].type == OP_GET_GLOBAL_VAL);  // 'add'
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[10].type == OP_CALL);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[11].type == OP_DEFINE_GLOBAL_VAL);  // 'result'
 
     FREE_COMPILER
 
