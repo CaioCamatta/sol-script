@@ -60,8 +60,8 @@ void addBytecodes(BytecodeArray* array, Bytecode* bytecodes, size_t count) {
 
 // Simplified pop function for testing
 static Value popVmStack(VM* vm) {
-    vm->SP--;
-    return *(vm->SP);
+    vm->currFrame->SP--;
+    return *(vm->currFrame->SP);
 }
 
 int test_vm_addition() {
@@ -433,7 +433,7 @@ int test_vm_simple_block_statement_and_cleanup() {
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "2.000000\n") == 0); });
 
     // Check if the stack size is zero after execution
-    ASSERT(vm.SP == vm.stack);
+    ASSERT(vm.currFrame->SP == vm.stack);
 
     // Cleanup
     FREE_ARRAY(compiledCode.topLevelCodeObject.bytecodeArray);

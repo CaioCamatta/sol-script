@@ -13,25 +13,25 @@
 typedef struct {
     CompiledCodeObject* codeObject;
     u_int8_t parameterCount;
-    Bytecode* IP;
-    Value* FP;  // Frame pointer
+    Bytecode* IP;  // Instruction pointer
+    Value* SP;     // Stack pointer
 } CallFrame;
 
 /**
- * Scanner struct to facilitate scanning through a file.
+ * The SolScript virtual machine. Executes call frames.
  *
- * @param compiledCode compiled code including bytecode array and constants pool.
- * @param IP the instruction pointer.
+ * Holds the global variables and a stack that is shared across call frames.
+ *
  * @param stack the stack for our stack-based VM.
  * @param globals hash table containing global variables
- * @param SP the stack pointer (we use an actual pointer instead of an int index for faster dereferencing)
+ * @param frames the call frames being executed
+ * @param currFrame the current call frame being executed.
  * */
 typedef struct {
     Value stack[STACK_MAX * FRAMES_MAX];
     HashTable globals;
-    Value* SP;  // points to next slot to be used in the stack, e.g. [<val>, <val>, <empty> SP, <empty>, ...]
     CallFrame frames[FRAMES_MAX];
-    int frameCount;
+    CallFrame* currFrame;
 } VM;
 
 /**

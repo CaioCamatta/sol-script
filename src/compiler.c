@@ -109,7 +109,7 @@ static void emitBytecode(CompilerUnit* compiler, Bytecode bytecode) {
  * of the height. For example, a local variable declaration increases the stack by 1 (locals live on the stack).
  */
 static void increaseStackHeight(CompilerUnit* compiler) {
-    if (compiler->predictedStack.currentStackHeight == UCHAR_MAX) {
+    if (compiler->predictedStack.currentStackHeight == UINT8_MAX) {
         errorAndExit(
             "StackOverflowError: The Compiler has predicted that this code will "
             "cause the VM stack to overflow.");  // This error often indicates that something is wrong

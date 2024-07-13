@@ -378,7 +378,7 @@ static void printConstantPool(ConstantPool constantPool, FunctionArray* arrayFun
                 break;
             case CONST_TYPE_LAMBDA:
                 printf("(function) <%p parameterCount=%d>\n",
-                       (void*)value.as.function, value.as.function->parameterCount);
+                       (void*)value.as.function->code, value.as.function->parameterCount);
                 insertFunction(arrayFunctionsToPrintLater, value.as.function);
                 break;
         }
@@ -521,7 +521,7 @@ void printCompiledCodeObject(CompiledCodeObject compiledCodeObject, const char* 
     for (size_t i = 0; i < functionsToPrint.used; i++) {
         Function* function = functionsToPrint.functions[i];
         char functionName[32];
-        snprintf(functionName, sizeof(functionName), "%p", (void*)function);
+        snprintf(functionName, sizeof(functionName), "%p", (void*)function->code);
         printCompiledCodeObject(*(function->code), functionName);
     }
 
