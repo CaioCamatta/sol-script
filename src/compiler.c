@@ -667,6 +667,8 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
 
     // Compile the function body
     visitBlockExpression(&functionCompiler, lambdaExpression->bodyBlock);
+    // TODO (optimization): visitBlockExpression will always emit a POP_N. For function compilation, we can skip the
+    // POP_N as it is redudant. The VM will pop the entire CallFrame, which is effectively the same as POP_N.
 
     // Emit OP_RETURN if not already present
     if (functionCompiler.compiledCodeObject.bytecodeArray.values[functionCompiler.compiledCodeObject.bytecodeArray.used - 1].type != OP_RETURN) {

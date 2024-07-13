@@ -551,6 +551,9 @@ void printStack(const Value* topOfStack, const Value* bottomOfStack) {
             case TYPE_STRING:
                 printf(KGRY "{" RESET " %.10s " KGRY "} " RESET, val.as.stringVal);
                 break;
+            case TYPE_LAMBDA:
+                printf(KGRY "{" RESET " %p " KGRY "} " RESET, val.as.lambdaVal);
+                break;
         }
     }
     printf(KGRY "]b\n" RESET);

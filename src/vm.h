@@ -8,6 +8,13 @@
 #include "value.h"
 
 #define STACK_MAX 256
+#define FRAMES_MAX 64  // Max number of nested function calls.
+
+typedef struct {
+    Function* function;
+    Bytecode* IP;
+    Value* FP;  // Frame pointer
+} CallFrame;
 
 /**
  * Scanner struct to facilitate scanning through a file.
@@ -21,9 +28,11 @@
 typedef struct {
     CompiledCodeObject compiledCode;
     Bytecode* IP;
-    Value stack[STACK_MAX];
+    Value stack[STACK_MAX * FRAMES_MAX];
     HashTable globals;
     Value* SP;  // points to next slot to be used in the stack, e.g. [<val>, <val>, <empty> SP, <empty>, ...]
+    CallFrame frames[FRAMES_MAX];
+    int frameCount;
 } VM;
 
 /**

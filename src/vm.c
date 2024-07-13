@@ -24,6 +24,13 @@ void initVM(VM* vm, CompiledCode compiledCode) {
     for (int i = 0; i < STACK_MAX; ++i) {
         vm->stack[i] = (Value){.type = TYPE_NULL};
     }
+
+    vm->frameCount = 0;
+    // Push the initial call frame
+    CallFrame* frame = &vm->frames[vm->frameCount++];
+    frame->function = NULL;  // Top-level code is not a function
+    frame->IP = vm->IP;
+    frame->FP = vm->SP;
 }
 
 /* Print a runtime error and exit. */
@@ -60,6 +67,8 @@ void popN(VM* vm, int n) {
     vm->SP -= n;
 }
 
+#define IS_TOP_LEVEL_FUNCTION(framePtr) framePtr->function == NULL
+
 /**
  * peek(0) peeks the top of the stack
  * peek(1) peeks the second highest element of the stack
@@ -77,6 +86,8 @@ Value bytecodeConstantToValue(VM* vm, size_t constantIndex) {
         case CONST_TYPE_STRING:
         case CONST_TYPE_IDENTIFIER:
             return (Value){.type = TYPE_STRING, .as = {.stringVal = constant.as.string}};
+        case CONST_TYPE_LAMBDA:
+            return (Value){.type = TYPE_LAMBDA, .as = {.lambdaVal = constant.as.function}};
     }
 }
 
@@ -94,6 +105,9 @@ static void printValue(Value value) {
             break;
         case TYPE_STRING:
             printf("%s", value.as.stringVal);
+            break;
+        case TYPE_LAMBDA:
+            printf("%p", value.as.lambdaVal);
             break;
     };
     printf("\n");
@@ -139,10 +153,11 @@ static bool isFalsey(Value value) {
  */
 void step(VM* vm) {
     // Fetch the instruction at the instruction pointer
-    Bytecode* instruction = vm->IP;
+    CallFrame* frame = &(vm->frames[vm->frameCount - 1]);
+    Bytecode* instruction = frame->IP;
 
 #if DEBUG_VM
-    printf(KGRY "%-4ld " RESET, vm->IP - vm->compiledCode.bytecodeArray.values);
+    printf(KGRY "%-4ld " RESET, frame->IP - (IS_TOP_LEVEL_FUNCTION(frame) ? vm->compiledCode.bytecodeArray.values : frame->function->code->bytecodeArray.values));
     printStack(vm->SP, &(vm->stack[0]));
 #endif
 
@@ -304,6 +319,48 @@ void step(VM* vm) {
             *(vm->SP - 1) = tempValue;
             break;
         }
+        case OP_LAMBDA: {
+            size_t constantIndex = instruction->maybeOperand1;
+            Constant constant = vm->compiledCode.constantPool.values[constantIndex];
+            if (constant.type != CONST_TYPE_LAMBDA) {
+                runtimeError(vm, "Expected lambda in constant pool.");
+            }
+            Function* function = constant.as.function;
+            push(vm, LAMBDA_VAL(function));
+            break;
+        }
+        case OP_CALL: {
+            Value callee = pop(vm);
+            if (!IS_LAMBDA(callee)) {
+                runtimeError(vm, "Can only call functions.");
+            }
+            Function* function = (Function*)callee.as.lambdaVal;
+
+            if (vm->frameCount == FRAMES_MAX) {
+                runtimeError(vm, "Stack overflow. Too many frames.");
+            }
+
+            CallFrame* frame = &vm->frames[vm->frameCount++];
+            frame->function = function;
+            frame->IP = function->code->bytecodeArray.values;
+            frame->FP = vm->SP - function->parameterCount - 1;
+
+            break;
+        }
+        case OP_RETURN: {
+            Value result = pop(vm);
+            vm->frameCount--;
+
+            if (vm->frameCount == 0) {
+                pop(vm);  // Pop the function
+                return;
+            }
+
+            vm->SP = vm->frames[vm->frameCount - 1].FP;
+            push(vm, result);
+            vm->IP = vm->frames[vm->frameCount - 1].IP;
+            break;
+        }
         default:
             // Handle any unknown or unimplemented opcodes.
             fprintf(stderr, "Unimplemented opcode %d\n", instruction->type);
@@ -311,7 +368,7 @@ void step(VM* vm) {
     }
 
     // Move the instruction pointer to the next instruction
-    vm->IP++;
+    frame->IP++;
 }
 
 /**
@@ -325,7 +382,7 @@ void run(VM* vm) {
     printf("Started executing VM.\n");
 #endif
 
-    while (vm->IP < lastInstruction) {
+    while (vm->frameCount > 1 || vm->frames[vm->frameCount - 1].IP < lastInstruction) {
         step(vm);
     }
 }

@@ -3,6 +3,9 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
+
+#include "bytecode.h"
 
 /**
  * The stack holds Values. A Value represents any SolScript type like booleans, numbers, strings, etc.
@@ -13,7 +16,8 @@ typedef enum {
     TYPE_DOUBLE,
     TYPE_STRING,
     TYPE_BOOLEAN,
-    TYPE_NULL
+    TYPE_NULL,
+    TYPE_LAMBDA
 } ValueType;
 typedef struct {
     ValueType type;
@@ -22,6 +26,7 @@ typedef struct {
         double doubleVal;
         const char* stringVal;  // This string should live in the constant pool, which persists through the VM's lifetime.
         bool booleanVal;
+        void* lambdaVal;  // Runtime function objects in SolScript are just a pointer to the code object.
     } as;
 } Value;
 
@@ -45,9 +50,15 @@ typedef struct {
         .type = TYPE_STRING, .as = {.stringVal = stringValArg } \
     }
 
+#define LAMBDA_VAL(functionPtr)                                \
+    (Value) {                                                  \
+        .type = TYPE_LAMBDA, .as = {.lambdaVal = functionPtr } \
+    }
+
 #define IS_DOUBLE(value) ((value).type == TYPE_DOUBLE)
 #define IS_NULL(value) ((value).type == TYPE_NULL)
 #define IS_BOOLEAN(value) ((value).type == TYPE_BOOLEAN)
 #define IS_STRING(value) ((value).type == TYPE_STRING)
+#define IS_LAMBDA(value) ((value).type == TYPE_LAMBDA)
 
 #endif
