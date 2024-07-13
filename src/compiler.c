@@ -159,7 +159,7 @@ char* copyStringToHeap(const char* chars, int length) {
  * TODO: this method is terribly inefficient as it iterates through the entire table. We should keep a hash table
  * of (number -> index in table) on the side and discard it after compilation is done.
  */
-static size_t findConstantInPool(CompilerUnit* compiler, Constant constant) {
+static int findConstantInPool(CompilerUnit* compiler, Constant constant) {
     for (size_t i = 0; i < compiler->compiledCodeObject.constantPool.used; i++) {
         // Skip if its not the same type
         if (constant.type != compiler->compiledCodeObject.constantPool.values[i].type) continue;
@@ -188,7 +188,7 @@ static size_t findConstantInPool(CompilerUnit* compiler, Constant constant) {
  * */
 static size_t addConstantToPool(CompilerUnit* compiler, Constant constant) {
     // Check if its already there
-    size_t maybeIndexInPool = findConstantInPool(compiler, constant);
+    int maybeIndexInPool = findConstantInPool(compiler, constant);
     if (maybeIndexInPool != -1) return maybeIndexInPool;
 
     // If not, insert and return index
@@ -636,7 +636,7 @@ static void visitSelectionStatement(CompilerUnit* compiler, SelectionStatement* 
     }
 }
 
-static Function* createFunction(int parameterCount, CompiledCodeObject* code) {
+static Function* createFunction(u_int8_t parameterCount, CompiledCodeObject* code) {
     Function* function = (Function*)malloc(sizeof(Function));
     function->parameterCount = parameterCount;
     function->code = code;
@@ -708,13 +708,17 @@ static void visitCallExpression(CompilerUnit* compiler, CallExpression* callExpr
 
     // Verify that the identifier being called exists in the lexical scope
     char* identifierNameNullTerminated = strndup(callExpression->lambdaFunctionName->token.start, callExpression->lambdaFunctionName->token.length);
-    size_t functionIndex = findLocalByName(compiler, identifierNameNullTerminated);
+    int functionIndex = findLocalByName(compiler, identifierNameNullTerminated);
     Constant functionNameConstant = IDENTIFIER_CONST(identifierNameNullTerminated);
 
     if (functionIndex == -1) {
         // It's not a local variable, so we check if it's a global
-        size_t index = findConstantInPool(compiler, functionNameConstant);
         if (!isGlobalInTable(compiler, functionNameConstant.as.string)) errorAndExit("Error: identifier '%s' referenced before declaration.", functionNameConstant.as.string);
+
+        // Then check whether the name is in the current constant pool.
+        // If it's not, we add it. This can happen when compiling a function; the actual
+        // Constant corresponding to the global might be in an enclosing constant pool.
+        int index = addConstantToPool(compiler, functionNameConstant);
 
         // Emit bytecode to load the function object onto the stack
         Bytecode bytecodeToGetVariable = isGlobalConstant(compiler, functionNameConstant.as.string)
@@ -807,12 +811,16 @@ static void visitIdentifierLiteral(CompilerUnit* compiler, IdentifierLiteral* id
     size_t stackIndex = findLocalByName(compiler, identifierNameNullTerminated);
 
     if (stackIndex == -1) {  // Its not a local variable
+        // First confirm it's a global
+        if (!isGlobalInTable(compiler, identifierNameNullTerminated)) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
+
+        // Then check whether the name is in the current constant pool.
+        // If we didn't find the constant in the current pool, we add it. This can happen when compiling a
+        // function; the actual Constant corresponding to the global might be in an enclosing constant pool.
         Constant constant = (Constant){
             .type = CONST_TYPE_IDENTIFIER,
             .as = {identifierNameNullTerminated}};
-        size_t index = findConstantInPool(compiler, constant);
-
-        if (!isGlobalInTable(compiler, identifierNameNullTerminated)) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
+        int index = addConstantToPool(compiler, constant);
 
         Bytecode bytecodeToGetVariable = isGlobalConstant(compiler, identifierNameNullTerminated)
                                              ? BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index)

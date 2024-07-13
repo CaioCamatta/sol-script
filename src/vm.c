@@ -15,9 +15,7 @@
  * Initialize VM with some source code.
  */
 void initVM(VM* vm, CompiledCode compiledCode) {
-    vm->compiledCode = compiledCode.topLevelCodeObject;
-    vm->IP = vm->compiledCode.bytecodeArray.values;  // Set instruction pointer to the beginning of bytecode
-    vm->SP = vm->stack;                              // Set stack pointer to the top of the stack
+    vm->SP = vm->stack;  // Set stack pointer to the top of the stack
     initHashTable(&vm->globals);
 
     // Initialize stack with empty values.
@@ -25,12 +23,21 @@ void initVM(VM* vm, CompiledCode compiledCode) {
         vm->stack[i] = (Value){.type = TYPE_NULL};
     }
 
-    vm->frameCount = 0;
     // Push the initial call frame
+    vm->frameCount = 0;
     CallFrame* frame = &vm->frames[vm->frameCount++];
-    frame->function = NULL;  // Top-level code is not a function
-    frame->IP = vm->IP;
+    // initVM accepts a struct, not a pointer, so we manually copy it to the heap.
+    frame->codeObject = malloc(sizeof(CompiledCode));
+    frame->codeObject->bytecodeArray = compiledCode.topLevelCodeObject.bytecodeArray;
+    frame->codeObject->constantPool = compiledCode.topLevelCodeObject.constantPool;
+    frame->parameterCount = 0;  // Top-level code is not a function
     frame->FP = vm->SP;
+    frame->IP = frame->codeObject->bytecodeArray.values;
+}
+
+void freeVM(VM* vm) {
+    // Free the top level object we manually initialized in initVM;
+    free(vm->frames[0].codeObject);
 }
 
 /* Print a runtime error and exit. */
@@ -79,7 +86,7 @@ static Value peek(VM* vm, int distance) {
 
 // Convert a Constant in the constants pool from the compiled bytecode into a runtime Value
 Value bytecodeConstantToValue(VM* vm, size_t constantIndex) {
-    Constant constant = vm->compiledCode.constantPool.values[constantIndex];
+    Constant constant = vm->frames[vm->frameCount - 1].codeObject->constantPool.values[constantIndex];
     switch (constant.type) {
         case CONST_TYPE_DOUBLE:
             return (Value){.type = TYPE_DOUBLE, .as = {.doubleVal = constant.as.number}};
@@ -157,7 +164,7 @@ void step(VM* vm) {
     Bytecode* instruction = frame->IP;
 
 #if DEBUG_VM
-    printf(KGRY "%-4ld " RESET, frame->IP - (IS_TOP_LEVEL_FUNCTION(frame) ? vm->compiledCode.bytecodeArray.values : frame->function->code->bytecodeArray.values));
+    printf(KGRY "%-4ld " RESET, frame->IP - frame->codeObject->bytecodeArray.values);
     printStack(vm->SP, &(vm->stack[0]));
 #endif
 
@@ -170,14 +177,14 @@ void step(VM* vm) {
         case OP_DEFINE_GLOBAL_VAL: {
             Value value = pop(vm);
             size_t constantIndex = instruction->maybeOperand1;
-            Constant constant = vm->compiledCode.constantPool.values[constantIndex];
+            Constant constant = frame->codeObject->constantPool.values[constantIndex];
             hashTableInsert(&vm->globals, constant.as.string, value);
             break;
         }
         case OP_GET_GLOBAL_VAL:
         case OP_GET_GLOBAL_VAR: {
             size_t constantIndex = instruction->maybeOperand1;
-            Constant constant = vm->compiledCode.constantPool.values[constantIndex];
+            Constant constant = frame->codeObject->constantPool.values[constantIndex];
             Value value = hashTableGet(&vm->globals, constant.as.string)->value;
             push(vm, value);
             break;
@@ -185,7 +192,7 @@ void step(VM* vm) {
         case OP_SET_GLOBAL_VAR: {
             Value value = pop(vm);
             size_t constantIndex = instruction->maybeOperand1;
-            Constant constant = vm->compiledCode.constantPool.values[constantIndex];
+            Constant constant = frame->codeObject->constantPool.values[constantIndex];
             hashTableInsert(&vm->globals, constant.as.string, value);
             break;
         }
@@ -299,15 +306,15 @@ void step(VM* vm) {
             // If condition is falsey, jump over the "then" branch
             if (isFalsey(value)) {
                 size_t IPAfterThenBranch = instruction->maybeOperand1;
-                // We have to subtract 1 because the instruction we jump to will be skipped (in `vm->IP++;` below).
-                vm->IP = &(vm->compiledCode.bytecodeArray.values[IPAfterThenBranch - 1]);
+                // We have to subtract 1 because the instruction we jump to will be skipped (in `frame->IP++;` below).
+                frame->IP = &(frame->codeObject->bytecodeArray.values[IPAfterThenBranch - 1]);
             }
             break;
         }
         case OP_JUMP: {
             size_t IPToJumpTo = instruction->maybeOperand1;
-            // We have to subtract 1 because the instruction we jump to will be skipped (in `vm->IP++;` below).
-            vm->IP = &(vm->compiledCode.bytecodeArray.values[IPToJumpTo - 1]);
+            // We have to subtract 1 because the instruction we jump to will be skipped (in `frame->IP++;` below).
+            frame->IP = &(frame->codeObject->bytecodeArray.values[IPToJumpTo - 1]);
             break;
         }
         case OP_SWAP: {
@@ -321,7 +328,7 @@ void step(VM* vm) {
         }
         case OP_LAMBDA: {
             size_t constantIndex = instruction->maybeOperand1;
-            Constant constant = vm->compiledCode.constantPool.values[constantIndex];
+            Constant constant = frame->codeObject->constantPool.values[constantIndex];
             if (constant.type != CONST_TYPE_LAMBDA) {
                 runtimeError(vm, "Expected lambda in constant pool.");
             }
@@ -341,7 +348,8 @@ void step(VM* vm) {
             }
 
             CallFrame* frame = &vm->frames[vm->frameCount++];
-            frame->function = function;
+            frame->codeObject = function->code;
+            frame->parameterCount = function->parameterCount;
             frame->IP = function->code->bytecodeArray.values;
             frame->FP = vm->SP - function->parameterCount - 1;
 
@@ -356,9 +364,9 @@ void step(VM* vm) {
                 return;
             }
 
-            vm->SP = vm->frames[vm->frameCount - 1].FP;
+            vm->SP = frame->FP;
             push(vm, result);
-            vm->IP = vm->frames[vm->frameCount - 1].IP;
+            frame->IP = frame->IP;
             break;
         }
         default:
@@ -376,7 +384,7 @@ void step(VM* vm) {
  */
 void run(VM* vm) {
     // Find the last instruction so we know when to stop executing
-    Bytecode* lastInstruction = &(vm->compiledCode.bytecodeArray.values[vm->compiledCode.bytecodeArray.used]);
+    Bytecode* lastInstruction = &(vm->frames[vm->frameCount - 1].codeObject->bytecodeArray.values[vm->frames[vm->frameCount - 1].codeObject->bytecodeArray.used]);
 
 #if DEBUG_VM
     printf("Started executing VM.\n");

@@ -50,8 +50,8 @@ static void repl() {
 
         // Add new bytecode to VM
         for (int i = 0; i < newCode.topLevelCodeObject.bytecodeArray.used; i++) {
-            vm.compiledCode.bytecodeArray.values[vm.compiledCode.bytecodeArray.used] = newCode.topLevelCodeObject.bytecodeArray.values[i];
-            vm.compiledCode.bytecodeArray.used++;
+            vm.frames[0].codeObject->bytecodeArray.values[vm.frames[0].codeObject->bytecodeArray.used] = newCode.topLevelCodeObject.bytecodeArray.values[i];
+            vm.frames[0].codeObject->bytecodeArray.used++;
         }
         run(&vm);
         printf("\n");

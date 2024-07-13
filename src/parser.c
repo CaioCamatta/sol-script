@@ -577,6 +577,7 @@ static IdentifierArray* parameterList(ASTParser* parser) {
 
     if (peek(parser)->type == TOKEN_IDENTIFIER) {
         do {
+            if (parameters->used == UINT8_MAX) errorAtCurrent(parser, "Exceeded maximum number of parameters.");
             Literal* literal = identifierLiteral(parser);
             INSERT_ARRAY((*parameters), *(literal->as.identifierLiteral), IdentifierLiteral);
         } while (match(parser, TOKEN_COMMA));

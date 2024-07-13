@@ -349,14 +349,15 @@ The following features are necessary a proper v1.0 release, in rough order:
  - [X] Implement non-constant variables
  - [X] Implement iteration statement (loops)
  - [ ] Implement functions and returns
- - [ ] Implement the rest of the parser for the whole syntax grammar
  - [ ] Add CLI argument to enable or disable debugging logs in the REPL.
  - [ ] Improve error logs; print line and column
  - [ ] Add Panic Mode error recovery; stop crashing the compiler on every error.
  - [ ] Implement objects / structs
  - [ ] Add garbage collector
  - [ ] Implement closures
- - [ ] (maybe) Add native functions
- - [ ] (maybe) Add benchmark tests
- - [ ] (maybe) Profile execution and find opportunities for optimization
- - [ ] (maybe) Implement [NaN boxing](https://piotrduperas.com/posts/nan-boxing)
+
+## v1.1 Tasks
+ - [ ] Add native functions
+ - [ ] Add benchmark tests
+ - [ ] Profile execution and find opportunities for optimization
+ - [ ] Implement [NaN boxing](https://piotrduperas.com/posts/nan-boxing)

@@ -281,7 +281,7 @@ static void printExpression(const Expression* expression, int depth) {
         }
         case CALL_EXPRESSION: {
             CallExpression* callExpr = expression->as.callExpression;
-            printf("CallExpression" KGRY "(numberOfArguments=%zu)\n" RESET, callExpr->arguments->used);
+            printf("CallExpression" KGRY "(numberOfArguments=%hhu)\n" RESET, callExpr->arguments->used);
             printIndent(depth + 1);
             printf("FunctionName\n");
 
@@ -292,7 +292,7 @@ static void printExpression(const Expression* expression, int depth) {
             free(tempLiteral);
 
             printIndent(depth + 1);
-            printf("Arguments" KGRY "(numberOfArguments=%zu)\n" RESET, callExpr->arguments->used);
+            printf("Arguments" KGRY "(numberOfArguments=%hhu)\n" RESET, callExpr->arguments->used);
             for (int i = 0; i < callExpr->arguments->used; i++) {
                 printExpression(callExpr->arguments->values[i], depth + 2);
             }

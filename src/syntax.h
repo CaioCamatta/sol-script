@@ -212,8 +212,8 @@ struct LambdaExpression {
 
 typedef struct {
     Expression **values;
-    size_t used;
-    size_t size;
+    u_int8_t used;
+    u_int8_t size;  // Cap number of parameters at 256
 } ExpressionArray;
 
 struct CallExpression {

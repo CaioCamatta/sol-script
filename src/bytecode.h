@@ -93,7 +93,7 @@ typedef enum {
 
 typedef struct {
     CompiledCodeObject* code;
-    int parameterCount;
+    u_int8_t parameterCount;
 } Function;
 
 typedef struct {

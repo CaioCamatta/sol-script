@@ -11,7 +11,8 @@
 #define FRAMES_MAX 64  // Max number of nested function calls.
 
 typedef struct {
-    Function* function;
+    CompiledCodeObject* codeObject;
+    u_int8_t parameterCount;
     Bytecode* IP;
     Value* FP;  // Frame pointer
 } CallFrame;
@@ -26,8 +27,6 @@ typedef struct {
  * @param SP the stack pointer (we use an actual pointer instead of an int index for faster dereferencing)
  * */
 typedef struct {
-    CompiledCodeObject compiledCode;
-    Bytecode* IP;
     Value stack[STACK_MAX * FRAMES_MAX];
     HashTable globals;
     Value* SP;  // points to next slot to be used in the stack, e.g. [<val>, <val>, <empty> SP, <empty>, ...]
@@ -49,5 +48,8 @@ void step(VM* vm);
 
 /* Initialize VM with some source code. */
 void initVM(VM* vm, CompiledCode compiledCode);
+
+/* Free a VM and its structs. */
+void freeVM(VM* vm);
 
 #endif
