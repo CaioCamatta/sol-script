@@ -10,6 +10,14 @@
 #define STACK_MAX 128
 #define FRAMES_MAX 8  // Max number of nested function calls.
 
+/**
+ * A CallFrame is the struct use to execution functions.
+ *
+ * Because the SolScript only has a single global stack of values shared by all call frames,
+ * call frames have a virtual stack that overlaps the global stack. It starts at `stackStart`,
+ * and we maintain `SP` with the current stack pointer. Within the context of  a lambda
+ * execution, local access are relative.
+ */
 typedef struct {
     CompiledCodeObject* codeObject;
     u_int8_t parameterCount;

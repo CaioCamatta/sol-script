@@ -692,12 +692,12 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
 }
 
 /**
- * Call a function.
+ * Call a lambda function.
  *  1) Put all arguments on the stack; the bottommost one is the first argument.
  *  2) Verify function exists in lexical scope
  *  3) TODO: Check that identifier being called is actually a calalble
  *  4) TODO: Check arity
- *  5) Emit bytecode for put function object (referenced by the identifier) being caled on the stack
+ *  5) Emit bytecode to put function object being caled on the stack.
  *  6) Emit bytecode to execute the function object
  */
 static void visitCallExpression(CompilerUnit* compiler, CallExpression* callExpression) {
