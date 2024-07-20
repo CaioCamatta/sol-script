@@ -120,6 +120,10 @@ static void all_tests() {
     RUN_TEST(test_vm_iteration_statement_simple);
     RUN_TEST(test_vm_iteration_statement_with_variable);
     RUN_TEST(test_vm_nested_iteration_statements);
+    RUN_TEST(test_vm_lambda_no_params);
+    RUN_TEST(test_vm_lambda_one_param);
+    RUN_TEST(test_vm_lambda_two_params);
+    RUN_TEST(test_vm_lambda_nested_calls);
 }
 
 int main(int argc, char **argv) {

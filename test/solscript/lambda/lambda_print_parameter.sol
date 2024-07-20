@@ -1,1 +1,0 @@
-val greet = lambda (name) { print "Hello, " + name; };"

@@ -1025,3 +1025,179 @@ int test_vm_nested_iteration_statements() {
     FREE_COMPILER;
     return SUCCESS_RETURN_CODE;
 }
+
+int test_vm_lambda_no_params() {
+    CompiledCode code = newCompiledCode();
+
+    // Create lambda: lambda () { 42; }
+    Function* lambda = malloc(sizeof(Function));
+    lambda->parameterCount = 0;
+    lambda->code = malloc(sizeof(CompiledCodeObject));
+    INIT_ARRAY(lambda->code->bytecodeArray, Bytecode);
+    INIT_ARRAY(lambda->code->constantPool, Constant);
+
+    // Lambda body: return 42
+    INSERT_ARRAY(lambda->code->constantPool, DOUBLE_CONST(42), Constant);
+    INSERT_ARRAY(lambda->code->bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 0), Bytecode);
+    INSERT_ARRAY(lambda->code->bytecodeArray, BYTECODE_OPERAND_1(OP_POPN, 0), Bytecode);
+    INSERT_ARRAY(lambda->code->bytecodeArray, BYTECODE(OP_RETURN), Bytecode);
+
+    // Main code
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, LAMBDA_CONST(lambda), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, IDENTIFIER_CONST("getFortyTwo"), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_LAMBDA, 0), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, 1), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 1), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE(OP_CALL), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);
+
+    VM vm;
+    initVM(&vm, code);
+
+    CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "42.000000\n") == 0); });
+
+    freeVM(&vm);
+    freeCompiledCode(&code);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_vm_lambda_one_param() {
+    CompiledCode code = newCompiledCode();
+
+    // Create lambda: lambda (x) { x; }
+    Function* lambda = malloc(sizeof(Function));
+    lambda->parameterCount = 1;
+    lambda->code = malloc(sizeof(CompiledCodeObject));
+    INIT_ARRAY(lambda->code->bytecodeArray, Bytecode);
+    INIT_ARRAY(lambda->code->constantPool, Constant);
+
+    // Lambda body: return x
+    INSERT_ARRAY(lambda->code->bytecodeArray, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, 0), Bytecode);
+    INSERT_ARRAY(lambda->code->bytecodeArray, BYTECODE_OPERAND_1(OP_POPN, 0), Bytecode);
+    INSERT_ARRAY(lambda->code->bytecodeArray, BYTECODE(OP_RETURN), Bytecode);
+
+    // Main code
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, LAMBDA_CONST(lambda), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, IDENTIFIER_CONST("identity"), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, DOUBLE_CONST(5), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_LAMBDA, 0), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, 1), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 2), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 1), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE(OP_CALL), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);
+
+    VM vm;
+    initVM(&vm, code);
+
+    CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "5.000000\n") == 0); });
+
+    freeVM(&vm);
+    freeCompiledCode(&code);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_vm_lambda_two_params() {
+    CompiledCode code = newCompiledCode();
+
+    // Create lambda: lambda (a, b) { a + b; }
+    Function* lambda = malloc(sizeof(Function));
+    lambda->parameterCount = 2;
+    lambda->code = malloc(sizeof(CompiledCodeObject));
+    INIT_ARRAY(lambda->code->bytecodeArray, Bytecode);
+    INIT_ARRAY(lambda->code->constantPool, Constant);
+
+    // Lambda body: a + b
+    INSERT_ARRAY(lambda->code->bytecodeArray, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, 0), Bytecode);
+    INSERT_ARRAY(lambda->code->bytecodeArray, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, 1), Bytecode);
+    INSERT_ARRAY(lambda->code->bytecodeArray, BYTECODE(OP_BINARY_ADD), Bytecode);
+    INSERT_ARRAY(lambda->code->bytecodeArray, BYTECODE_OPERAND_1(OP_POPN, 0), Bytecode);
+    INSERT_ARRAY(lambda->code->bytecodeArray, BYTECODE(OP_RETURN), Bytecode);
+
+    // Main code
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, LAMBDA_CONST(lambda), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, IDENTIFIER_CONST("add"), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, DOUBLE_CONST(3), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, DOUBLE_CONST(4), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_LAMBDA, 0), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, 1), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 2), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 3), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 1), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE(OP_CALL), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);
+
+    VM vm;
+    initVM(&vm, code);
+
+    CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "7.000000\n") == 0); });
+
+    freeVM(&vm);
+    freeCompiledCode(&code);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_vm_lambda_nested_calls() {
+    CompiledCode code = newCompiledCode();
+
+    // Create lambda: lambda (a, b) { a * b; }
+    Function* multiplyLambda = malloc(sizeof(Function));
+    multiplyLambda->parameterCount = 2;
+    multiplyLambda->code = malloc(sizeof(CompiledCodeObject));
+    INIT_ARRAY(multiplyLambda->code->bytecodeArray, Bytecode);
+    INIT_ARRAY(multiplyLambda->code->constantPool, Constant);
+
+    INSERT_ARRAY(multiplyLambda->code->bytecodeArray, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, 0), Bytecode);
+    INSERT_ARRAY(multiplyLambda->code->bytecodeArray, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, 1), Bytecode);
+    INSERT_ARRAY(multiplyLambda->code->bytecodeArray, BYTECODE(OP_BINARY_MULTIPLY), Bytecode);
+    INSERT_ARRAY(multiplyLambda->code->bytecodeArray, BYTECODE_OPERAND_1(OP_POPN, 0), Bytecode);
+    INSERT_ARRAY(multiplyLambda->code->bytecodeArray, BYTECODE(OP_RETURN), Bytecode);
+
+    // Create lambda: lambda (a, b) { a + b; }
+    Function* addLambda = malloc(sizeof(Function));
+    addLambda->parameterCount = 2;
+    addLambda->code = malloc(sizeof(CompiledCodeObject));
+    INIT_ARRAY(addLambda->code->bytecodeArray, Bytecode);
+    INIT_ARRAY(addLambda->code->constantPool, Constant);
+
+    INSERT_ARRAY(addLambda->code->bytecodeArray, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, 0), Bytecode);
+    INSERT_ARRAY(addLambda->code->bytecodeArray, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, 1), Bytecode);
+    INSERT_ARRAY(addLambda->code->bytecodeArray, BYTECODE(OP_BINARY_ADD), Bytecode);
+    INSERT_ARRAY(addLambda->code->bytecodeArray, BYTECODE_OPERAND_1(OP_POPN, 0), Bytecode);
+    INSERT_ARRAY(addLambda->code->bytecodeArray, BYTECODE(OP_RETURN), Bytecode);
+
+    // Main code
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, LAMBDA_CONST(multiplyLambda), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, IDENTIFIER_CONST("multiply"), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, LAMBDA_CONST(addLambda), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, IDENTIFIER_CONST("add"), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, DOUBLE_CONST(2), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, DOUBLE_CONST(3), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, DOUBLE_CONST(4), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, DOUBLE_CONST(5), Constant);
+
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_LAMBDA, 0), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, 1), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_LAMBDA, 2), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, 3), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 4), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 5), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 1), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE(OP_CALL), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 6), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 7), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 1), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE(OP_CALL), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 3), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE(OP_CALL), Bytecode);
+    INSERT_ARRAY(code.topLevelCodeObject.bytecodeArray, BYTECODE(OP_PRINT), Bytecode);
+
+    VM vm;
+    initVM(&vm, code);
+
+    CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "26.000000\n") == 0); });
+
+    freeVM(&vm);
+    freeCompiledCode(&code);
+    return SUCCESS_RETURN_CODE;
+}
