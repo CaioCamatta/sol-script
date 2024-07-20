@@ -12,6 +12,7 @@ typedef struct ValDeclarationStatement ValDeclarationStatement;
 typedef struct VarDeclarationStatement VarDeclarationStatement;
 typedef struct SelectionStatement SelectionStatement;
 typedef struct IterationStatement IterationStatement;
+typedef struct ReturnStatement ReturnStatement;
 typedef struct AssignmentStatement AssignmentStatement;
 typedef struct LogicalOrExpression LogicalOrExpression;
 typedef struct LogicalAndExpression LogicalAndExpression;
@@ -39,7 +40,8 @@ typedef enum {
     BLOCK_STATEMENT,            // Stack effect: 0
     SELECTION_STATEMENT,        // Stack effect: 1
     ASSIGNMENT_STATEMENT,       // Stack effect: 0
-    ITERATION_STATEMENT         // Stack effect: 0
+    ITERATION_STATEMENT,        // Stack effect: 0
+    RETURN_STATEMENT            // Stack effect: 1
 } StatementType;
 
 typedef enum {
@@ -75,6 +77,7 @@ typedef struct {
         SelectionStatement *selectionStatement;
         AssignmentStatement *assignmentStatement;
         IterationStatement *iterationStatement;
+        ReturnStatement *returnStatement;
     } as;
 } Statement;
 
@@ -148,6 +151,10 @@ struct AssignmentStatement {
 struct IterationStatement {
     Expression *conditionExpression;
     Statement *bodyStatement;
+};
+
+struct ReturnStatement {
+    Expression *expression;
 };
 
 struct LogicalOrExpression {

@@ -1778,3 +1778,164 @@ int test_parser_call_in_if_condition() {
 
     return SUCCESS_RETURN_CODE;
 }
+
+int test_parser_simple_return() {
+    // return 42;
+    Token tokensArray[] = {
+        createToken(TOKEN_RETURN, "return"),
+        createToken(TOKEN_NUMBER, "42"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 4,
+        .size = 4};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == RETURN_STATEMENT);
+    ReturnStatement* returnStmt = statement->as.returnStatement;
+    ASSERT(returnStmt->expression->type == PRIMARY_EXPRESSION);
+    ASSERT(returnStmt->expression->as.primaryExpression->literal->type == NUMBER_LITERAL);
+    ASSERT(strcmp(returnStmt->expression->as.primaryExpression->literal->as.numberLiteral->token.start, "42") == 0);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_return_without_expression() {
+    // return;
+    Token tokensArray[] = {
+        createToken(TOKEN_RETURN, "return"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 3,
+        .size = 3};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == RETURN_STATEMENT);
+    ReturnStatement* returnStmt = statement->as.returnStatement;
+    ASSERT(returnStmt->expression == NULL);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_return_in_lambda() {
+    // val func = lambda () { return 10; };
+    Token tokensArray[] = {
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "func"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_LAMBDA, "lambda"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_RETURN, "return"),
+        createToken(TOKEN_NUMBER, "10"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 13,
+        .size = 13};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == VAL_DECLARATION_STATEMENT);
+    ValDeclarationStatement* valDecl = statement->as.valDeclarationStatement;
+    ASSERT(valDecl->expression->type == LAMBDA_EXPRESSION);
+
+    LambdaExpression* lambda = valDecl->expression->as.lambdaExpression;
+    ASSERT(lambda->bodyBlock->statementArray.used == 1);
+    Statement* lambdaStatement = lambda->bodyBlock->statementArray.values[0];
+    ASSERT(lambdaStatement->type == RETURN_STATEMENT);
+    ReturnStatement* returnStmt = lambdaStatement->as.returnStatement;
+    ASSERT(returnStmt->expression->type == PRIMARY_EXPRESSION);
+    ASSERT(returnStmt->expression->as.primaryExpression->literal->type == NUMBER_LITERAL);
+    ASSERT(strcmp(returnStmt->expression->as.primaryExpression->literal->as.numberLiteral->token.start, "10") == 0);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_multiple_returns() {
+    // val func = lambda (x) { if (x > 0) { return 1; } else { return -1; } };
+    Token tokensArray[] = {
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "func"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_LAMBDA, "lambda"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "x"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_IF, "if"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "x"),
+        createToken(TOKEN_GREATER, ">"),
+        createToken(TOKEN_NUMBER, "0"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_RETURN, "return"),
+        createToken(TOKEN_NUMBER, "1"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_ELSE, "else"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_RETURN, "return"),
+        createToken(TOKEN_MINUS, "-"),
+        createToken(TOKEN_NUMBER, "1"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 29,
+        .size = 29};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == VAL_DECLARATION_STATEMENT);
+    ValDeclarationStatement* valDecl = statement->as.valDeclarationStatement;
+    ASSERT(valDecl->expression->type == LAMBDA_EXPRESSION);
+
+    LambdaExpression* lambda = valDecl->expression->as.lambdaExpression;
+    ASSERT(lambda->bodyBlock->statementArray.used == 1);
+    Statement* ifStatement = lambda->bodyBlock->statementArray.values[0];
+    ASSERT(ifStatement->type == SELECTION_STATEMENT);
+
+    SelectionStatement* selection = ifStatement->as.selectionStatement;
+    ASSERT(selection->trueStatement->type == BLOCK_STATEMENT);
+    ASSERT(selection->falseStatement->type == BLOCK_STATEMENT);
+
+    BlockStatement* trueBlock = selection->trueStatement->as.blockStatement;
+    ASSERT(trueBlock->statementArray.used == 1);
+    ASSERT(trueBlock->statementArray.values[0]->type == RETURN_STATEMENT);
+
+    BlockStatement* falseBlock = selection->falseStatement->as.blockStatement;
+    ASSERT(falseBlock->statementArray.used == 1);
+    ASSERT(falseBlock->statementArray.values[0]->type == RETURN_STATEMENT);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}

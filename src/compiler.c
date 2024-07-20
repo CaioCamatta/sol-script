@@ -744,6 +744,20 @@ static void visitCallExpression(CompilerUnit* compiler, CallExpression* callExpr
     emitBytecode(compiler, BYTECODE(OP_CALL));
 }
 
+static void visitReturnStatement(CompilerUnit* compiler, ReturnStatement* returnStatement) {
+    if (compiler->enclosingCompilerUnit == NULL) errorAndExit("Cannot return from global scope.");
+
+    if (returnStatement->expression != NULL) {
+        visitExpression(compiler, returnStatement->expression);
+    } else {
+        // If no expression, return null
+        emitBytecode(compiler, BYTECODE(OP_NULL));
+        increaseStackHeight(compiler);
+    }
+
+    emitBytecode(compiler, BYTECODE(OP_RETURN));
+}
+
 /**
  * Here's an example of the bytecode produced by SolScript while-loops:
  *  42    : loop condition expression
@@ -941,6 +955,9 @@ static void visitStatement(CompilerUnit* compiler, Statement* statement) {
             break;
         case ITERATION_STATEMENT:
             visitIterationStatement(compiler, statement->as.iterationStatement);
+            break;
+        case RETURN_STATEMENT:
+            visitReturnStatement(compiler, statement->as.returnStatement);
             break;
         default:
             fprintf(stderr, "Unimplemented statement type %d.\n", statement->type);

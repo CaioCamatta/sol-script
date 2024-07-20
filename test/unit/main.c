@@ -60,6 +60,10 @@ static void all_tests() {
     RUN_TEST(test_parser_nested_calls);
     RUN_TEST(test_parser_call_with_expression_args);
     RUN_TEST(test_parser_call_in_if_condition);
+    RUN_TEST(test_parser_simple_return);
+    RUN_TEST(test_parser_return_without_expression);
+    RUN_TEST(test_parser_return_in_lambda);
+    RUN_TEST(test_parser_multiple_returns);
 
     // Compiler tests
     RUN_TEST(test_compiler);
@@ -93,6 +97,8 @@ static void all_tests() {
     RUN_TEST(test_compiler_lambda_expression_nested);
     RUN_TEST(test_compiler_call_expression_simple);
     RUN_TEST(test_compiler_call_expression_nested);
+    RUN_TEST(test_compiler_lambda_with_return);
+    RUN_TEST(test_compiler_lambda_with_conditional_returns);
 
     // VM tests
     RUN_TEST(test_vm_addition);

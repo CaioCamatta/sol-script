@@ -827,6 +827,26 @@ static Statement* iterationStatement(ASTParser* parser) {
     return stmt;
 }
 
+static Statement* returnStatement(ASTParser* parser) {
+    consume(parser, TOKEN_RETURN, "Expected 'return' keyword.");
+
+    ReturnStatement* returnStmt = allocateASTNode(ReturnStatement);
+
+    if (!check(parser, TOKEN_SEMICOLON)) {
+        returnStmt->expression = expression(parser);
+    } else {
+        returnStmt->expression = NULL;
+    }
+
+    consume(parser, TOKEN_SEMICOLON, "Expected ';' after return statement.");
+
+    Statement* stmt = allocateASTNode(Statement);
+    stmt->type = RETURN_STATEMENT;
+    stmt->as.returnStatement = returnStmt;
+
+    return stmt;
+}
+
 /**
  * statement:
  *  declaration
@@ -858,8 +878,8 @@ static Statement* statement(ASTParser* parser) {
             return iterationStatement(parser);
         case TOKEN_IF:
             return selectionStatement(parser);
-        // case TOKEN_RETURN:
-        //     return returnStatement(parser);]
+        case TOKEN_RETURN:
+            return returnStatement(parser);
         default: {
             // In the default case, we know there's going to be an expression.
             Expression* tempExpression = expression(parser);

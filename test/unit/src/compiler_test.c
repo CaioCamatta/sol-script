@@ -161,6 +161,14 @@
         }                                        \
     }
 
+#define RETURN_STATEMENT(expressionInput)          \
+    &(Statement) {                                 \
+        .type = RETURN_STATEMENT,                  \
+        .as.returnStatement = &(ReturnStatement) { \
+            .expression = expressionInput          \
+        }                                          \
+    }
+
 #define VAL_DECLARATION_STATEMENT(identifierName, expressionInput)                                                      \
     &(Statement) {                                                                                                      \
         .type = VAL_DECLARATION_STATEMENT,                                                                              \
@@ -1514,6 +1522,104 @@ int test_compiler_call_expression_nested() {
     ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[9].type == OP_GET_GLOBAL_VAL);  // 'add'
     ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[10].type == OP_CALL);
     ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[11].type == OP_DEFINE_GLOBAL_VAL);  // 'result'
+
+    FREE_COMPILER
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_lambda_with_return() {
+    Source testSource = {
+        .rootStatements = {
+            VAL_DECLARATION_STATEMENT(
+                "func",
+                LAMBDA_EXPRESSION(
+                    IDENTIFIER_ARRAY(),
+                    BLOCK_EXPRESSION(
+                        RETURN_STATEMENT(PRIMARY_EXPRESSION(NUMBER_LITERAL("10"))),
+                        NULL)))},
+        .numberOfStatements = 1,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.used == 2);  // 'func' and the lambda
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].type == CONST_TYPE_LAMBDA);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[1].type == CONST_TYPE_IDENTIFIER);
+
+    Function* lambda = compiledCode.topLevelCodeObject.constantPool.values[0].as.lambda;
+    ASSERT(lambda->parameterCount == 0);
+
+    Bytecode expectedLambdaBytecode[] = {
+        {.type = OP_LOAD_CONSTANT},
+        {.type = OP_RETURN},
+        {.type = OP_NULL},
+        {.type = OP_SWAP},
+        {.type = OP_POPN},
+        {.type = OP_POPN},
+        {.type = OP_RETURN},
+    };
+    BytecodeArray expectedLambdaBytecodeArray = {.values = expectedLambdaBytecode, .used = 7};
+
+    ASSERT(compareTypesInBytecodeArrays(expectedLambdaBytecodeArray, lambda->code->bytecodeArray));
+    ASSERT(lambda->code->constantPool.values[0].as.number == 10);
+
+    FREE_COMPILER
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_lambda_with_conditional_returns() {
+    Source testSource = {
+        .rootStatements = {
+            VAL_DECLARATION_STATEMENT(
+                "func",
+                LAMBDA_EXPRESSION(
+                    IDENTIFIER_ARRAY({.token = IDENTIFIER_TOKEN("x")}),
+                    BLOCK_EXPRESSION(
+                        SELECTION_STATEMENT(
+                            COMPARISON_EXPRESSION(
+                                PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("x")),
+                                PRIMARY_EXPRESSION(NUMBER_LITERAL("0")),
+                                TOKEN(TOKEN_GREATER)),
+                            BLOCK_STATEMENT(RETURN_STATEMENT(PRIMARY_EXPRESSION(NUMBER_LITERAL("1")))),
+                            BLOCK_STATEMENT(RETURN_STATEMENT(UNARY_EXPRESSION(TOKEN(TOKEN_MINUS), PRIMARY_EXPRESSION(NUMBER_LITERAL("1")))))),
+                        NULL)))},
+        .numberOfStatements = 1,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.used == 2);  // 'func' and the lambda
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].type == CONST_TYPE_LAMBDA);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[1].type == CONST_TYPE_IDENTIFIER);
+
+    Function* lambda = compiledCode.topLevelCodeObject.constantPool.values[0].as.lambda;
+    ASSERT(lambda->parameterCount == 1);
+
+    Bytecode expectedLambdaBytecode[] = {
+        {.type = OP_GET_LOCAL_VAR_FAST},
+        {.type = OP_LOAD_CONSTANT},
+        {.type = OP_BINARY_GT},
+        {.type = OP_JUMP_IF_FALSE},
+        {.type = OP_LOAD_CONSTANT},
+        {.type = OP_RETURN},
+        {.type = OP_POPN},
+        {.type = OP_JUMP},
+        {.type = OP_LOAD_CONSTANT},
+        {.type = OP_UNARY_NEGATE},
+        {.type = OP_RETURN},
+        {.type = OP_POPN},
+        {.type = OP_NULL},
+        {.type = OP_POPN},
+        {.type = OP_POPN},
+        {.type = OP_RETURN},
+    };
+    BytecodeArray expectedLambdaBytecodeArray = {.values = expectedLambdaBytecode, .used = 16};
+
+    ASSERT(compareTypesInBytecodeArrays(expectedLambdaBytecodeArray, lambda->code->bytecodeArray));
+    ASSERT(lambda->code->constantPool.values[0].as.number == 0);
+    ASSERT(lambda->code->constantPool.values[1].as.number == 1);
 
     FREE_COMPILER
 
