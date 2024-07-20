@@ -348,7 +348,8 @@ The following features are necessary a proper v1.0 release, in rough order:
  - [X] Implement assignment statements
  - [X] Implement non-constant variables
  - [X] Implement iteration statement (loops)
- - [ ] Implement functions and returns
+ - [X] Implement functions and returns
+ - [ ] Add end-to-end tests
  - [ ] Add CLI argument to enable or disable debugging logs in the REPL.
  - [ ] Improve error logs; print line and column
  - [ ] Add Panic Mode error recovery; stop crashing the compiler on every error.
