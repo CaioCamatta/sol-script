@@ -13,6 +13,9 @@
 #define TOKEN(typeArg) \
     (Token) { .type = typeArg, .start = "_", .length = 1 }
 
+#define IDENTIFIER_TOKEN(identifier) \
+    (Token) { .type = TOKEN_IDENTIFIER, .start = identifier, .length = 1 }
+
 #define NUMBER_LITERAL(numberAsString)                                                                           \
     &(Literal) {                                                                                                 \
         .type = NUMBER_LITERAL,                                                                                  \
@@ -158,6 +161,14 @@
         }                                        \
     }
 
+#define RETURN_STATEMENT(expressionInput)          \
+    &(Statement) {                                 \
+        .type = RETURN_STATEMENT,                  \
+        .as.returnStatement = &(ReturnStatement) { \
+            .expression = expressionInput          \
+        }                                          \
+    }
+
 #define VAL_DECLARATION_STATEMENT(identifierName, expressionInput)                                                      \
     &(Statement) {                                                                                                      \
         .type = VAL_DECLARATION_STATEMENT,                                                                              \
@@ -256,6 +267,44 @@
         }                                                \
     }
 
+#define LAMBDA_EXPRESSION(parametersArg, bodyExpression)                  \
+    &(Expression) {                                                       \
+        .type = LAMBDA_EXPRESSION,                                        \
+        .as.lambdaExpression = &(LambdaExpression) {                      \
+            .parameters = parametersArg,                                  \
+            .bodyBlock = &(BlockExpression) {                             \
+                .statementArray = (StatementArray){.used = 0, .size = 0}, \
+                .lastExpression = bodyExpression                          \
+            }                                                             \
+        }                                                                 \
+    }
+
+#define CALL_EXPRESSION(functionName, argumentsArg)                                                                 \
+    &(Expression) {                                                                                                 \
+        .type = CALL_EXPRESSION,                                                                                    \
+        .as.callExpression = &(CallExpression) {                                                                    \
+            .lambdaFunctionName = &(IdentifierLiteral){                                                             \
+                .token = (Token){.type = TOKEN_IDENTIFIER, .start = functionName, .length = strlen(functionName)}}, \
+            .arguments = argumentsArg                                                                               \
+        }                                                                                                           \
+    }
+
+// Helper macro for creating IdentifierArray
+#define IDENTIFIER_ARRAY(...)                                                           \
+    &(IdentifierArray) {                                                                \
+        .values = (IdentifierLiteral[]){__VA_ARGS__},                                   \
+        .used = sizeof((IdentifierLiteral[]){__VA_ARGS__}) / sizeof(IdentifierLiteral), \
+        .size = sizeof((IdentifierLiteral[]){__VA_ARGS__}) / sizeof(IdentifierLiteral)  \
+    }
+
+// Helper macro for creating ExpressionArray
+#define EXPRESSION_ARRAY(...)                                               \
+    &(ExpressionArray) {                                                    \
+        .values = (Expression*[]){__VA_ARGS__},                             \
+        .used = sizeof((Expression*[]){__VA_ARGS__}) / sizeof(Expression*), \
+        .size = sizeof((Expression*[]){__VA_ARGS__}) / sizeof(Expression*)  \
+    }
+
 // ------------------------------------------------------------------------
 // ---------------------------- Test utilities ----------------------------
 // ------------------------------------------------------------------------
@@ -277,11 +326,14 @@ static int compareTypesInBytecodeArrays(BytecodeArray expected, BytecodeArray ac
 
 // Macro to initialize compiler, compile AST, and print the compiled bytecode
 // Assumes the source is named `testSource`; creates a variable called `compiledCode`.
-#define COMPILE_TEST_SOURCE                         \
-    Compiler compiler;                              \
-    initCompiler(&compiler, &testSource);           \
-    CompiledCode compiledCode = compile(&compiler); \
+#define COMPILE_TEST_SOURCE                              \
+    CompilerState compilerState;                         \
+    initCompilerState(&compilerState, &testSource);      \
+    CompiledCode compiledCode = compile(&compilerState); \
     printCompiledCode(compiledCode);
+
+// Macro to free the compiler state (assumed to exist in lexical scope)
+#define FREE_COMPILER freeCompilerState(&compilerState);
 
 // -------------------------------------------------------------------------
 // --------------------------------- Tests ---------------------------------
@@ -311,15 +363,14 @@ int test_compiler() {
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 4};
 
     // Compared the actual and expected
-    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
-    ASSERT(compiledCode.constantPool.values[0].as.number == 5);       // 5 is in slot 0 of the pool
-    ASSERT(compiledCode.bytecodeArray.values[0].maybeOperand1 == 0);  // first instruction loads slot 0
-    ASSERT(compiledCode.constantPool.values[1].as.number == 7);
-    ASSERT(compiledCode.bytecodeArray.values[1].maybeOperand1 == 1);
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].as.number == 5);       // 5 is in slot 0 of the pool
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[0].maybeOperand1 == 0);  // first instruction loads slot 0
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[1].as.number == 7);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[1].maybeOperand1 == 1);
 
     // Clean up
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -336,13 +387,12 @@ int test_compiler_print() {
 
     // Verify the bytecode
     // Assuming the bytecode for a print statement is OP_PRINT followed by the value to print
-    ASSERT(compiledCode.bytecodeArray.used == 2);                           // Check if two bytecode instructions are generated
-    ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);  // First should be OP_CONSTANT
-    ASSERT(compiledCode.bytecodeArray.values[1].type == OP_PRINT);          // Second should be OP_PRINT
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.used == 2);                           // Check if two bytecode instructions are generated
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);  // First should be OP_CONSTANT
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[1].type == OP_PRINT);          // Second should be OP_PRINT
 
     // Clean up
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -358,12 +408,11 @@ int test_compiler_val_declaration() {
     COMPILE_TEST_SOURCE
 
     // Verify bytecode for val declaration
-    ASSERT(compiledCode.bytecodeArray.used == 2);                               // Check if two bytecode instructions are generated
-    ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);      // First should be OP_LOAD_CONSTANT
-    ASSERT(compiledCode.bytecodeArray.values[1].type == OP_DEFINE_GLOBAL_VAL);  // Second should be OP_SET_GLOBAL_VAL
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.used == 2);                               // Check if two bytecode instructions are generated
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);      // First should be OP_LOAD_CONSTANT
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[1].type == OP_DEFINE_GLOBAL_VAL);  // Second should be OP_SET_GLOBAL_VAL
 
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -380,17 +429,16 @@ int test_compiler_variable_declaration_and_printing() {
 
     COMPILE_TEST_SOURCE
 
-    ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);      // load 42 into stack
-    ASSERT(compiledCode.bytecodeArray.values[1].type == OP_DEFINE_GLOBAL_VAL);  // assign top of stack to variable 'x'
-    ASSERT(compiledCode.bytecodeArray.values[2].type == OP_GET_GLOBAL_VAL);     // get variable 'x'
-    ASSERT(compiledCode.bytecodeArray.values[3].type == OP_PRINT);              // print top of stack
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);      // load 42 into stack
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[1].type == OP_DEFINE_GLOBAL_VAL);  // assign top of stack to variable 'x'
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[2].type == OP_GET_GLOBAL_VAL);     // get variable 'x'
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[3].type == OP_PRINT);              // print top of stack
 
-    ASSERT(compiledCode.constantPool.values[0].type == CONST_TYPE_DOUBLE);  // 42
-    ASSERT(compiledCode.constantPool.values[0].as.number == 42);
-    ASSERT(compiledCode.constantPool.values[1].type == CONST_TYPE_IDENTIFIER);  // x
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].type == CONST_TYPE_DOUBLE);  // 42
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].as.number == 42);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[1].type == CONST_TYPE_IDENTIFIER);  // x
 
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;  // Assuming SUCCESS_RETURN_CODE is defined as part of your testing framework
 }
@@ -407,11 +455,10 @@ int test_add_constant_to_pool_no_duplicates() {
     COMPILE_TEST_SOURCE
 
     // Assert the constants were not added twice; there should be one for '42', one for 'x', one for 'y'.
-    ASSERT(compiledCode.constantPool.used == 3);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.used == 3);
 
     // Cleanup
-    FREE_ARRAY(compiler.compiledBytecode);
-    FREE_ARRAY(compiler.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -440,11 +487,10 @@ int test_compiler_binary_equal() {
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 4};
 
     // Assert the actual bytecode matches the expected
-    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
 
     // Cleanup
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -473,11 +519,10 @@ int test_compiler_binary_not_equal() {
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 4};
 
     // Assert the bytecode is as expected
-    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
 
     // Cleanup
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -541,11 +586,10 @@ int test_compiler_comparison_operations() {
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
 
     // Assert the actual bytecode matches the expected
-    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
 
     // Cleanup
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -586,11 +630,10 @@ int test_compiler_logical_and_or_operations() {
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
 
     // Assert the actual bytecode matches the expected
-    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
 
     // Cleanup
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -632,16 +675,15 @@ int test_compiler_multiplicative_expressions() {
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
 
     // Assert the actual bytecode matches the expected
-    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
 
     // Verify constants in the constant pool
-    ASSERT(compiledCode.constantPool.values[0].as.number == 5);
-    ASSERT(compiledCode.constantPool.values[1].as.number == 2);
-    ASSERT(compiledCode.constantPool.values[2].as.number == 10);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].as.number == 5);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[1].as.number == 2);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[2].as.number == 10);
 
     // Cleanup
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -673,11 +715,10 @@ int test_compiler_unary_expressions() {
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
 
     // Compare actual and expected bytecode
-    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
 
     // Clean up
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -691,11 +732,10 @@ int test_compiler_boolean_literal() {
 
     COMPILE_TEST_SOURCE
 
-    ASSERT(compiledCode.bytecodeArray.used == 2);
-    ASSERT(compiledCode.bytecodeArray.values[0].type == OP_FALSE);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.used == 2);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[0].type == OP_FALSE);
 
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -713,13 +753,12 @@ int test_compiler_string_literal() {
     COMPILE_TEST_SOURCE
 
     // Assertions to ensure string literal was correctly recognized, added to the constant pool, and properly loaded
-    ASSERT(compiledCode.constantPool.used == 1);                                          // Ensure constant pool has entries
-    ASSERT(strcmp(compiledCode.constantPool.values[0].as.string, "Hello, World!") == 0);  // Check string content
-    ASSERT(compiledCode.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);                // Check bytecode to load string
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.used == 1);                                          // Ensure constant pool has entries
+    ASSERT(strcmp(compiledCode.topLevelCodeObject.constantPool.values[0].as.string, "Hello, World!") == 0);  // Check string content
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[0].type == OP_LOAD_CONSTANT);                // Check bytecode to load string
 
     // Cleanup
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -739,11 +778,10 @@ int test_compiler_stack_height_expression_and_val() {
 
     // The expression and print statements shouldn't add to the height.
     // The val declaration also shouldn't add anything because it's a global variable.
-    ASSERT(compiler.currentStackHeight == 0);
+    ASSERT(compilerState.currentCompilerUnit.predictedStack.currentStackHeight == 0);
 
     // Clean up
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -777,11 +815,10 @@ int test_compiler_single_block_statement_with_locals() {
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
 
     // Assert the actual bytecode matches the expected
-    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
 
     // Cleanup
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -846,7 +883,7 @@ int test_compiler_nested_blocks_with_global_and_local_vars() {
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
 
     // Assert the actual bytecode matches the expected
-    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
 
     // Assert constant pool contains one identifier for the global, and four numbers.
     //  Constant Pool:
@@ -855,21 +892,20 @@ int test_compiler_nested_blocks_with_global_and_local_vars() {
     //  #2 (double) 10.000000
     //  #3 (double) 20.000000
     //  #4 (double) 30.000000
-    ASSERT(compiledCode.constantPool.used == 5);
-    ASSERT(compiledCode.constantPool.values[0].type == CONST_TYPE_DOUBLE);
-    ASSERT(compiledCode.constantPool.values[0].as.number == 100.0);
-    ASSERT(compiledCode.constantPool.values[1].type == CONST_TYPE_IDENTIFIER);
-    ASSERT(strcmp(compiledCode.constantPool.values[1].as.string, "g") == 0);
-    ASSERT(compiledCode.constantPool.values[2].type == CONST_TYPE_DOUBLE);
-    ASSERT(compiledCode.constantPool.values[2].as.number == 10.0);
-    ASSERT(compiledCode.constantPool.values[3].type == CONST_TYPE_DOUBLE);
-    ASSERT(compiledCode.constantPool.values[3].as.number == 20.0);
-    ASSERT(compiledCode.constantPool.values[4].type == CONST_TYPE_DOUBLE);
-    ASSERT(compiledCode.constantPool.values[4].as.number == 30.0);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.used == 5);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].type == CONST_TYPE_DOUBLE);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].as.number == 100.0);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[1].type == CONST_TYPE_IDENTIFIER);
+    ASSERT(strcmp(compiledCode.topLevelCodeObject.constantPool.values[1].as.string, "g") == 0);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[2].type == CONST_TYPE_DOUBLE);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[2].as.number == 10.0);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[3].type == CONST_TYPE_DOUBLE);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[3].as.number == 20.0);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[4].type == CONST_TYPE_DOUBLE);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[4].as.number == 30.0);
 
     // Cleanup and assertions
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -897,14 +933,13 @@ int test_compiler_if_statement_no_else() {
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
 
     // Assert the actual bytecode matches the expected
-    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
 
     // Check that nothing is popped (we didnt create any variables)
-    ASSERT(expectedBytecode[4].maybeOperand1 == compiledCode.bytecodeArray.values[4].maybeOperand1);
+    ASSERT(expectedBytecode[4].maybeOperand1 == compiledCode.topLevelCodeObject.bytecodeArray.values[4].maybeOperand1);
 
     // Cleanup
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -936,15 +971,14 @@ int test_compiler_if_statement_with_else() {
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
 
     // Assert the actual bytecode matches the expected
-    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
 
     // Check that nothing is popped (we didnt create any variables)
-    ASSERT(expectedBytecode[4].maybeOperand1 == compiledCode.bytecodeArray.values[4].maybeOperand1);
-    ASSERT(expectedBytecode[8].maybeOperand1 == compiledCode.bytecodeArray.values[8].maybeOperand1);
+    ASSERT(expectedBytecode[4].maybeOperand1 == compiledCode.topLevelCodeObject.bytecodeArray.values[4].maybeOperand1);
+    ASSERT(expectedBytecode[8].maybeOperand1 == compiledCode.topLevelCodeObject.bytecodeArray.values[8].maybeOperand1);
 
     // Cleanup
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -1004,21 +1038,20 @@ int test_compiler_nested_if_statements() {
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
 
     // Assert bytecode matches expected
-    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
 
     // Verify operands
-    ASSERT(compiledCode.bytecodeArray.values[1].maybeOperand1 == 15);   // Operand for first OP_JUMP_IF_FALSE
-    ASSERT(compiledCode.bytecodeArray.values[5].maybeOperand1 == 10);   // Operand for nested OP_JUMP_IF_FALSE
-    ASSERT(compiledCode.bytecodeArray.values[9].maybeOperand1 == 13);   // Operand for first OP_JUMP
-    ASSERT(compiledCode.bytecodeArray.values[14].maybeOperand1 == 18);  // Operand for second OP_JUMP
-    ASSERT(compiledCode.bytecodeArray.values[8].maybeOperand1 == 0);    // Operand for the first OP_POPN after "true-inner"
-    ASSERT(compiledCode.bytecodeArray.values[12].maybeOperand1 == 0);   // Operand for the OP_POPN after "false-inner"
-    ASSERT(compiledCode.bytecodeArray.values[13].maybeOperand1 == 0);   // Operand for the OP_POPN after exiting the inner if
-    ASSERT(compiledCode.bytecodeArray.values[17].maybeOperand1 == 0);   // Operand for the OP_POPN after "false-outer"
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[1].maybeOperand1 == 15);   // Operand for first OP_JUMP_IF_FALSE
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[5].maybeOperand1 == 10);   // Operand for nested OP_JUMP_IF_FALSE
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[9].maybeOperand1 == 13);   // Operand for first OP_JUMP
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[14].maybeOperand1 == 18);  // Operand for second OP_JUMP
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[8].maybeOperand1 == 0);    // Operand for the first OP_POPN after "true-inner"
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[12].maybeOperand1 == 0);   // Operand for the OP_POPN after "false-inner"
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[13].maybeOperand1 == 0);   // Operand for the OP_POPN after exiting the inner if
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[17].maybeOperand1 == 0);   // Operand for the OP_POPN after "false-outer"
 
     // Clean up
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -1039,18 +1072,16 @@ int test_compiler_block_expression_simple() {
 
     Bytecode expectedBytecode[] = {
         {.type = OP_LOAD_CONSTANT, .maybeOperand1 = 0},
-        {.type = OP_SWAP, .maybeOperand1 = 0},
         {.type = OP_POPN, .maybeOperand1 = 0},
         {.type = OP_DEFINE_GLOBAL_VAL, .maybeOperand1 = 1},
     };
-    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 4};
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 3};
 
-    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
-    ASSERT(compiledCode.constantPool.values[0].as.number == 3);
-    ASSERT(strcmp(compiledCode.constantPool.values[1].as.string, "a") == 0);
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].as.number == 3);
+    ASSERT(strcmp(compiledCode.topLevelCodeObject.constantPool.values[1].as.string, "a") == 0);
 
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -1075,22 +1106,18 @@ int test_compiler_block_expression_nested() {
 
     Bytecode expectedBytecode[] = {
         {.type = OP_LOAD_CONSTANT, .maybeOperand1 = 0},
-        {.type = OP_SWAP, .maybeOperand1 = 0},
         {.type = OP_POPN, .maybeOperand1 = 0},
-        {.type = OP_SWAP, .maybeOperand1 = 0},
         {.type = OP_POPN, .maybeOperand1 = 0},
-        {.type = OP_SWAP, .maybeOperand1 = 0},
         {.type = OP_POPN, .maybeOperand1 = 0},
         {.type = OP_DEFINE_GLOBAL_VAL, .maybeOperand1 = 1},
     };
-    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 8};
+    BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 5};
 
-    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
-    ASSERT(compiledCode.constantPool.values[0].as.number == 3);
-    ASSERT(strcmp(compiledCode.constantPool.values[1].as.string, "a") == 0);
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].as.number == 3);
+    ASSERT(strcmp(compiledCode.topLevelCodeObject.constantPool.values[1].as.string, "a") == 0);
 
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -1119,13 +1146,12 @@ int test_compiler_block_expression_with_statements() {
     };
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 6};
 
-    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
-    ASSERT(compiledCode.constantPool.values[0].as.number == 2);
-    ASSERT(compiledCode.constantPool.values[1].as.number == 3);
-    ASSERT(strcmp(compiledCode.constantPool.values[2].as.string, "a") == 0);
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].as.number == 2);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[1].as.number == 3);
+    ASSERT(strcmp(compiledCode.topLevelCodeObject.constantPool.values[2].as.string, "a") == 0);
 
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -1152,11 +1178,10 @@ int test_compiler_var_declaration_and_assignment_global() {
     };
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 6};
 
-    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
 
     // Clean up
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -1186,11 +1211,10 @@ int test_compiler_var_declaration_and_assignment_local() {
     };
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 7};
 
-    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
 
     // Clean up
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -1222,16 +1246,15 @@ int test_compiler_global_declaration_and_local_assignment() {
     };
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = 9};
 
-    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
 
     // Verify constant pool
-    ASSERT(compiledCode.constantPool.used == 2);
-    ASSERT(strcmp(compiledCode.constantPool.values[0].as.string, "a") == 0);
-    ASSERT(compiledCode.constantPool.values[1].as.number == 1);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.used == 2);
+    ASSERT(strcmp(compiledCode.topLevelCodeObject.constantPool.values[0].as.string, "a") == 0);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[1].as.number == 1);
 
     // Clean up
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -1257,10 +1280,9 @@ int test_compiler_iteration_statement_simple() {
     };
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
 
-    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
 
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }
@@ -1305,10 +1327,301 @@ int test_compiler_iteration_statement_with_variable() {
         BYTECODE_OPERAND_1(OP_JUMP, 2),            // Jump back to condition
     };
     BytecodeArray expectedBytecodeArray = {.values = expectedBytecode, .used = sizeof(expectedBytecode) / sizeof(Bytecode)};
-    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.bytecodeArray));
+    ASSERT(compareTypesInBytecodeArrays(expectedBytecodeArray, compiledCode.topLevelCodeObject.bytecodeArray));
 
-    FREE_ARRAY(compiledCode.bytecodeArray);
-    FREE_ARRAY(compiledCode.constantPool);
+    FREE_COMPILER
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_lambda_expression_simple() {
+    Source testSource = {
+        .rootStatements = {
+            VAL_DECLARATION_STATEMENT(
+                "add",
+                LAMBDA_EXPRESSION(
+                    IDENTIFIER_ARRAY(
+                        {.token = IDENTIFIER_TOKEN("a")},
+                        {.token = IDENTIFIER_TOKEN("b")}),
+                    ADDITIVE_EXPRESSION(
+                        PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("a")),
+                        TOKEN(TOKEN_PLUS),
+                        PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("b")))))},
+        .numberOfStatements = 1,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    // Verify the constant pool contains the function
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.used == 2);  // 'add' and the function object
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].type == CONST_TYPE_LAMBDA);
+
+    // Verify the bytecode for defining the function
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[0].type == OP_LAMBDA);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[1].type == OP_DEFINE_GLOBAL_VAL);
+
+    // Verify the function's bytecode
+    Function* function = compiledCode.topLevelCodeObject.constantPool.values[0].as.lambda;
+    ASSERT(function->parameterCount == 2);
+    ASSERT(function->code->bytecodeArray.values[0].type == OP_GET_LOCAL_VAR_FAST);
+    ASSERT(function->code->bytecodeArray.values[1].type == OP_GET_LOCAL_VAR_FAST);
+    ASSERT(function->code->bytecodeArray.values[2].type == OP_BINARY_ADD);
+    ASSERT(function->code->bytecodeArray.values[3].type == OP_POPN);
+    ASSERT(function->code->bytecodeArray.values[4].type == OP_RETURN);
+
+    FREE_COMPILER
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_lambda_expression_nested() {
+    Source testSource = {
+        .rootStatements = {
+            VAL_DECLARATION_STATEMENT(
+                "makeAdder",
+                LAMBDA_EXPRESSION(
+                    IDENTIFIER_ARRAY(
+                        {.token = IDENTIFIER_TOKEN("x")}),
+                    LAMBDA_EXPRESSION(
+                        IDENTIFIER_ARRAY(
+                            {.token = IDENTIFIER_TOKEN("y")}),
+                        ADDITIVE_EXPRESSION(
+                            PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("y")),
+                            TOKEN(TOKEN_PLUS),
+                            PRIMARY_EXPRESSION(NUMBER_LITERAL("1"))))))},
+        .numberOfStatements = 1,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    // Verify the constant pool contains the outer function
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.used == 2);  // 'makeAdder' and the outer function object
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].type == CONST_TYPE_LAMBDA);
+
+    // Verify the bytecode for defining the outer function
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[0].type == OP_LAMBDA);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[1].type == OP_DEFINE_GLOBAL_VAL);
+
+    // Verify the outer function's bytecode
+    Function* outerFunction = compiledCode.topLevelCodeObject.constantPool.values[0].as.lambda;
+    ASSERT(outerFunction->parameterCount == 1);
+    ASSERT(outerFunction->code->bytecodeArray.values[0].type == OP_LAMBDA);
+    ASSERT(outerFunction->code->bytecodeArray.values[1].type == OP_POPN);
+    ASSERT(outerFunction->code->bytecodeArray.values[2].type == OP_RETURN);
+
+    // Verify the inner function's bytecode
+    Function* innerFunction = outerFunction->code->constantPool.values[0].as.lambda;
+    ASSERT(innerFunction->parameterCount == 1);
+    ASSERT(innerFunction->code->bytecodeArray.values[0].type == OP_GET_LOCAL_VAR_FAST);  // y
+    ASSERT(innerFunction->code->bytecodeArray.values[1].type == OP_LOAD_CONSTANT);       // 1
+    ASSERT(innerFunction->code->bytecodeArray.values[2].type == OP_BINARY_ADD);
+    ASSERT(innerFunction->code->bytecodeArray.values[3].type == OP_POPN);
+    ASSERT(innerFunction->code->bytecodeArray.values[4].type == OP_RETURN);
+
+    FREE_COMPILER
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_call_expression_simple() {
+    Source testSource = {
+        .rootStatements = {
+            VAL_DECLARATION_STATEMENT(
+                "add",
+                LAMBDA_EXPRESSION(
+                    IDENTIFIER_ARRAY(
+                        {.token = IDENTIFIER_TOKEN("a")},
+                        {.token = IDENTIFIER_TOKEN("b")}),
+                    ADDITIVE_EXPRESSION(
+                        PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("a")),
+                        TOKEN(TOKEN_PLUS),
+                        PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("b"))))),
+            VAL_DECLARATION_STATEMENT(
+                "result",
+                CALL_EXPRESSION(
+                    "add",
+                    EXPRESSION_ARRAY(
+                        PRIMARY_EXPRESSION(NUMBER_LITERAL("5")),
+                        PRIMARY_EXPRESSION(NUMBER_LITERAL("3")))))},
+        .numberOfStatements = 2,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    // Verify the constant pool
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.used == 5);  // 'add', lambda, 'result', 5, and 3
+
+    // Verify the bytecode for lambda definition
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[0].type == OP_LAMBDA);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[1].type == OP_DEFINE_GLOBAL_VAL);  // 'add'
+
+    // Verify the bytecode for function call
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[2].type == OP_LOAD_CONSTANT);   // 5
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[3].type == OP_LOAD_CONSTANT);   // 3
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[4].type == OP_GET_GLOBAL_VAL);  // 'add'
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[5].type == OP_CALL);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[6].type == OP_DEFINE_GLOBAL_VAL);  // 'result'
+
+    FREE_COMPILER
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_call_expression_nested() {
+    Source testSource = {
+        .rootStatements = {
+            VAL_DECLARATION_STATEMENT(
+                "add",
+                LAMBDA_EXPRESSION(
+                    IDENTIFIER_ARRAY(
+                        {.token = IDENTIFIER_TOKEN("a")},
+                        {.token = IDENTIFIER_TOKEN("b")}),
+                    ADDITIVE_EXPRESSION(
+                        PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("a")),
+                        TOKEN(TOKEN_PLUS),
+                        PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("b"))))),
+            VAL_DECLARATION_STATEMENT(
+                "multiply",
+                LAMBDA_EXPRESSION(
+                    IDENTIFIER_ARRAY(
+                        {.token = IDENTIFIER_TOKEN("a")},
+                        {.token = IDENTIFIER_TOKEN("b")}),
+                    MULTIPLICATIVE_EXPRESSION(
+                        PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("a")),
+                        TOKEN(TOKEN_STAR),
+                        PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("b"))))),
+            VAL_DECLARATION_STATEMENT(
+                "result",
+                CALL_EXPRESSION("add",
+                                EXPRESSION_ARRAY(
+                                    PRIMARY_EXPRESSION(NUMBER_LITERAL("5")),
+                                    CALL_EXPRESSION("multiply",
+                                                    EXPRESSION_ARRAY(
+                                                        PRIMARY_EXPRESSION(NUMBER_LITERAL("3")),
+                                                        PRIMARY_EXPRESSION(NUMBER_LITERAL("2")))))))},
+        .numberOfStatements = 3,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    // Verify the constant pool
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.used == 8);  // 'add', 'multiply', their lambdas, 'result', 5, 3, and 2
+
+    // Verify the bytecode for lambda definitions
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[0].type == OP_LAMBDA);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[1].type == OP_DEFINE_GLOBAL_VAL);  // 'add'
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[2].type == OP_LAMBDA);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[3].type == OP_DEFINE_GLOBAL_VAL);  // 'multiply'
+
+    // Verify the bytecode for the nested function calls
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[4].type == OP_LOAD_CONSTANT);   // 5
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[5].type == OP_LOAD_CONSTANT);   // 3
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[6].type == OP_LOAD_CONSTANT);   // 2
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[7].type == OP_GET_GLOBAL_VAL);  // 'multiply'
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[8].type == OP_CALL);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[9].type == OP_GET_GLOBAL_VAL);  // 'add'
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[10].type == OP_CALL);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[11].type == OP_DEFINE_GLOBAL_VAL);  // 'result'
+
+    FREE_COMPILER
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_lambda_with_return() {
+    Source testSource = {
+        .rootStatements = {
+            VAL_DECLARATION_STATEMENT(
+                "func",
+                LAMBDA_EXPRESSION(
+                    IDENTIFIER_ARRAY(),
+                    BLOCK_EXPRESSION(
+                        RETURN_STATEMENT(PRIMARY_EXPRESSION(NUMBER_LITERAL("10"))),
+                        NULL)))},
+        .numberOfStatements = 1,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.used == 2);  // 'func' and the lambda
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].type == CONST_TYPE_LAMBDA);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[1].type == CONST_TYPE_IDENTIFIER);
+
+    Function* lambda = compiledCode.topLevelCodeObject.constantPool.values[0].as.lambda;
+    ASSERT(lambda->parameterCount == 0);
+
+    Bytecode expectedLambdaBytecode[] = {
+        {.type = OP_LOAD_CONSTANT},
+        {.type = OP_RETURN},
+        {.type = OP_NULL},
+        {.type = OP_SWAP},
+        {.type = OP_POPN},
+        {.type = OP_POPN},
+        {.type = OP_RETURN},
+    };
+    BytecodeArray expectedLambdaBytecodeArray = {.values = expectedLambdaBytecode, .used = 7};
+
+    ASSERT(compareTypesInBytecodeArrays(expectedLambdaBytecodeArray, lambda->code->bytecodeArray));
+    ASSERT(lambda->code->constantPool.values[0].as.number == 10);
+
+    FREE_COMPILER
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_lambda_with_conditional_returns() {
+    Source testSource = {
+        .rootStatements = {
+            VAL_DECLARATION_STATEMENT(
+                "func",
+                LAMBDA_EXPRESSION(
+                    IDENTIFIER_ARRAY({.token = IDENTIFIER_TOKEN("x")}),
+                    BLOCK_EXPRESSION(
+                        SELECTION_STATEMENT(
+                            COMPARISON_EXPRESSION(
+                                PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("x")),
+                                PRIMARY_EXPRESSION(NUMBER_LITERAL("0")),
+                                TOKEN(TOKEN_GREATER)),
+                            BLOCK_STATEMENT(RETURN_STATEMENT(PRIMARY_EXPRESSION(NUMBER_LITERAL("1")))),
+                            BLOCK_STATEMENT(RETURN_STATEMENT(UNARY_EXPRESSION(TOKEN(TOKEN_MINUS), PRIMARY_EXPRESSION(NUMBER_LITERAL("1")))))),
+                        NULL)))},
+        .numberOfStatements = 1,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.used == 2);  // 'func' and the lambda
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].type == CONST_TYPE_LAMBDA);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[1].type == CONST_TYPE_IDENTIFIER);
+
+    Function* lambda = compiledCode.topLevelCodeObject.constantPool.values[0].as.lambda;
+    ASSERT(lambda->parameterCount == 1);
+
+    Bytecode expectedLambdaBytecode[] = {
+        {.type = OP_GET_LOCAL_VAR_FAST},
+        {.type = OP_LOAD_CONSTANT},
+        {.type = OP_BINARY_GT},
+        {.type = OP_JUMP_IF_FALSE},
+        {.type = OP_LOAD_CONSTANT},
+        {.type = OP_RETURN},
+        {.type = OP_POPN},
+        {.type = OP_JUMP},
+        {.type = OP_LOAD_CONSTANT},
+        {.type = OP_UNARY_NEGATE},
+        {.type = OP_RETURN},
+        {.type = OP_POPN},
+        {.type = OP_NULL},
+        {.type = OP_POPN},
+        {.type = OP_POPN},
+        {.type = OP_RETURN},
+    };
+    BytecodeArray expectedLambdaBytecodeArray = {.values = expectedLambdaBytecode, .used = 16};
+
+    ASSERT(compareTypesInBytecodeArrays(expectedLambdaBytecodeArray, lambda->code->bytecodeArray));
+    ASSERT(lambda->code->constantPool.values[0].as.number == 0);
+    ASSERT(lambda->code->constantPool.values[1].as.number == 1);
+
+    FREE_COMPILER
 
     return SUCCESS_RETURN_CODE;
 }

@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "syntax.h"
+#include "util/colors.h"
 
 // ---------------------------------------------------------------------------
 // ------------------------- PARSER HELPER FUNCTIONS -------------------------
@@ -31,7 +32,48 @@ void freeSource(Source* source) {
 
 // Print error at current token, halt execution
 static void errorAtCurrent(ASTParser* parser, const char* message) {
-    fprintf(stderr, "Error at line %d, column %d: %s", parser->current->lineNo, parser->current->colNo, message);
+    Token* token = parser->current;
+
+    // Error tokens come from the scanner, so we handle it differently.
+    if (token->type == TOKEN_ERROR) {
+        fprintf(stderr, KRED "ScannerError" KGRY "[%d:%d]" RESET, token->lineNo, token->colNo);
+
+        fprintf(stderr, ": %.*s\n", token->length, token->start);
+        exit(EXIT_FAILURE);
+    }
+
+    fprintf(stderr, KRED "ParserError" KGRY "[%d:%d]" RESET, token->lineNo, token->colNo);
+
+    if (token->type == TOKEN_EOF) {
+        fprintf(stderr, " at end");
+    } else if (token->type != TOKEN_ERROR) {
+        fprintf(stderr, " at '%.*s'", token->length, token->start);
+    }
+
+    fprintf(stderr, ": %s\n", message);
+
+    // Find the beginning of the line
+    const char* lineStart = token->start;
+    while (lineStart > parser->tokenArray.values[0].start && lineStart[-1] != '\n') {
+        lineStart--;
+    }
+
+    // Find the end of the line
+    const char* lineEnd = token->start;
+    while (lineEnd < parser->tokenArray.values[parser->tokenArray.used - 1].start + parser->tokenArray.values[parser->tokenArray.used - 1].length && *lineEnd != '\n') {
+        lineEnd++;
+    }
+
+    // Print the line
+    int lineLength = lineEnd - lineStart;
+    fprintf(stderr, "    %.*s\n", lineLength, lineStart);
+
+    // Print the pointer to the error column
+    for (int i = 0; i < token->colNo - 1; i++) {
+        fprintf(stderr, " ");
+    }
+    fprintf(stderr, "    ^\n");
+
     // TODO: Change this so we instead of exiting, we track that there are errors and move to the
     // next statement. Then after all statements are parsed we report the errors. This is a better UX.
     exit(EXIT_FAILURE);
@@ -67,6 +109,11 @@ static bool check(ASTParser* parser, TokenType type) {
     return parser->current->type == type;
 }
 
+/* Check if the next token is of a given type. */
+static bool checkNext(ASTParser* parser, TokenType type) {
+    return (parser->current->type != TOKEN_EOF && (parser->current + 1)->type == type);
+}
+
 /* Consume current token if it's of a given type. Returns true if a token was consumed and false otherwise. */
 static bool match(ASTParser* parser, TokenType type) {
     if (check(parser, type)) {
@@ -86,9 +133,6 @@ static bool match(ASTParser* parser, TokenType type) {
 
 /**
  * Check that there is a semicolon after an expression.
- *
- * Exception: semicolons are optional after the block expressions. This is a quality of
- * life thing to allow users to write "val a = { 2; }" for example.
  * */
 static void checkSemicolonAfterExpression(ASTParser* parser, Expression* maybeLatestExpression, char* message) {
     if (maybeLatestExpression && maybeLatestExpression->type == BLOCK_EXPRESSION) {
@@ -260,21 +304,65 @@ static Expression* primaryExpression(ASTParser* parser) {
 }
 
 /**
+ * argument-list:
+ *  expression ( "," expression )*
+ */
+static ExpressionArray* argumentList(ASTParser* parser) {
+    ExpressionArray* arguments = (ExpressionArray*)malloc(sizeof(ExpressionArray));
+    INIT_ARRAY((*arguments), Expression*);
+
+    if (peek(parser)->type != TOKEN_RIGHT_PAREN) {
+        do {
+            Expression* expr = expression(parser);
+            INSERT_ARRAY((*arguments), expr, Expression);
+        } while (match(parser, TOKEN_COMMA));
+    }
+    return arguments;
+}
+
+/**
  * postfix-call-expression:
  *  primary-expression
- *  "this" "." postfix-call-expression
- *  identifier "." postfix-call-expression
- *  identifier "(" argument-list? ")"  "." postfix-call-expression
+ *  identifier "(" ")"
+ *  identifier "(" argument-list ")"
  */
 static Expression* postfixCallExpression(ASTParser* parser) {
+    if (check(parser, TOKEN_IDENTIFIER) && checkNext(parser, TOKEN_LEFT_PAREN)) {
+        CallExpression* postfixCallExpr = allocateASTNode(CallExpression);
+
+        // Parse function name
+        postfixCallExpr->lambdaFunctionName = identifierLiteral(parser)->as.identifierLiteral;
+
+        // Parse optional arguments
+        consume(parser, TOKEN_LEFT_PAREN, "Impossible. Expected '(' in postfix-call-expression.");
+        postfixCallExpr->arguments = argumentList(parser);
+        consume(parser, TOKEN_RIGHT_PAREN, "Expected ')' after lambda parameters.");
+
+        Expression* expr = allocateASTNode(Expression);
+        expr->type = CALL_EXPRESSION;
+        expr->as.callExpression = postfixCallExpr;
+
+        return expr;
+    }
     return primaryExpression(parser);
 }
 
 /**
- * unary-expression:
+ * postfix-expression:
  *  postfix-call-expression
- *  ( "!" )* postfix-call-expression
- *  ( "-" )* postfix-call-expression
+ *  postfix-call-expression "." postfix-expression
+ *  "this" "." postfix-expression
+ *  identifier "." postfix-expression
+ */
+static Expression* postfixExpression(ASTParser* parser) {
+    return postfixCallExpression(parser);
+}
+
+/**
+ * unary-expression:
+ *  postfix-expression
+ *  ( "!" )* postfix-expression
+ *  ( "-" )* postfix-expression
  */
 static Expression* unaryExpression(ASTParser* parser) {
     if (match(parser, TOKEN_EXCLAMATION) || match(parser, TOKEN_MINUS)) {
@@ -291,7 +379,7 @@ static Expression* unaryExpression(ASTParser* parser) {
 
         return expression;
     }
-    return postfixCallExpression(parser);
+    return postfixExpression(parser);
 }
 
 /**
@@ -436,38 +524,80 @@ static Expression* blockExpression(ASTParser* parser) {
         Statement* statementNode = statement(parser);
 
         if (statementNode != NULL) {
-            // If the statement we just parsed is the last one in the block, we backtrack to check that it's also
-            // parseable as an expression (e.g., maybe it was an ExpressionStatement or nested block.)
+            INSERT_ARRAY(blockExpr->statementArray, statementNode, Statement*);
+
+            // If the statement we just parsed is the last one in the block, we try to
+            // convert it to an expression by backtrackind and re-parsing.
             if (check(parser, TOKEN_RIGHT_CURLY)) {
-                // Backtrack
-                parser->current = parserPositionBeforeStatement;
-                parser->previous = parser->current - 1;
+                // There default case is that there's no expression at the end of the block.
+                // Scala would return a Unit here; we leave it as NULL.
+                Expression* lastExpression = NULL;
 
-                // Parse expression
-                Expression* lastExpression = expression(parser);
-                checkSemicolonAfterExpression(parser, lastExpression, "Impossible. Expected ';' after block expression.");
+                Statement* lastStatementInThisBlock = statementNode;
+                if (lastStatementInThisBlock != NULL) {
+                    // Expression statements and block statements can be converted
+                    // to expressions.
+                    if (lastStatementInThisBlock->type == EXPRESSION_STATEMENT || lastStatementInThisBlock->type == BLOCK_STATEMENT) {
+                        // Backtrack
+                        parser->current = parserPositionBeforeStatement;
+                        parser->previous = parser->current - 1;
 
+                        // Parse expression
+                        lastExpression = expression(parser);
+                        checkSemicolonAfterExpression(parser, lastExpression, "Impossible. Expected ';' after block expression.");
+
+                        // Remove the last statement since we're adding it as the last expression.
+                        blockExpr->statementArray.used--;
+                    }
+                }
                 blockExpr->lastExpression = lastExpression;
                 break;
-            } else {
-                // If the statement isn't the last one, we just add it to the array.
-                INSERT_ARRAY(blockExpr->statementArray, statementNode, Statement*);
             }
-
         } else {
             errorAtCurrent(parser, "Error parsing statement in block expression.");
         }
     }
     consume(parser, TOKEN_RIGHT_CURLY, "Unclosed block expression. Expected '}'.");
 
-    // Block expressions must have at one expression in them.
-    if (!blockExpr->statementArray.used && !blockExpr->lastExpression) errorAtCurrent(parser, "Encountered an empty block-expression.");
+    // Block expressions must have at least one expression in them.
+    if (!blockExpr->statementArray.used && !blockExpr->lastExpression) errorAtCurrent(parser, "Encountered an empty block-expression. This isn't allowed in SolScript.");
 
     // Make the last ExpressionStatement the block's `lastExpression`
 
     Expression* expr = allocateASTNode(Expression);
     expr->type = BLOCK_EXPRESSION;
     expr->as.blockExpression = blockExpr;
+
+    return expr;
+}
+
+static IdentifierArray* parameterList(ASTParser* parser) {
+    IdentifierArray* parameters = (IdentifierArray*)malloc(sizeof(IdentifierArray));
+    INIT_ARRAY((*parameters), Token);
+
+    if (peek(parser)->type == TOKEN_IDENTIFIER) {
+        do {
+            if (parameters->used == UINT8_MAX) errorAtCurrent(parser, "Exceeded maximum number of parameters.");
+            Literal* literal = identifierLiteral(parser);
+            INSERT_ARRAY((*parameters), *(literal->as.identifierLiteral), IdentifierLiteral);
+        } while (match(parser, TOKEN_COMMA));
+    }
+    return parameters;
+}
+
+static Expression* lambdaExpression(ASTParser* parser) {
+    consume(parser, TOKEN_LAMBDA, "Expected 'lambda' keyword in lambda expression.");
+
+    consume(parser, TOKEN_LEFT_PAREN, "Expected '(' after 'lambda'.");
+    LambdaExpression* lambdaExpr = allocateASTNode(LambdaExpression);
+    lambdaExpr->parameters = parameterList(parser);
+    consume(parser, TOKEN_RIGHT_PAREN, "Expected ')' after lambda parameters.");
+
+    lambdaExpr->bodyBlock = blockExpression(parser)->as.blockExpression;
+
+    Expression* expr = allocateASTNode(Expression);
+    expr->type = LAMBDA_EXPRESSION;
+    expr->as.lambdaExpression = lambdaExpr;
 
     return expr;
 }
@@ -479,7 +609,12 @@ static Expression* blockExpression(ASTParser* parser) {
  *  logical-or-expression
  */
 static Expression* expression(ASTParser* parser) {
-    return logicalOrExpression(parser);
+    switch (peek(parser)->type) {
+        case TOKEN_LAMBDA:
+            return lambdaExpression(parser);
+        default:
+            return logicalOrExpression(parser);
+    }
 }
 
 /**
@@ -692,6 +827,26 @@ static Statement* iterationStatement(ASTParser* parser) {
     return stmt;
 }
 
+static Statement* returnStatement(ASTParser* parser) {
+    consume(parser, TOKEN_RETURN, "Expected 'return' keyword.");
+
+    ReturnStatement* returnStmt = allocateASTNode(ReturnStatement);
+
+    if (!check(parser, TOKEN_SEMICOLON)) {
+        returnStmt->expression = expression(parser);
+    } else {
+        returnStmt->expression = NULL;
+    }
+
+    consume(parser, TOKEN_SEMICOLON, "Expected ';' after return statement.");
+
+    Statement* stmt = allocateASTNode(Statement);
+    stmt->type = RETURN_STATEMENT;
+    stmt->as.returnStatement = returnStmt;
+
+    return stmt;
+}
+
 /**
  * statement:
  *  declaration
@@ -723,8 +878,8 @@ static Statement* statement(ASTParser* parser) {
             return iterationStatement(parser);
         case TOKEN_IF:
             return selectionStatement(parser);
-        // case TOKEN_RETURN:
-        //     return returnStatement(parser);]
+        case TOKEN_RETURN:
+            return returnStatement(parser);
         default: {
             // In the default case, we know there's going to be an expression.
             Expression* tempExpression = expression(parser);

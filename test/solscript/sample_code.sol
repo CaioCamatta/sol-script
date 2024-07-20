@@ -1,16 +1,16 @@
 
 val a = 1;
 val b = "2";
-val c = () => {
+val c = lambda () {
     print 2;
 }
 
 var car = struct {
     make: "Porsche";
-    printMake: () => { print this.make };
+    printMake: lambda () { print this.make };
 }
 
-var carFactory = (_make) => {
+var carFactory = lambda (_make) {
     struct {
         make: _make
     }

@@ -5,6 +5,9 @@
 
 #include "value.h"
 
+// Forward declarations
+typedef struct CompiledCodeObject CompiledCodeObject;
+
 // --------------------------------- Bytecode ----------------------------------
 /**
  * Note: I decided to explode the binary operations into one bytecode per operation (like in the JVM)
@@ -48,7 +51,12 @@ typedef enum {
     OP_BINARY_LOGICAL_AND,  // stack[-2] && STACK[-1]
     OP_BINARY_LOGICAL_OR,   // stack[-2] || STACK[-1]
     OP_BINARY_EQUAL,        // stack[-2] == STACK[-1]
-    OP_BINARY_NOT_EQUAL     // stack[-2] != STACK[-1]
+    OP_BINARY_NOT_EQUAL,    // stack[-2] != STACK[-1]
+
+    // Functions
+    OP_LAMBDA,  // put lambda Value on the stack.
+    OP_CALL,    // Invoke identifier if its in scope
+    OP_RETURN   // Exit current frame and return the value at the top of the current frame.
 } Opcode;
 
 // Create simple bytecode with no operands or constants
@@ -79,14 +87,21 @@ typedef struct {
 typedef enum {
     CONST_TYPE_STRING,
     CONST_TYPE_IDENTIFIER,  // identifiers are similar to strings, but handled slightly different
-    CONST_TYPE_DOUBLE       // TODO: stop putting doubles in constant pool; inline it in the bytecode
+    CONST_TYPE_DOUBLE,      // TODO: stop putting doubles in constant pool; inline it in the bytecode
+    CONST_TYPE_LAMBDA
 } ConstantType;
+
+typedef struct {
+    CompiledCodeObject* code;
+    u_int8_t parameterCount;
+} Function;
 
 typedef struct {
     ConstantType type;
     union {
         char* string;  // Null-terminated
         double number;
+        Function* lambda;
     } as;
 } Constant;
 
@@ -109,6 +124,12 @@ typedef struct {
         .as = {.number = numberArg}, \
     }
 
+#define LAMBDA_CONST(lambdaArg)      \
+    (Constant) {                     \
+        .type = CONST_TYPE_LAMBDA,   \
+        .as = {.lambda = lambdaArg}, \
+    }
+
 /**
  * Pool to store Values so they can be referenced at runtime.
  *
@@ -128,9 +149,17 @@ typedef struct {
  * SolScript's compiled code consists of a constant pool and the bytecode.
  * This is all the information the VM needs to run.
  */
-typedef struct {
-    ConstantPool constantPool;
+struct CompiledCodeObject {
+    ConstantPool constantPool;  // May contain nested CodeObjects (e.g. if a function is defined within another)
     BytecodeArray bytecodeArray;
+};
+
+/**
+ * SolScript's compiled code consists of compiled code + metadata.
+ */
+typedef struct {
+    CompiledCodeObject topLevelCodeObject;
+    // Other metadata can go in here
 } CompiledCode;
 
 #endif

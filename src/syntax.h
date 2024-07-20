@@ -12,6 +12,7 @@ typedef struct ValDeclarationStatement ValDeclarationStatement;
 typedef struct VarDeclarationStatement VarDeclarationStatement;
 typedef struct SelectionStatement SelectionStatement;
 typedef struct IterationStatement IterationStatement;
+typedef struct ReturnStatement ReturnStatement;
 typedef struct AssignmentStatement AssignmentStatement;
 typedef struct LogicalOrExpression LogicalOrExpression;
 typedef struct LogicalAndExpression LogicalAndExpression;
@@ -22,6 +23,8 @@ typedef struct MultiplicativeExpression MultiplicativeExpression;
 typedef struct BlockExpression BlockExpression;
 typedef struct UnaryExpression UnaryExpression;
 typedef struct PrimaryExpression PrimaryExpression;
+typedef struct LambdaExpression LambdaExpression;
+typedef struct CallExpression CallExpression;
 typedef struct BooleanLiteral BooleanLiteral;
 typedef struct NumberLiteral NumberLiteral;
 typedef struct IdentifierLiteral IdentifierLiteral;
@@ -37,7 +40,8 @@ typedef enum {
     BLOCK_STATEMENT,            // Stack effect: 0
     SELECTION_STATEMENT,        // Stack effect: 1
     ASSIGNMENT_STATEMENT,       // Stack effect: 0
-    ITERATION_STATEMENT         // Stack effect: 0
+    ITERATION_STATEMENT,        // Stack effect: 0
+    RETURN_STATEMENT            // Stack effect: 1
 } StatementType;
 
 typedef enum {
@@ -49,7 +53,9 @@ typedef enum {
     MULTIPLICATIVE_EXPRESSION,  // Stack effect: -1
     BLOCK_EXPRESSION,           // Stack effect: 0 per se
     UNARY_EXPRESSION,           // Stack effect: 0
-    PRIMARY_EXPRESSION          // Stack effect: 0 per se
+    PRIMARY_EXPRESSION,         // Stack effect: 0 per se
+    LAMBDA_EXPRESSION,          // Stack effect: 1
+    CALL_EXPRESSION             // Stack effect: 1
 } ExpressionType;
 
 typedef enum {
@@ -71,6 +77,7 @@ typedef struct {
         SelectionStatement *selectionStatement;
         AssignmentStatement *assignmentStatement;
         IterationStatement *iterationStatement;
+        ReturnStatement *returnStatement;
     } as;
 } Statement;
 
@@ -86,6 +93,8 @@ typedef struct {
         BlockExpression *blockExpression;
         UnaryExpression *unaryExpression;
         PrimaryExpression *primaryExpression;
+        LambdaExpression *lambdaExpression;
+        CallExpression *callExpression;
     } as;
 } Expression;
 
@@ -144,6 +153,10 @@ struct IterationStatement {
     Statement *bodyStatement;
 };
 
+struct ReturnStatement {
+    Expression *expression;
+};
+
 struct LogicalOrExpression {
     Expression *leftExpression;
     Expression *rightExpression;
@@ -190,6 +203,29 @@ struct UnaryExpression {
 
 struct PrimaryExpression {
     Literal *literal;
+};
+
+typedef struct {
+    IdentifierLiteral *values;
+    size_t used;
+    size_t size;
+} IdentifierArray;
+
+// Lambda expression = lambda function
+struct LambdaExpression {
+    IdentifierArray *parameters;  // May be an empty array
+    BlockExpression *bodyBlock;
+};
+
+typedef struct {
+    Expression **values;
+    u_int8_t used;
+    u_int8_t size;  // Cap number of parameters at 256
+} ExpressionArray;
+
+struct CallExpression {
+    IdentifierLiteral *lambdaFunctionName;
+    ExpressionArray *arguments;  // May be an empty array
 };
 
 struct BooleanLiteral {

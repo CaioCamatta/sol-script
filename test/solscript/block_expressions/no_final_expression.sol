@@ -1,3 +1,3 @@
 val a = { 
     val b = 2; 
-}; // should throw error
+}; // should NOT throw error after https://github.com/CaioCamatta/sol-script/pull/17.

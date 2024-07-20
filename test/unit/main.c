@@ -48,6 +48,22 @@ static void all_tests() {
     RUN_TEST(test_parser_iteration_statement_no_curlys);
     RUN_TEST(test_parser_iteration_statement_no_parentheses_no_curlys);
     RUN_TEST(test_parser_iteration_statement_with_block);
+    RUN_TEST(test_parser_lambda_expression_no_parameters);
+    RUN_TEST(test_parser_lambda_expression_single_parameter);
+    RUN_TEST(test_parser_lambda_expression_multiple_parameters);
+    RUN_TEST(test_parser_lambda_expression_no_last_expression_in_block);
+    RUN_TEST(test_parser_call_with_args);
+    RUN_TEST(test_parser_call_in_binary_expression);
+    RUN_TEST(test_parser_call_no_args);
+    RUN_TEST(test_parser_recursive_call);
+    RUN_TEST(test_parser_call_with_block_expression_arg);
+    RUN_TEST(test_parser_nested_calls);
+    RUN_TEST(test_parser_call_with_expression_args);
+    RUN_TEST(test_parser_call_in_if_condition);
+    RUN_TEST(test_parser_simple_return);
+    RUN_TEST(test_parser_return_without_expression);
+    RUN_TEST(test_parser_return_in_lambda);
+    RUN_TEST(test_parser_multiple_returns);
 
     // Compiler tests
     RUN_TEST(test_compiler);
@@ -77,6 +93,12 @@ static void all_tests() {
     RUN_TEST(test_compiler_global_declaration_and_local_assignment);
     RUN_TEST(test_compiler_iteration_statement_simple);
     RUN_TEST(test_compiler_iteration_statement_with_variable);
+    RUN_TEST(test_compiler_lambda_expression_simple);
+    RUN_TEST(test_compiler_lambda_expression_nested);
+    RUN_TEST(test_compiler_call_expression_simple);
+    RUN_TEST(test_compiler_call_expression_nested);
+    RUN_TEST(test_compiler_lambda_with_return);
+    RUN_TEST(test_compiler_lambda_with_conditional_returns);
 
     // VM tests
     RUN_TEST(test_vm_addition);
@@ -104,6 +126,10 @@ static void all_tests() {
     RUN_TEST(test_vm_iteration_statement_simple);
     RUN_TEST(test_vm_iteration_statement_with_variable);
     RUN_TEST(test_vm_nested_iteration_statements);
+    RUN_TEST(test_vm_lambda_no_params);
+    RUN_TEST(test_vm_lambda_one_param);
+    RUN_TEST(test_vm_lambda_two_params);
+    RUN_TEST(test_vm_lambda_nested_calls);
 }
 
 int main(int argc, char **argv) {

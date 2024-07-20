@@ -7,23 +7,40 @@
 #include "util/hash_table.h"
 #include "value.h"
 
-#define STACK_MAX 256
+#define STACK_MAX 128
+#define FRAMES_MAX 8  // Max number of nested function calls.
 
 /**
- * Scanner struct to facilitate scanning through a file.
+ * A CallFrame is the struct use to execution functions.
  *
- * @param compiledCode compiled code including bytecode array and constants pool.
- * @param IP the instruction pointer.
+ * Because the SolScript only has a single global stack of values shared by all call frames,
+ * call frames have a virtual stack that overlaps the global stack. It starts at `stackStart`,
+ * and we maintain `SP` with the current stack pointer. Within the context of  a lambda
+ * execution, local access are relative.
+ */
+typedef struct {
+    CompiledCodeObject* codeObject;
+    u_int8_t parameterCount;
+    Bytecode* IP;       // Instruction pointer
+    Value* SP;          // Stack pointer
+    Value* stackStart;  // First value belonging to this call frame's stack
+} CallFrame;
+
+/**
+ * The SolScript virtual machine. Executes call frames.
+ *
+ * Holds the global variables and a stack that is shared across call frames.
+ *
  * @param stack the stack for our stack-based VM.
  * @param globals hash table containing global variables
- * @param SP the stack pointer (we use an actual pointer instead of an int index for faster dereferencing)
+ * @param frames the call frames being executed
+ * @param currFrame the current call frame being executed.
  * */
 typedef struct {
-    CompiledCode compiledCode;
-    Bytecode* IP;
-    Value stack[STACK_MAX];
+    Value stack[STACK_MAX * FRAMES_MAX];
     HashTable globals;
-    Value* SP;  // points to next slot to be used in the stack, e.g. [<val>, <val>, <empty> SP, <empty>, ...]
+    CallFrame frames[FRAMES_MAX];
+    CallFrame* currFrame;
 } VM;
 
 /**
@@ -40,5 +57,8 @@ void step(VM* vm);
 
 /* Initialize VM with some source code. */
 void initVM(VM* vm, CompiledCode compiledCode);
+
+/* Free a VM and its structs. */
+void freeVM(VM* vm);
 
 #endif

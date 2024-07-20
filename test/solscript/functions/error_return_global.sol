@@ -1,0 +1,1 @@
+return; // Should error; "Cannot return from global scope."

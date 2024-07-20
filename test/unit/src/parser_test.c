@@ -1082,3 +1082,860 @@ int test_parser_iteration_statement_with_block() {
     freeSource(source);
     return SUCCESS_RETURN_CODE;
 }
+
+int test_parser_lambda_expression_no_parameters() {
+    // "lambda () { 42; };"
+    Token tokensArray[] = {
+        createToken(TOKEN_LAMBDA, "lambda"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_NUMBER, "42"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 9,
+        .size = 9};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == EXPRESSION_STATEMENT);
+
+    Expression* expression = statement->as.expressionStatement->expression;
+    ASSERT(expression->type == LAMBDA_EXPRESSION);
+
+    LambdaExpression* lambdaExpr = expression->as.lambdaExpression;
+    ASSERT(lambdaExpr->parameters->used == 0);  // No parameters
+
+    ASSERT(lambdaExpr->bodyBlock->statementArray.used == 0);
+    ASSERT(lambdaExpr->bodyBlock->lastExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(lambdaExpr->bodyBlock->lastExpression->as.primaryExpression->literal->type == NUMBER_LITERAL);
+    ASSERT(strcmp(lambdaExpr->bodyBlock->lastExpression->as.primaryExpression->literal->as.numberLiteral->token.start, "42") == 0);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_lambda_expression_single_parameter() {
+    // "lambda (x) { x; };"
+    Token tokensArray[] = {
+        createToken(TOKEN_LAMBDA, "lambda"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "x"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_IDENTIFIER, "x"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 10,
+        .size = 10};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == EXPRESSION_STATEMENT);
+
+    Expression* expression = statement->as.expressionStatement->expression;
+    ASSERT(expression->type == LAMBDA_EXPRESSION);
+
+    LambdaExpression* lambdaExpr = expression->as.lambdaExpression;
+    ASSERT(lambdaExpr->parameters->used == 1);
+    ASSERT(strcmp(lambdaExpr->parameters->values[0].token.start, "x") == 0);
+
+    ASSERT(lambdaExpr->bodyBlock->statementArray.used == 0);
+    ASSERT(lambdaExpr->bodyBlock->lastExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(lambdaExpr->bodyBlock->lastExpression->as.primaryExpression->literal->type == IDENTIFIER_LITERAL);
+    ASSERT(strcmp(lambdaExpr->bodyBlock->lastExpression->as.primaryExpression->literal->as.identifierLiteral->token.start, "x") == 0);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_lambda_expression_multiple_parameters() {
+    // "lambda (x,y) { x + y; };"
+    Token tokensArray[] = {
+        createToken(TOKEN_LAMBDA, "lambda"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "x"),
+        createToken(TOKEN_COMMA, ","),
+        createToken(TOKEN_IDENTIFIER, "y"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_IDENTIFIER, "x"),
+        createToken(TOKEN_PLUS, "+"),
+        createToken(TOKEN_IDENTIFIER, "y"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 14,
+        .size = 14};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == EXPRESSION_STATEMENT);
+
+    Expression* expression = statement->as.expressionStatement->expression;
+    ASSERT(expression->type == LAMBDA_EXPRESSION);
+
+    LambdaExpression* lambdaExpr = expression->as.lambdaExpression;
+    ASSERT(lambdaExpr->parameters->used == 2);
+    ASSERT(strcmp(lambdaExpr->parameters->values[0].token.start, "x") == 0);
+    ASSERT(strcmp(lambdaExpr->parameters->values[1].token.start, "y") == 0);
+
+    ASSERT(lambdaExpr->bodyBlock->statementArray.used == 0);
+    ASSERT(lambdaExpr->bodyBlock->lastExpression->type == ADDITIVE_EXPRESSION);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_lambda_expression_no_last_expression_in_block() {
+    // "lambda () { print "Hello"; };"
+    Token tokensArray[] = {
+        createToken(TOKEN_LAMBDA, "lambda"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_PRINT, "print"),
+        createToken(TOKEN_STRING, "\"Hello\""),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 12,
+        .size = 12};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == EXPRESSION_STATEMENT);
+
+    Expression* expression = statement->as.expressionStatement->expression;
+    ASSERT(expression->type == LAMBDA_EXPRESSION);
+
+    LambdaExpression* lambdaExpr = expression->as.lambdaExpression;
+    ASSERT(lambdaExpr->parameters->used == 0);  // No parameters
+
+    ASSERT(lambdaExpr->bodyBlock->statementArray.used == 1);
+    ASSERT(lambdaExpr->bodyBlock->statementArray.values[0]->type == PRINT_STATEMENT);
+    ASSERT(lambdaExpr->bodyBlock->statementArray.values[0]->as.printStatement->expression->type == PRIMARY_EXPRESSION);
+    ASSERT(lambdaExpr->bodyBlock->statementArray.values[0]->as.printStatement->expression->as.primaryExpression->literal->type == STRING_LITERAL);
+
+    ASSERT(lambdaExpr->bodyBlock->lastExpression == NULL);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_call_with_args() {
+    // val greet = lambda (name) { print "Hello, " + name + "!"; };
+    // greet("Alice");
+    // greet("Bob");");
+    Token tokensArray[] = {
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "greet"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_LAMBDA, "lambda"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "name"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_PRINT, "print"),
+        createToken(TOKEN_STRING, "\"Hello, \""),
+        createToken(TOKEN_PLUS, "+"),
+        createToken(TOKEN_IDENTIFIER, "name"),
+        createToken(TOKEN_PLUS, "+"),
+        createToken(TOKEN_STRING, "\"!\""),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_IDENTIFIER, "greet"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_STRING, "\"Alice\""),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_IDENTIFIER, "greet"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_STRING, "\"Bob\""),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = sizeof(tokensArray) / sizeof(Token),
+        .size = sizeof(tokensArray) / sizeof(Token)};
+
+    PARSE_TEST_AST
+    ASSERT(source->numberOfStatements == 3);
+
+    Statement* valDecl = source->rootStatements[0];
+    ASSERT(valDecl->type == VAL_DECLARATION_STATEMENT);
+    ASSERT(strcmp(valDecl->as.valDeclarationStatement->identifier->token.start, "greet") == 0);
+
+    Expression* lambdaExpr = valDecl->as.valDeclarationStatement->expression;
+    ASSERT(lambdaExpr->type == LAMBDA_EXPRESSION);
+    ASSERT(lambdaExpr->as.lambdaExpression->parameters->used == 1);
+
+    Statement* callAlice = source->rootStatements[1];
+    ASSERT(callAlice->type == EXPRESSION_STATEMENT);
+    ASSERT(callAlice->as.expressionStatement->expression->type == CALL_EXPRESSION);
+    ASSERT(strcmp(callAlice->as.expressionStatement->expression->as.callExpression->lambdaFunctionName->token.start, "greet") == 0);
+    ASSERT(callAlice->as.expressionStatement->expression->as.callExpression->arguments->used == 1);
+
+    Statement* callBob = source->rootStatements[2];
+    ASSERT(callBob->type == EXPRESSION_STATEMENT);
+    ASSERT(callBob->as.expressionStatement->expression->type == CALL_EXPRESSION);
+    ASSERT(strcmp(callBob->as.expressionStatement->expression->as.callExpression->lambdaFunctionName->token.start, "greet") == 0);
+    ASSERT(callBob->as.expressionStatement->expression->as.callExpression->arguments->used == 1);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_call_in_binary_expression() {
+    // val double = lambda (n) { n * 2; };
+    // val result = double(5) + 10;
+    Token tokensArray[] = {
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "double"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_LAMBDA, "lambda"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "n"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_IDENTIFIER, "n"),
+        createToken(TOKEN_STAR, "*"),
+        createToken(TOKEN_NUMBER, "2"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "result"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_IDENTIFIER, "double"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_NUMBER, "5"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_PLUS, "+"),
+        createToken(TOKEN_NUMBER, "10"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = sizeof(tokensArray) / sizeof(Token),
+        .size = sizeof(tokensArray) / sizeof(Token)};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 2);
+
+    Statement* valResult = source->rootStatements[1];
+    ASSERT(valResult->type == VAL_DECLARATION_STATEMENT);
+    ASSERT(strcmp(valResult->as.valDeclarationStatement->identifier->token.start, "result") == 0);
+
+    Expression* addExpr = valResult->as.valDeclarationStatement->expression;
+    ASSERT(addExpr->type == ADDITIVE_EXPRESSION);
+    ASSERT(addExpr->as.additiveExpression->leftExpression->type == CALL_EXPRESSION);
+    ASSERT(strcmp(addExpr->as.additiveExpression->leftExpression->as.callExpression->lambdaFunctionName->token.start, "double") == 0);
+    ASSERT(addExpr->as.additiveExpression->leftExpression->as.callExpression->arguments->used == 1);
+    ASSERT(addExpr->as.additiveExpression->rightExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(addExpr->as.additiveExpression->rightExpression->as.primaryExpression->literal->type == NUMBER_LITERAL);
+    ASSERT(strcmp(addExpr->as.additiveExpression->rightExpression->as.primaryExpression->literal->as.numberLiteral->token.start, "10") == 0);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_call_no_args() {
+    // val myFunc = lambda () { print "Called myFunc!"; }; myFunc();
+    Token tokensArray[] = {
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "myFunc"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_LAMBDA, "lambda"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_PRINT, "print"),
+        createToken(TOKEN_STRING, "Called myFunc!"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_IDENTIFIER, "myFunc"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = sizeof(tokensArray) / sizeof(Token),
+        .size = sizeof(tokensArray) / sizeof(Token)};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 2);
+
+    Statement* callMyFunc = source->rootStatements[1];
+    ASSERT(callMyFunc->type == EXPRESSION_STATEMENT);
+
+    Expression* callExpr = callMyFunc->as.expressionStatement->expression;
+    ASSERT(callExpr->type == CALL_EXPRESSION);
+    ASSERT(strcmp(callExpr->as.callExpression->lambdaFunctionName->token.start, "myFunc") == 0);
+    ASSERT(callExpr->as.callExpression->arguments->used == 0);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+// TODO: the if-statement here should actually be the final expression somehow
+int test_parser_recursive_call() {
+    // val factorial = lambda (n) {
+    //     if (n <= 1) { 1; } else { n * factorial(n - 1); }
+    //  };
+    Token tokensArray[] = {
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "factorial"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_LAMBDA, "lambda"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "n"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_IF, "if"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "n"),
+        createToken(TOKEN_LESSER_EQUAL, "<="),
+        createToken(TOKEN_NUMBER, "1"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_NUMBER, "1"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_ELSE, "else"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_IDENTIFIER, "n"),
+        createToken(TOKEN_STAR, "*"),
+        createToken(TOKEN_IDENTIFIER, "factorial"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "n"),
+        createToken(TOKEN_MINUS, "-"),
+        createToken(TOKEN_NUMBER, "1"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = sizeof(tokensArray) / sizeof(Token),
+        .size = sizeof(tokensArray) / sizeof(Token)};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+
+    Statement* valFactorial = source->rootStatements[0];
+    ASSERT(valFactorial->type == VAL_DECLARATION_STATEMENT);
+    ASSERT(strcmp(valFactorial->as.valDeclarationStatement->identifier->token.start, "factorial") == 0);
+
+    Expression* lambdaExpr = valFactorial->as.valDeclarationStatement->expression;
+    ASSERT(lambdaExpr->type == LAMBDA_EXPRESSION);
+
+    Statement* ifStmt = lambdaExpr->as.lambdaExpression->bodyBlock->statementArray.values[0];  // TODO: the if-statement here should actually be the final expression somehow
+    ASSERT(ifStmt->type == SELECTION_STATEMENT);
+
+    Expression* recursiveCallExpr = ifStmt->as.selectionStatement->falseStatement->as.blockStatement->statementArray.values[0]->as.expressionStatement->expression;
+    ASSERT(recursiveCallExpr->type == MULTIPLICATIVE_EXPRESSION);
+    ASSERT(recursiveCallExpr->as.multiplicativeExpression->rightExpression->type == CALL_EXPRESSION);
+    ASSERT(strcmp(recursiveCallExpr->as.multiplicativeExpression->rightExpression->as.callExpression->lambdaFunctionName->token.start, "factorial") == 0);
+    ASSERT(recursiveCallExpr->as.multiplicativeExpression->rightExpression->as.callExpression->arguments->used == 1);
+
+    freeSource(source);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_call_with_block_expression_arg() {
+    // val applyOperation = lambda (a, operation) { operation(a); };
+    // val result = applyOperation(5, lambda(x) { x * x; });
+    Token tokensArray[] = {
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "applyOperation"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_LAMBDA, "lambda"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "a"),
+        createToken(TOKEN_COMMA, ","),
+        createToken(TOKEN_IDENTIFIER, "operation"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_IDENTIFIER, "operation"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "a"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "result"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_IDENTIFIER, "applyOperation"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_NUMBER, "5"),
+        createToken(TOKEN_COMMA, ","),
+        createToken(TOKEN_LAMBDA, "lambda"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "x"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_IDENTIFIER, "x"),
+        createToken(TOKEN_STAR, "*"),
+        createToken(TOKEN_IDENTIFIER, "x"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = sizeof(tokensArray) / sizeof(Token),
+        .size = sizeof(tokensArray) / sizeof(Token)};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 2);
+
+    Statement* valResult = source->rootStatements[1];
+    ASSERT(valResult->type == VAL_DECLARATION_STATEMENT);
+    ASSERT(strcmp(valResult->as.valDeclarationStatement->identifier->token.start, "result") == 0);
+
+    Expression* callExpr = valResult->as.valDeclarationStatement->expression;
+    ASSERT(callExpr->type == CALL_EXPRESSION);
+    ASSERT(strcmp(callExpr->as.callExpression->lambdaFunctionName->token.start, "applyOperation") == 0);
+    ASSERT(callExpr->as.callExpression->arguments->used == 2);
+    ASSERT(callExpr->as.callExpression->arguments->values[1]->type == LAMBDA_EXPRESSION);
+
+    freeSource(source);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_nested_calls() {
+    // val addTwo = lambda (n) { n + 2; };
+    // val multiplyByThree = lambda (n) { n * 3; };
+    // val result = multiplyByThree(addTwo(5));
+    Token tokensArray[] = {
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "addTwo"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_LAMBDA, "lambda"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "n"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_IDENTIFIER, "n"),
+        createToken(TOKEN_PLUS, "+"),
+        createToken(TOKEN_NUMBER, "2"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "multiplyByThree"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_LAMBDA, "lambda"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "n"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_IDENTIFIER, "n"),
+        createToken(TOKEN_STAR, "*"),
+        createToken(TOKEN_NUMBER, "3"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "result"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_IDENTIFIER, "multiplyByThree"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "addTwo"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_NUMBER, "5"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = sizeof(tokensArray) / sizeof(Token),
+        .size = sizeof(tokensArray) / sizeof(Token)};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 3);
+
+    Statement* valResult = source->rootStatements[2];
+    ASSERT(valResult->type == VAL_DECLARATION_STATEMENT);
+    ASSERT(strcmp(valResult->as.valDeclarationStatement->identifier->token.start, "result") == 0);
+
+    Expression* callMultiplyByThree = valResult->as.valDeclarationStatement->expression;
+    ASSERT(callMultiplyByThree->type == CALL_EXPRESSION);
+    ASSERT(strcmp(callMultiplyByThree->as.callExpression->lambdaFunctionName->token.start, "multiplyByThree") == 0);
+    ASSERT(callMultiplyByThree->as.callExpression->arguments->used == 1);
+
+    Expression* callAddTwo = callMultiplyByThree->as.callExpression->arguments->values[0];
+    ASSERT(callAddTwo->type == CALL_EXPRESSION);
+    ASSERT(strcmp(callAddTwo->as.callExpression->lambdaFunctionName->token.start, "addTwo") == 0);
+    ASSERT(callAddTwo->as.callExpression->arguments->used == 1);
+    ASSERT(callAddTwo->as.callExpression->arguments->values[0]->type == PRIMARY_EXPRESSION);
+    ASSERT(callAddTwo->as.callExpression->arguments->values[0]->as.primaryExpression->literal->type == NUMBER_LITERAL);
+    ASSERT(strcmp(callAddTwo->as.callExpression->arguments->values[0]->as.primaryExpression->literal->as.numberLiteral->token.start, "5") == 0);
+
+    freeSource(source);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_call_with_expression_args() {
+    // val sum = lambda (a, b) { a + b; };
+    // val x = 10;
+    // val y = 20;
+    // val result = sum(x + 5, y - 3);
+    Token tokensArray[] = {
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "sum"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_LAMBDA, "lambda"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "a"),
+        createToken(TOKEN_COMMA, ","),
+        createToken(TOKEN_IDENTIFIER, "b"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_IDENTIFIER, "a"),
+        createToken(TOKEN_PLUS, "+"),
+        createToken(TOKEN_IDENTIFIER, "b"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "x"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_NUMBER, "10"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "y"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_NUMBER, "20"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "result"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_IDENTIFIER, "sum"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "x"),
+        createToken(TOKEN_PLUS, "+"),
+        createToken(TOKEN_NUMBER, "5"),
+        createToken(TOKEN_COMMA, ","),
+        createToken(TOKEN_IDENTIFIER, "y"),
+        createToken(TOKEN_MINUS, "-"),
+        createToken(TOKEN_NUMBER, "3"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = sizeof(tokensArray) / sizeof(Token),
+        .size = sizeof(tokensArray) / sizeof(Token)};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 4);
+
+    Statement* valResult = source->rootStatements[3];
+    ASSERT(valResult->type == VAL_DECLARATION_STATEMENT);
+    ASSERT(strcmp(valResult->as.valDeclarationStatement->identifier->token.start, "result") == 0);
+
+    Expression* callExpr = valResult->as.valDeclarationStatement->expression;
+    ASSERT(callExpr->type == CALL_EXPRESSION);
+    ASSERT(strcmp(callExpr->as.callExpression->lambdaFunctionName->token.start, "sum") == 0);
+    ASSERT(callExpr->as.callExpression->arguments->used == 2);
+
+    Expression* firstArg = callExpr->as.callExpression->arguments->values[0];
+    ASSERT(firstArg->type == ADDITIVE_EXPRESSION);
+    ASSERT(firstArg->as.additiveExpression->leftExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(strcmp(firstArg->as.additiveExpression->leftExpression->as.primaryExpression->literal->as.identifierLiteral->token.start, "x") == 0);
+    ASSERT(firstArg->as.additiveExpression->rightExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(strcmp(firstArg->as.additiveExpression->rightExpression->as.primaryExpression->literal->as.numberLiteral->token.start, "5") == 0);
+
+    Expression* secondArg = callExpr->as.callExpression->arguments->values[1];
+    ASSERT(secondArg->type == ADDITIVE_EXPRESSION);
+    ASSERT(secondArg->as.additiveExpression->leftExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(strcmp(secondArg->as.additiveExpression->leftExpression->as.primaryExpression->literal->as.identifierLiteral->token.start, "y") == 0);
+    ASSERT(secondArg->as.additiveExpression->rightExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(strcmp(secondArg->as.additiveExpression->rightExpression->as.primaryExpression->literal->as.numberLiteral->token.start, "3") == 0);
+
+    freeSource(source);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_call_in_if_condition() {
+    // val isTen = lambda (n) { n == 10; };
+    // val num = 10;
+    // if (isTen(num)) { print \"10 is 10.\"; } else { print \"10 is not 10.\"; }
+    Token tokensArray[] = {
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "isTen"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_LAMBDA, "lambda"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "n"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_IDENTIFIER, "n"),
+        createToken(TOKEN_EQUAL_EQUAL, "=="),
+        createToken(TOKEN_NUMBER, "10"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "num"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_NUMBER, "10"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_IF, "if"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "isTen"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "num"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_PRINT, "print"),
+        createToken(TOKEN_STRING, "\"10 is 10.\""),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_ELSE, "else"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_PRINT, "print"),
+        createToken(TOKEN_STRING, "\"10 is not 10.\""),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = sizeof(tokensArray) / sizeof(Token),
+        .size = sizeof(tokensArray) / sizeof(Token)};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 3);
+
+    Statement* ifStmt = source->rootStatements[2];
+    ASSERT(ifStmt->type == SELECTION_STATEMENT);
+
+    Expression* conditionExpr = ifStmt->as.selectionStatement->conditionExpression;
+    ASSERT(conditionExpr->type == CALL_EXPRESSION);
+    ASSERT(strcmp(conditionExpr->as.callExpression->lambdaFunctionName->token.start, "isTen") == 0);
+    ASSERT(conditionExpr->as.callExpression->arguments->used == 1);
+    ASSERT(conditionExpr->as.callExpression->arguments->values[0]->type == PRIMARY_EXPRESSION);
+    ASSERT(strcmp(conditionExpr->as.callExpression->arguments->values[0]->as.primaryExpression->literal->as.identifierLiteral->token.start, "num") == 0);
+
+    freeSource(source);
+
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_simple_return() {
+    // return 42;
+    Token tokensArray[] = {
+        createToken(TOKEN_RETURN, "return"),
+        createToken(TOKEN_NUMBER, "42"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 4,
+        .size = 4};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == RETURN_STATEMENT);
+    ReturnStatement* returnStmt = statement->as.returnStatement;
+    ASSERT(returnStmt->expression->type == PRIMARY_EXPRESSION);
+    ASSERT(returnStmt->expression->as.primaryExpression->literal->type == NUMBER_LITERAL);
+    ASSERT(strcmp(returnStmt->expression->as.primaryExpression->literal->as.numberLiteral->token.start, "42") == 0);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_return_without_expression() {
+    // return;
+    Token tokensArray[] = {
+        createToken(TOKEN_RETURN, "return"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 3,
+        .size = 3};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == RETURN_STATEMENT);
+    ReturnStatement* returnStmt = statement->as.returnStatement;
+    ASSERT(returnStmt->expression == NULL);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_return_in_lambda() {
+    // val func = lambda () { return 10; };
+    Token tokensArray[] = {
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "func"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_LAMBDA, "lambda"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_RETURN, "return"),
+        createToken(TOKEN_NUMBER, "10"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 13,
+        .size = 13};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == VAL_DECLARATION_STATEMENT);
+    ValDeclarationStatement* valDecl = statement->as.valDeclarationStatement;
+    ASSERT(valDecl->expression->type == LAMBDA_EXPRESSION);
+
+    LambdaExpression* lambda = valDecl->expression->as.lambdaExpression;
+    ASSERT(lambda->bodyBlock->statementArray.used == 1);
+    Statement* lambdaStatement = lambda->bodyBlock->statementArray.values[0];
+    ASSERT(lambdaStatement->type == RETURN_STATEMENT);
+    ReturnStatement* returnStmt = lambdaStatement->as.returnStatement;
+    ASSERT(returnStmt->expression->type == PRIMARY_EXPRESSION);
+    ASSERT(returnStmt->expression->as.primaryExpression->literal->type == NUMBER_LITERAL);
+    ASSERT(strcmp(returnStmt->expression->as.primaryExpression->literal->as.numberLiteral->token.start, "10") == 0);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_multiple_returns() {
+    // val func = lambda (x) { if (x > 0) { return 1; } else { return -1; } };
+    Token tokensArray[] = {
+        createToken(TOKEN_VAL, "val"),
+        createToken(TOKEN_IDENTIFIER, "func"),
+        createToken(TOKEN_EQUAL, "="),
+        createToken(TOKEN_LAMBDA, "lambda"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "x"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_IF, "if"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_IDENTIFIER, "x"),
+        createToken(TOKEN_GREATER, ">"),
+        createToken(TOKEN_NUMBER, "0"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_RETURN, "return"),
+        createToken(TOKEN_NUMBER, "1"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_ELSE, "else"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_RETURN, "return"),
+        createToken(TOKEN_MINUS, "-"),
+        createToken(TOKEN_NUMBER, "1"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = 29,
+        .size = 29};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* statement = source->rootStatements[0];
+    ASSERT(statement->type == VAL_DECLARATION_STATEMENT);
+    ValDeclarationStatement* valDecl = statement->as.valDeclarationStatement;
+    ASSERT(valDecl->expression->type == LAMBDA_EXPRESSION);
+
+    LambdaExpression* lambda = valDecl->expression->as.lambdaExpression;
+    ASSERT(lambda->bodyBlock->statementArray.used == 1);
+    Statement* ifStatement = lambda->bodyBlock->statementArray.values[0];
+    ASSERT(ifStatement->type == SELECTION_STATEMENT);
+
+    SelectionStatement* selection = ifStatement->as.selectionStatement;
+    ASSERT(selection->trueStatement->type == BLOCK_STATEMENT);
+    ASSERT(selection->falseStatement->type == BLOCK_STATEMENT);
+
+    BlockStatement* trueBlock = selection->trueStatement->as.blockStatement;
+    ASSERT(trueBlock->statementArray.used == 1);
+    ASSERT(trueBlock->statementArray.values[0]->type == RETURN_STATEMENT);
+
+    BlockStatement* falseBlock = selection->falseStatement->as.blockStatement;
+    ASSERT(falseBlock->statementArray.used == 1);
+    ASSERT(falseBlock->statementArray.values[0]->type == RETURN_STATEMENT);
+
+    freeSource(source);
+    return SUCCESS_RETURN_CODE;
+}

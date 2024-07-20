@@ -28,6 +28,8 @@ static char const* tokenTypeStrings[] = {
     "TOKEN_VAL",
     "TOKEN_VAR",
     "TOKEN_PRINT",
+    "TOKEN_WHILE",
+    "TOKEN_LAMBDA",
 
     // Identifier
     "TOKEN_IDENTIFIER",
@@ -79,7 +81,7 @@ void printToken(Token token) {
 }
 
 void printTokenList(TokenArray tokenArray) {
-    printf("Tokens:\n");
+    printf(KBOLD KCYN "Tokens\n" RESET KBOFF);
 
     for (int i = 0; i < tokenArray.used; i++) {
         printf(" ");
@@ -105,7 +107,7 @@ void printAST(const Source* source) {
         return;
     }
 
-    printf("AST\n");
+    printf(KBOLD KCYN "AST\n" RESET KBOFF);
     printf("Source" KGRY "(numberOfStatements=%d)\n" RESET, source->numberOfStatements);
     for (int i = 0; i < source->numberOfStatements; ++i) {
         printIndent(0);
@@ -165,6 +167,10 @@ static void printStatement(const Statement* statement, int depth) {
         case PRINT_STATEMENT:
             printf("PrintStatement\n");
             printExpression(statement->as.printStatement->expression, depth + 1);
+            break;
+        case RETURN_STATEMENT:
+            printf("ReturnStatement\n");
+            printExpression(statement->as.returnStatement->expression, depth + 1);
             break;
         case BLOCK_STATEMENT:
             printf("BlockStatement" KGRY "(numberOfStatements=%zu)\n" RESET, statement->as.blockStatement->statementArray.used);
@@ -258,6 +264,44 @@ static void printExpression(const Expression* expression, int depth) {
             }
             printExpression(blockExpr->lastExpression, depth + 1);
             break;
+        case LAMBDA_EXPRESSION: {
+            LambdaExpression* lambdaExpr = expression->as.lambdaExpression;
+
+            printf("LambdaExpression\n");
+
+            printIndent(depth + 1);
+            printf("ParameterList" KGRY "(numberOfParameters=%zu)\n" RESET, lambdaExpr->parameters->used);
+            for (int i = 0; i < lambdaExpr->parameters->used; i++) {
+                printIndent(depth + 2);
+                printf("IdentifierLiteral" KGRY "(token=\"%.*s\")\n" RESET, lambdaExpr->parameters->values[i].token.length, lambdaExpr->parameters->values[i].token.start);
+            }
+
+            Expression* blockExpr = (Expression*)malloc(sizeof(Expression));
+            blockExpr->type = BLOCK_EXPRESSION;
+            blockExpr->as.blockExpression = lambdaExpr->bodyBlock;
+            printExpression(blockExpr, depth + 1);
+            free(blockExpr);
+            break;
+        }
+        case CALL_EXPRESSION: {
+            CallExpression* callExpr = expression->as.callExpression;
+            printf("CallExpression" KGRY "(numberOfArguments=%hhu)\n" RESET, callExpr->arguments->used);
+            printIndent(depth + 1);
+            printf("FunctionName\n");
+
+            Literal* tempLiteral = (Literal*)malloc(sizeof(Literal));
+            tempLiteral->type = IDENTIFIER_LITERAL;
+            tempLiteral->as.identifierLiteral = callExpr->lambdaFunctionName;
+            printLiteral(tempLiteral, depth + 2);
+            free(tempLiteral);
+
+            printIndent(depth + 1);
+            printf("Arguments" KGRY "(numberOfArguments=%hhu)\n" RESET, callExpr->arguments->used);
+            for (int i = 0; i < callExpr->arguments->used; i++) {
+                printExpression(callExpr->arguments->values[i], depth + 2);
+            }
+            break;
+        }
     }
 }
 
@@ -295,8 +339,34 @@ static void printLiteral(const Literal* literal, int depth) {
 // -------------------------------- COMPILER ---------------------------------
 // ---------------------------------------------------------------------------
 
-static void printConstantPool(ConstantPool constantPool) {
-    printf("Constant Pool \n");
+// New structure to keep track of functions to print later
+typedef struct {
+    Function** functions;
+    size_t used;
+    size_t size;
+} FunctionArray;
+
+static void initFunctionArray(FunctionArray* array) {
+    array->functions = malloc(sizeof(Function*) * 8);
+    array->used = 0;
+    array->size = 8;
+}
+
+static void insertFunction(FunctionArray* array, Function* function) {
+    if (array->used == array->size) {
+        array->size *= 2;
+        array->functions = realloc(array->functions, sizeof(Function*) * array->size);
+    }
+    array->functions[array->used++] = function;
+}
+
+static void freeFunctionArray(FunctionArray* array) {
+    free(array->functions);
+    array->functions = NULL;
+    array->used = array->size = 0;
+}
+
+static void printConstantPool(ConstantPool constantPool, FunctionArray* arrayFunctionsToPrintLater) {
     for (size_t i = 0; i < constantPool.used; i++) {
         Constant value = constantPool.values[i];
         printf(KGRY " #%-3zu " RESET, i);
@@ -310,13 +380,16 @@ static void printConstantPool(ConstantPool constantPool) {
             case CONST_TYPE_IDENTIFIER:
                 printf("(identifier) \"%s\"\n", value.as.string);
                 break;
+            case CONST_TYPE_LAMBDA:
+                printf("(function) <%p parameterCount=%d>\n",
+                       (void*)value.as.lambda->code, value.as.lambda->parameterCount);
+                insertFunction(arrayFunctionsToPrintLater, value.as.lambda);
+                break;
         }
     }
 }
 
 static void printBytecodeArray(BytecodeArray bytecodeArray) {
-    printf("Bytecode\n");
-
     for (int i = 0; i < bytecodeArray.used; i++) {
         printf(KGRY " %-4d " RESET, i);
         switch (bytecodeArray.values[i].type) {
@@ -419,15 +492,44 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
             case OP_SWAP:
                 printf("SWAP #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
+            case OP_LAMBDA:
+                printf("LAMBDA #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                break;
+            case OP_CALL:
+                printf("CALL\n");
+                break;
+            case OP_RETURN:
+                printf("RETURN\n");
+                break;
         }
     }
 }
 
 void printCompiledCode(CompiledCode compiledCode) {
-    printf("Compiled code:\n");
-    printConstantPool(compiledCode.constantPool);
-    printBytecodeArray(compiledCode.bytecodeArray);
+    printf(KBOLD KCYN "Compiled code\n" RESET KBOFF);
+    printCompiledCodeObject(compiledCode.topLevelCodeObject, "main");
+}
+
+void printCompiledCodeObject(CompiledCodeObject compiledCodeObject, const char* name) {
+    printf(KCYN "%s\n" RESET, name);
+    FunctionArray functionsToPrint;
+    initFunctionArray(&functionsToPrint);
+
+    printConstantPool(compiledCodeObject.constantPool, &functionsToPrint);
     printf("\n");
+    printBytecodeArray(compiledCodeObject.bytecodeArray);
+
+    printf("\n");
+
+    // Print all collected functions
+    for (size_t i = 0; i < functionsToPrint.used; i++) {
+        Function* function = functionsToPrint.functions[i];
+        char functionName[32];
+        snprintf(functionName, sizeof(functionName), "%p", (void*)function->code);
+        printCompiledCodeObject(*(function->code), functionName);
+    }
+
+    freeFunctionArray(&functionsToPrint);
 }
 
 // ---------------------------------------------------------------------------
@@ -452,6 +554,9 @@ void printStack(const Value* topOfStack, const Value* bottomOfStack) {
                 break;
             case TYPE_STRING:
                 printf(KGRY "{" RESET " %.10s " KGRY "} " RESET, val.as.stringVal);
+                break;
+            case TYPE_LAMBDA:
+                printf(KGRY "{" RESET " %p " KGRY "} " RESET, val.as.lambdaVal);
                 break;
         }
     }
