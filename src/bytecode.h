@@ -54,7 +54,7 @@ typedef enum {
     OP_BINARY_NOT_EQUAL,    // stack[-2] != STACK[-1]
 
     // Functions
-    OP_LAMBDA,  // put function Value on the stack.
+    OP_LAMBDA,  // put lambda Value on the stack.
     OP_CALL,    // Invoke identifier if its in scope
     OP_RETURN   // Exit current frame and return the value at the top of the current frame.
 } Opcode;
@@ -101,7 +101,7 @@ typedef struct {
     union {
         char* string;  // Null-terminated
         double number;
-        Function* function;
+        Function* lambda;
     } as;
 } Constant;
 
@@ -124,10 +124,10 @@ typedef struct {
         .as = {.number = numberArg}, \
     }
 
-#define LAMBDA_CONST(function)        \
-    (Constant) {                      \
-        .type = CONST_TYPE_LAMBDA,    \
-        .as = {.function = function}, \
+#define LAMBDA_CONST(lambdaArg)      \
+    (Constant) {                     \
+        .type = CONST_TYPE_LAMBDA,   \
+        .as = {.lambda = lambdaArg}, \
     }
 
 /**

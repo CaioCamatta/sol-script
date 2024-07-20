@@ -87,7 +87,7 @@ Value bytecodeConstantToValue(CallFrame* callFrame, size_t constantIndex) {
         case CONST_TYPE_IDENTIFIER:
             return (Value){.type = TYPE_STRING, .as = {.stringVal = constant.as.string}};
         case CONST_TYPE_LAMBDA:
-            return (Value){.type = TYPE_LAMBDA, .as = {.lambdaVal = constant.as.function}};
+            return (Value){.type = TYPE_LAMBDA, .as = {.lambdaVal = constant.as.lambda}};
     }
 }
 
@@ -335,7 +335,7 @@ void step(VM* vm) {
             if (constant.type != CONST_TYPE_LAMBDA) {
                 runtimeError(frame, "Expected lambda in constant pool.");
             }
-            Function* function = constant.as.function;
+            Function* function = constant.as.lambda;
             push(frame, LAMBDA_VAL(function));
             break;
         }

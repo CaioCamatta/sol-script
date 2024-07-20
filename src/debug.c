@@ -378,8 +378,8 @@ static void printConstantPool(ConstantPool constantPool, FunctionArray* arrayFun
                 break;
             case CONST_TYPE_LAMBDA:
                 printf("(function) <%p parameterCount=%d>\n",
-                       (void*)value.as.function->code, value.as.function->parameterCount);
-                insertFunction(arrayFunctionsToPrintLater, value.as.function);
+                       (void*)value.as.lambda->code, value.as.lambda->parameterCount);
+                insertFunction(arrayFunctionsToPrintLater, value.as.lambda);
                 break;
         }
     }

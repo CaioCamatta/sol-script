@@ -1353,7 +1353,7 @@ int test_compiler_lambda_expression_simple() {
     ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[1].type == OP_DEFINE_GLOBAL_VAL);
 
     // Verify the function's bytecode
-    Function* function = compiledCode.topLevelCodeObject.constantPool.values[0].as.function;
+    Function* function = compiledCode.topLevelCodeObject.constantPool.values[0].as.lambda;
     ASSERT(function->parameterCount == 2);
     ASSERT(function->code->bytecodeArray.values[0].type == OP_GET_LOCAL_VAR_FAST);
     ASSERT(function->code->bytecodeArray.values[1].type == OP_GET_LOCAL_VAR_FAST);
@@ -1395,14 +1395,14 @@ int test_compiler_lambda_expression_nested() {
     ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[1].type == OP_DEFINE_GLOBAL_VAL);
 
     // Verify the outer function's bytecode
-    Function* outerFunction = compiledCode.topLevelCodeObject.constantPool.values[0].as.function;
+    Function* outerFunction = compiledCode.topLevelCodeObject.constantPool.values[0].as.lambda;
     ASSERT(outerFunction->parameterCount == 1);
     ASSERT(outerFunction->code->bytecodeArray.values[0].type == OP_LAMBDA);
     ASSERT(outerFunction->code->bytecodeArray.values[1].type == OP_POPN);
     ASSERT(outerFunction->code->bytecodeArray.values[2].type == OP_RETURN);
 
     // Verify the inner function's bytecode
-    Function* innerFunction = outerFunction->code->constantPool.values[0].as.function;
+    Function* innerFunction = outerFunction->code->constantPool.values[0].as.lambda;
     ASSERT(innerFunction->parameterCount == 1);
     ASSERT(innerFunction->code->bytecodeArray.values[0].type == OP_GET_LOCAL_VAR_FAST);  // y
     ASSERT(innerFunction->code->bytecodeArray.values[1].type == OP_LOAD_CONSTANT);       // 1

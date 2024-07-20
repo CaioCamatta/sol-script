@@ -55,8 +55,8 @@ void freeCompilerUnit(CompilerUnit compilerUnit) {
     for (size_t i = 0; i < compilerUnit.compiledCodeObject.constantPool.used; i++) {
         Constant* constant = &compilerUnit.compiledCodeObject.constantPool.values[i];
         if (constant->type == CONST_TYPE_LAMBDA) {
-            free(constant->as.function->code);
-            free(constant->as.function);
+            free(constant->as.lambda->code);
+            free(constant->as.lambda);
         }
     }
     FREE_ARRAY(compilerUnit.compiledCodeObject.constantPool);
@@ -174,7 +174,7 @@ static int findConstantInPool(CompilerUnit* compiler, Constant constant) {
                 if (constant.as.number == compiler->compiledCodeObject.constantPool.values[i].as.number) return i;
                 break;
             case CONST_TYPE_LAMBDA:
-                if (&constant.as.function == &compiler->compiledCodeObject.constantPool.values[i].as.function) return i;
+                if (&constant.as.lambda == &compiler->compiledCodeObject.constantPool.values[i].as.lambda) return i;
                 break;
         }
     }
