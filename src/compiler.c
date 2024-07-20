@@ -732,6 +732,9 @@ static void visitCallExpression(CompilerUnit* compiler, CallExpression* callExpr
         emitBytecode(compiler, bytecodeToGetVariable);
     }
 
+    // The call will put a value on the stack (even if its null)
+    increaseStackHeight(compiler);
+
     // TODO: Add compile-time type check. Only functions should be callable. (This could be done by adding
     // a type field to the Local struct)
 
