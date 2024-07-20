@@ -25,6 +25,7 @@ void initVM(VM* vm, CompiledCode compiledCode) {
     frame->codeObject->constantPool = compiledCode.topLevelCodeObject.constantPool;
     frame->parameterCount = 0;  // Top-level code is not a function
     frame->SP = vm->stack;      // Set stack pointer to the top of the stack
+    frame->stackStart = vm->stack;
     frame->IP = frame->codeObject->bytecodeArray.values;
 
     vm->currFrame = frame;
@@ -205,14 +206,14 @@ void step(VM* vm) {
         case OP_GET_LOCAL_VAL_FAST:
         case OP_GET_LOCAL_VAR_FAST: {
             size_t stackIndex = instruction->maybeOperand1;
-            Value value = vm->stack[stackIndex];
+            Value value = frame->stackStart[stackIndex];
             push(frame, value);
             break;
         }
         case OP_SET_LOCAL_VAR_FAST: {
             // Copy the value at the top of the stack onto the slot corresponding to the local var
             size_t stackIndex = instruction->maybeOperand1;
-            vm->stack[stackIndex] = pop(frame);
+            frame->stackStart[stackIndex] = pop(frame);
             break;
         }
         case OP_POPN: {
@@ -355,6 +356,7 @@ void step(VM* vm) {
             newFrame->parameterCount = function->parameterCount;
             newFrame->IP = function->code->bytecodeArray.values;
             newFrame->SP = frame->SP;
+            newFrame->stackStart = frame->SP - function->parameterCount;
 
             vm->currFrame = newFrame;
             break;

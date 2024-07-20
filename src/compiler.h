@@ -8,7 +8,7 @@
 #include "token.h"
 #include "util/hash_table.h"
 
-#define STACK_MAX 256
+#define STACK_MAX 128
 
 /**
  * Represents a local variable in the temporary stack maintained by the compiler.

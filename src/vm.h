@@ -7,14 +7,15 @@
 #include "util/hash_table.h"
 #include "value.h"
 
-#define STACK_MAX 256
-#define FRAMES_MAX 64  // Max number of nested function calls.
+#define STACK_MAX 128
+#define FRAMES_MAX 8  // Max number of nested function calls.
 
 typedef struct {
     CompiledCodeObject* codeObject;
     u_int8_t parameterCount;
-    Bytecode* IP;  // Instruction pointer
-    Value* SP;     // Stack pointer
+    Bytecode* IP;       // Instruction pointer
+    Value* SP;          // Stack pointer
+    Value* stackStart;  // First value belonging to this call frame's stack
 } CallFrame;
 
 /**
