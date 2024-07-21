@@ -1,12 +1,14 @@
 #include "compiler.h"
 
 #include <limits.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
 #include "bytecode.h"
+#include "colors.h"
 #include "config.h"
 #include "debug.h"
 #include "parser.h"
@@ -79,25 +81,27 @@ static void visitLiteral(CompilerUnit* compiler, Literal* literal);
 /**
  * Print error and crash.
  *
- * TODO: make it so we don't crash completely. It should be simple to print and error, move to compiling the next statement,
- * then after all statements have been compiled print all errors and exit the program.
+ * TODO: Add panic mode recovery (started in branch: caiocamatta/panic-mode-recovery-COMPILER)
  */
+
+int errorAndExit(CompilerUnit* compiler, const char* format, ...) {
 #if DEBUG_COMPILER
-#define errorAndExit(...)                                                                                                          \
-    {                                                                                                                              \
-        char pointerToObject[16];                                                                                                  \
-        sprintf(pointerToObject, "%p", compiler);                                                                                  \
-        printCompiledCodeObject(compiler->compiledCodeObject, compiler->enclosingCompilerUnit == NULL ? "main" : pointerToObject); \
-        fprintf(stderr, __VA_ARGS__);                                                                                              \
-        exit(EXIT_FAILURE);                                                                                                        \
-    }
-#else
-#define errorAndExit(...)             \
-    {                                 \
-        fprintf(stderr, __VA_ARGS__); \
-        exit(EXIT_FAILURE);           \
-    }
+    char pointerToObject[16];
+    sprintf(pointerToObject, "%p", compiler);
+    printCompiledCodeObject(compiler->compiledCodeObject,
+                            compiler->enclosingCompilerUnit == NULL ? "main" : pointerToObject);
 #endif
+
+    fprintf(stderr, KRED "CompilerError. " RESET);
+
+    va_list args;
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    fprintf(stderr, "\n");
+    va_end(args);
+
+    exit(EXIT_FAILURE);
+}
 
 // Add bytecode to the compiled program.
 static void emitBytecode(CompilerUnit* compiler, Bytecode bytecode) {
@@ -110,10 +114,10 @@ static void emitBytecode(CompilerUnit* compiler, Bytecode bytecode) {
  */
 static void increaseStackHeight(CompilerUnit* compiler) {
     if (compiler->predictedStack.currentStackHeight == UINT8_MAX) {
-        errorAndExit(
-            "StackOverflowError: The Compiler has predicted that this code will "
-            "cause the VM stack to overflow.");  // This error often indicates that something is wrong
-                                                 // with how the compiler tracks the predicted stack height
+        errorAndExit(compiler,
+                     "StackOverflowException: The Compiler has predicted that this code will "
+                     "cause the VM stack to overflow.");  // This error often indicates that something is wrong
+                                                          // with how the compiler tracks the predicted stack height
     }
 
     compiler->predictedStack.currentStackHeight++;
@@ -133,8 +137,9 @@ static void decreaseStackHeight(CompilerUnit* compiler) {
     if (compiler->predictedStack.currentStackHeight > 0) {
         compiler->predictedStack.tempStack[compiler->predictedStack.currentStackHeight - 1].name = NULL;
         compiler->predictedStack.currentStackHeight--;
-    } else
-        errorAndExit("InvalidStateException: the Compiler attempted to decrease the predicted stack height below 0.")
+    } else {
+        errorAndExit(compiler, "InvalidStateException: the Compiler attempted to decrease the predicted stack height below 0.");
+    }
 }
 
 static double tokenTodouble(Token token) {
@@ -220,9 +225,10 @@ static bool isGlobalConstant(CompilerUnit* compiler, char* name) {
     if (entry) {
         return entry->value.as.booleanVal;
     } else {
-        errorAndExit(
-            "InvalidStateException: Attempted to check if a global variable is constant, but the "
-            "global doesn't exist in the Compiler's hash table.")
+        errorAndExit(compiler,
+                     "InvalidStateException: Attempted to check if a global variable is constant, but the "
+                     "global doesn't exist in the Compiler's hash table.");
+        return 0;
     }
 }
 
@@ -250,24 +256,28 @@ static int findLocalByName(CompilerUnit* compiler, char* name) {
  */
 static int isLocalConstant(CompilerUnit* compiler, char* name) {
     int index = findLocalByName(compiler, name);
-    if (index == -1)
-        errorAndExit(
-            "InvalidStateException: Attempted to check if a local variable is constant, but the "
-            "local doesn't exist.") else {
-            return compiler->predictedStack.tempStack[index].isModifiable;
-        }
+    if (index == -1) {
+        errorAndExit(compiler,
+                     "InvalidStateException: Attempted to check if a local variable is constant, but the "
+                     "local doesn't exist.");
+        return 0;
+    } else {
+        return compiler->predictedStack.tempStack[index].isModifiable;
+    }
 }
 /**
  * Check if a local variable in the compiler's table of locals is constant (i.e. `val`).
  * Throws an error if the local doesn't exist.
  */
 static int isLocalConstantByIndex(CompilerUnit* compiler, int indexInTempStack) {
-    if (indexInTempStack == -1)
-        errorAndExit(
-            "InvalidStateException: Attempted to check if a local variable is constant, but the "
-            "local doesn't exist.") else {
-            return compiler->predictedStack.tempStack[indexInTempStack].isModifiable;
-        }
+    if (indexInTempStack == -1) {
+        errorAndExit(compiler,
+                     "InvalidStateException: Attempted to check if a local variable is constant, but the "
+                     "local doesn't exist.");
+        return 0;
+    } else {
+        return compiler->predictedStack.tempStack[indexInTempStack].isModifiable;
+    }
 }
 
 /**
@@ -285,7 +295,7 @@ static void addLocalToTempStack(CompilerUnit* compiler, char* name, bool isModif
 static void removeLocalsFromTempStack(CompilerUnit* compiler, int N) {
     for (int i = compiler->predictedStack.currentStackHeight; i > compiler->predictedStack.currentStackHeight - N; i--) {
         if (N < 0) {
-            errorAndExit("Attempted to remove more local variables than exist in the stack. This should be impossible.");
+            errorAndExit(compiler, "Attempted to remove more local variables than exist in the stack. This should be impossible.");
         }
         compiler->predictedStack.tempStack[i - 1].name = NULL;  // Setting the name to NULL frees up the spot
     }
@@ -425,7 +435,7 @@ static void visitAssignmentStatement(CompilerUnit* compiler, AssignmentStatement
             if (stackIndex == -1) {  // Not a local variable
                 if (isGlobalInTable(compiler, identifierName)) {
                     if (isGlobalConstant(compiler, identifierName)) {
-                        errorAndExit("Error: Cannot modify global constant '%s'.", identifierName);
+                        errorAndExit(compiler, "Cannot modify global constant '%s'.", identifierName);
                     }
 
                     // Global variable assignment
@@ -433,24 +443,24 @@ static void visitAssignmentStatement(CompilerUnit* compiler, AssignmentStatement
                     size_t constantIndex = addConstantToPool(compiler, constant);
                     emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAR, constantIndex));
                 } else {
-                    errorAndExit("Error: identifier '%s' not declared.", identifierName);
+                    errorAndExit(compiler, "Identifier '%s' not declared.", identifierName);
                 }
             } else {
                 if (isLocalConstantByIndex(compiler, stackIndex)) {
-                    errorAndExit("Error: Cannot modify local constant '%s'.", identifierName);
+                    errorAndExit(compiler, "Cannot modify local constant '%s'.", identifierName);
                 }
 
                 if (stackIndex != -1) {
                     emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_LOCAL_VAR_FAST, stackIndex));
                 } else {
-                    errorAndExit("Error: identifier '%s' not declared.", identifierName);
+                    errorAndExit(compiler, "Identifier '%s' not declared.", identifierName);
                 }
             }
         } else {
-            errorAndExit("Invalid assignment target. Invalid type of primary-expression.");
+            errorAndExit(compiler, "Invalid assignment target. Invalid type of primary-expression.");
         }
     } else {
-        errorAndExit("Invalid assignment target.");
+        errorAndExit(compiler, "Invalid assignment target.");
     }
 
     // The new value is already popped by the `OP_SET_*` operation, so we just need to update the stack height.
@@ -471,7 +481,7 @@ static void visitValDeclarationStatement(CompilerUnit* compiler, ValDeclarationS
     bool isVariableModifiable = true;  // Vals cannot be modified
 
     if (compiler->isInGlobalScope) {
-        if (isGlobalInTable(compiler, constant.as.string)) errorAndExit("Error: val \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
+        if (isGlobalInTable(compiler, constant.as.string)) errorAndExit(compiler, "Val \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
 
         size_t constantIndex = addConstantToPool(compiler, constant);
         addGlobalToTable(compiler, constant.as.string, isVariableModifiable);  // We also keep track that this global exists so we can prevent redeclaration later.
@@ -480,7 +490,7 @@ static void visitValDeclarationStatement(CompilerUnit* compiler, ValDeclarationS
 
         decreaseStackHeight(compiler);  // Globals are popped from the stack.
     } else {
-        if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit("Error: val \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
+        if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit(compiler, "Val \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
 
         addLocalToTempStack(compiler, constant.as.string, isVariableModifiable);
         emitBytecode(compiler, BYTECODE(OP_DEFINE_LOCAL_VAL_FAST));
@@ -503,7 +513,7 @@ static void visitVarDeclarationStatement(CompilerUnit* compiler, VarDeclarationS
 
     if (compiler->isInGlobalScope) {
         // Preventing global redeclaration is an arbitrary choice.
-        if (isGlobalInTable(compiler, constant.as.string)) errorAndExit("Error: var \"%s\" is already declared. Redeclaration is not permitted as it often leads to confusion.", constant.as.string);
+        if (isGlobalInTable(compiler, constant.as.string)) errorAndExit(compiler, "Var \"%s\" is already declared. Redeclaration is not permitted as it often leads to confusion.", constant.as.string);
 
         size_t constantIndex = addConstantToPool(compiler, constant);
         addGlobalToTable(compiler, constant.as.string, isVariableModifiable);  // We also keep track that this global exists so we can prevent redeclaration later.
@@ -512,7 +522,7 @@ static void visitVarDeclarationStatement(CompilerUnit* compiler, VarDeclarationS
 
         decreaseStackHeight(compiler);  // The value assigned to the Global is popped from the stack after we set the Global.
     } else {
-        if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit("Error: var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
+        if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit(compiler, "Var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
 
         addLocalToTempStack(compiler, constant.as.string, isVariableModifiable);
 
@@ -660,7 +670,7 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
         Constant constant = IDENTIFIER_CONST(copyStringToHeap(lambdaExpression->parameters->values[i].token.start,
                                                               lambdaExpression->parameters->values[i].token.length));
         if (findLocalByName(&functionCompiler, constant.as.string) != -1)
-            errorAndExit("Error: var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
+            errorAndExit(compiler, "Var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
         increaseStackHeight(&functionCompiler);
         addLocalToTempStack(&functionCompiler, constant.as.string, false);
     }
@@ -713,7 +723,7 @@ static void visitCallExpression(CompilerUnit* compiler, CallExpression* callExpr
 
     if (functionIndex == -1) {
         // It's not a local variable, so we check if it's a global
-        if (!isGlobalInTable(compiler, functionNameConstant.as.string)) errorAndExit("Error: identifier '%s' referenced before declaration.", functionNameConstant.as.string);
+        if (!isGlobalInTable(compiler, functionNameConstant.as.string)) errorAndExit(compiler, "Identifier '%s' referenced before declaration.", functionNameConstant.as.string);
 
         // Then check whether the name is in the current constant pool.
         // If it's not, we add it. This can happen when compiling a function; the actual
@@ -745,7 +755,7 @@ static void visitCallExpression(CompilerUnit* compiler, CallExpression* callExpr
 }
 
 static void visitReturnStatement(CompilerUnit* compiler, ReturnStatement* returnStatement) {
-    if (compiler->enclosingCompilerUnit == NULL) errorAndExit("Cannot return from global scope.");
+    if (compiler->enclosingCompilerUnit == NULL) errorAndExit(compiler, "Cannot return from global scope.");
 
     if (returnStatement->expression != NULL) {
         visitExpression(compiler, returnStatement->expression);
@@ -816,7 +826,7 @@ static void visitBooleanLiteral(CompilerUnit* compiler, BooleanLiteral* booleanL
             emitBytecode(compiler, BYTECODE(OP_TRUE));
             break;
         default:
-            errorAndExit("Error: failed to parse boolean from token '%.*s'.", booleanLiteral->token.length, booleanLiteral->token.start);
+            errorAndExit(compiler, "Failed to parse boolean from token '%.*s'.", booleanLiteral->token.length, booleanLiteral->token.start);
             break;
     }
     increaseStackHeight(compiler);
@@ -829,7 +839,7 @@ static void visitIdentifierLiteral(CompilerUnit* compiler, IdentifierLiteral* id
 
     if (stackIndex == -1) {  // Its not a local variable
         // First confirm it's a global
-        if (!isGlobalInTable(compiler, identifierNameNullTerminated)) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
+        if (!isGlobalInTable(compiler, identifierNameNullTerminated)) errorAndExit(compiler, "Identifier '%s' referenced before declaration.", identifierNameNullTerminated);
 
         // Then check whether the name is in the current constant pool.
         // If we didn't find the constant in the current pool, we add it. This can happen when compiling a

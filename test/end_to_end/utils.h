@@ -15,9 +15,9 @@ void execute_solscript(const char* sourceCode) {
     TokenArray tokens = scanTokens(&scanner);
 
     // Parse the tokens into an Abstract Syntax Tree
-    ASTParser treeParser;
-    initASTParser(&treeParser, tokens);
-    Source* source = parseAST(&treeParser);
+    ASTParser parser;
+    initASTParser(&parser, tokens);
+    Source* source = parseAST(&parser);
 
     // Compile the AST into bytecode
     CompilerState compiler;
@@ -32,5 +32,6 @@ void execute_solscript(const char* sourceCode) {
     // Clean up
     freeCompilerState(&compiler);
     freeSource(source);
+    freeParser(&parser);
     FREE_ARRAY(tokens);
 }

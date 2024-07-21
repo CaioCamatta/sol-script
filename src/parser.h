@@ -2,6 +2,7 @@
 #define sol_script_tree_parser_h
 
 #include "array.h"
+#include "error.h"
 #include "token.h"
 
 // These are the types of syntax nodes SolScript has. We use it
@@ -16,14 +17,16 @@ typedef enum {
  *
  * @param tokenArray Array of tokens generated from the scanner.
  * @param current Current token. 0-indexed.
+ * @param previous The token just consumed.
  * @param source Root of the AST.
+ * @param errors Errors that occurred during parsing.
  * */
 typedef struct {
-    // Inputs from scanner
     TokenArray tokenArray;
-    Token* current;   // the token to be consumed next
-    Token* previous;  // the token just consumed
-    Source* source;   // Root of the AST
+    Token* current;
+    Token* previous;
+    Source* source;
+    ErrorArray errors;
 } ASTParser;
 
 /**
@@ -48,10 +51,14 @@ Source* parseASTFromTokens(ASTParser* treeParser, TokenArray* tokenArray);
 
 /**
  * Free memory allocated for the Source of an AST.
- *
- * @param source the Source to free.
  */
 void freeSource(Source* source);
+
+/**
+ * Free memory allocated to the AST parser, but NOT its compiled AST.
+ * Use freeSource to free the AST.
+ */
+void freeParser(ASTParser* parser);
 
 /**
  *  Initialize treeParser at the beginning of the given token array to be parsed.
