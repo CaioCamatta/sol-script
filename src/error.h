@@ -17,11 +17,15 @@ typedef enum {
  * scanner, parser, or compiler.
  *
  * The Token contains the location (line, column) of the error.
+ *
+ * For now, `hasToken` is necessary because the Compiler & VM don't have access
+ * to tokens. So we allow errors to not have tokens associated with them.
  */
 typedef struct {
     const char* message;
     Token token;
     ErrorType type;
+    bool hasToken;
 } Error;
 
 /**
@@ -39,6 +43,7 @@ typedef struct {
 
 void initErrorArray(ErrorArray* errorArray);
 void addError(ErrorArray* errorArray, const char* message, Token token, ErrorType type);
+void addErrorWithoutToken(ErrorArray* errorArray, const char* message, ErrorType type);
 void printErrors(ErrorArray* errorArray);
 void freeErrorArray(ErrorArray* errorArray);
 bool hadError(ErrorArray* errorArray);

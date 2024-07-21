@@ -46,6 +46,7 @@ CompilerUnit initCompilerUnit(CompilerUnit* maybeEnclosingCompilerUnit, HashTabl
 
 void initCompilerState(CompilerState* compilerState, Source* ASTSource) {
     compilerState->ASTSource = ASTSource;
+    compilerState->panicMode = false;
     initHashTable(&compilerState->globals);
     compilerState->currentCompilerUnit = initCompilerUnit(NULL, &compilerState->globals);
 }
@@ -70,32 +71,34 @@ void freeCompilerState(CompilerState* compilerState) {
 
 /* FORWARD DECLARATIONS */
 
-static void visitStatement(CompilerUnit* compiler, Statement* statement);
-static void visitExpression(CompilerUnit* compiler, Expression* expression);
-static void visitLiteral(CompilerUnit* compiler, Literal* literal);
+static void visitStatement(CompilerState* compilerState, CompilerUnit* compiler, Statement* statement);
+static void visitExpression(CompilerState* compilerState, CompilerUnit* compiler, Expression* expression);
+static void visitLiteral(CompilerState* compilerState, CompilerUnit* compiler, Literal* literal);
 
 /* UTILITIES */
 
 /**
- * Print error and crash.
+ * Print error and synchronize and continue without crashing.
  *
- * TODO: make it so we don't crash completely. It should be simple to print and error, move to compiling the next statement,
- * then after all statements have been compiled print all errors and exit the program.
+ * The synchroniztion process is implicit. We just return from the current
+ * AST node being processed and continue to the next one.
  */
 #if DEBUG_COMPILER
-#define errorAndExit(...)                                                                                                          \
+#define error(...)                                                                                                                 \
     {                                                                                                                              \
         char pointerToObject[16];                                                                                                  \
         sprintf(pointerToObject, "%p", compiler);                                                                                  \
         printCompiledCodeObject(compiler->compiledCodeObject, compiler->enclosingCompilerUnit == NULL ? "main" : pointerToObject); \
-        fprintf(stderr, __VA_ARGS__);                                                                                              \
-        exit(EXIT_FAILURE);                                                                                                        \
+        if (compilerState->panicMode) return;                                                                                      \
+        compilerState->panicMode = true;                                                                                           \
+        addErrorWithoutToken(&compilerState->errors, "test", COMPILER_ERROR);                                                      \
     }
 #else
-#define errorAndExit(...)             \
-    {                                 \
-        fprintf(stderr, __VA_ARGS__); \
-        exit(EXIT_FAILURE);           \
+#define error(...)                                                            \
+    {                                                                         \
+        if (compilerState->panicMode) return;                                 \
+        compilerState->panicMode = true;                                      \
+        addErrorWithoutToken(&compilerState->errors, "test", COMPILER_ERROR); \
     }
 #endif
 
@@ -108,9 +111,9 @@ static void emitBytecode(CompilerUnit* compiler, Bytecode bytecode) {
  * The compiler can know in advance how tall the VM stack will be at any point. This function helps keep track
  * of the height. For example, a local variable declaration increases the stack by 1 (locals live on the stack).
  */
-static void increaseStackHeight(CompilerUnit* compiler) {
+static void increaseStackHeight(CompilerState* compilerState, CompilerUnit* compiler) {
     if (compiler->predictedStack.currentStackHeight == UINT8_MAX) {
-        errorAndExit(
+        error(
             "StackOverflowError: The Compiler has predicted that this code will "
             "cause the VM stack to overflow.");  // This error often indicates that something is wrong
                                                  // with how the compiler tracks the predicted stack height
@@ -129,12 +132,12 @@ static void increaseStackHeight(CompilerUnit* compiler) {
  *  decreaseStackHeight(1)
  *  Stack: [A B C(top) ? ? ?]
  */
-static void decreaseStackHeight(CompilerUnit* compiler) {
+static void decreaseStackHeight(CompilerState* compilerState, CompilerUnit* compiler) {
     if (compiler->predictedStack.currentStackHeight > 0) {
         compiler->predictedStack.tempStack[compiler->predictedStack.currentStackHeight - 1].name = NULL;
         compiler->predictedStack.currentStackHeight--;
     } else
-        errorAndExit("InvalidStateException: the Compiler attempted to decrease the predicted stack height below 0.")
+        error("InvalidStateException: the Compiler attempted to decrease the predicted stack height below 0.")
 }
 
 static double tokenTodouble(Token token) {
@@ -215,12 +218,12 @@ static bool isGlobalInTable(CompilerUnit* compiler, char* name) {
  * Check if a global variable in the compiler's table of globals is constant (i.e. `val`).
  * Throws an error if the global doesn't exist.
  */
-static bool isGlobalConstant(CompilerUnit* compiler, char* name) {
+static bool isGlobalConstant(CompilerState* compilerState, CompilerUnit* compiler, char* name) {
     HashTableEntry* entry = hashTableGet(compiler->globals, name);
     if (entry) {
         return entry->value.as.booleanVal;
     } else {
-        errorAndExit(
+        error(
             "InvalidStateException: Attempted to check if a global variable is constant, but the "
             "global doesn't exist in the Compiler's hash table.")
     }
@@ -248,12 +251,12 @@ static int findLocalByName(CompilerUnit* compiler, char* name) {
  * Check if a local variable in the compiler's table of locals is constant (i.e. `val`).
  * Throws an error if the local doesn't exist.
  */
-static int isLocalConstant(CompilerUnit* compiler, char* name) {
+static int isLocalConstant(CompilerState* compilerState, CompilerUnit* compiler, char* name) {
     int index = findLocalByName(compiler, name);
     if (index == -1)
-        errorAndExit(
-            "InvalidStateException: Attempted to check if a local variable is constant, but the "
-            "local doesn't exist.") else {
+        error(compiler
+              "InvalidStateException: Attempted to check if a local variable is constant, but the "
+              "local doesn't exist.") else {
             return compiler->predictedStack.tempStack[index].isModifiable;
         }
 }
@@ -261,11 +264,11 @@ static int isLocalConstant(CompilerUnit* compiler, char* name) {
  * Check if a local variable in the compiler's table of locals is constant (i.e. `val`).
  * Throws an error if the local doesn't exist.
  */
-static int isLocalConstantByIndex(CompilerUnit* compiler, int indexInTempStack) {
+static int isLocalConstantByIndex(CompilerState* compilerState, CompilerUnit* compiler, int indexInTempStack) {
     if (indexInTempStack == -1)
-        errorAndExit(
-            "InvalidStateException: Attempted to check if a local variable is constant, but the "
-            "local doesn't exist.") else {
+        error(compiler
+              "InvalidStateException: Attempted to check if a local variable is constant, but the "
+              "local doesn't exist.") else {
             return compiler->predictedStack.tempStack[indexInTempStack].isModifiable;
         }
 }
@@ -282,10 +285,10 @@ static void addLocalToTempStack(CompilerUnit* compiler, char* name, bool isModif
 /**
  * Remove N locals from the top of the Compiler's temporary stack.
  */
-static void removeLocalsFromTempStack(CompilerUnit* compiler, int N) {
+static void removeLocalsFromTempStack(CompilerState* compilerState, CompilerUnit* compiler, int N) {
     for (int i = compiler->predictedStack.currentStackHeight; i > compiler->predictedStack.currentStackHeight - N; i--) {
         if (N < 0) {
-            errorAndExit("Attempted to remove more local variables than exist in the stack. This should be impossible.");
+            error("Attempted to remove more local variables than exist in the stack. This should be impossible.");
         }
         compiler->predictedStack.tempStack[i - 1].name = NULL;  // Setting the name to NULL frees up the spot
     }
@@ -293,9 +296,9 @@ static void removeLocalsFromTempStack(CompilerUnit* compiler, int N) {
 
 /* VISITOR FUNCTIONS */
 
-static void visitAdditiveExpression(CompilerUnit* compiler, AdditiveExpression* additiveExpression) {
-    visitExpression(compiler, additiveExpression->leftExpression);
-    visitExpression(compiler, additiveExpression->rightExpression);
+static void visitAdditiveExpression(CompilerState* compilerState, CompilerUnit* compiler, AdditiveExpression* additiveExpression) {
+    visitExpression(compilerState, compiler, additiveExpression->leftExpression);
+    visitExpression(compilerState, compiler, additiveExpression->rightExpression);
 
     switch (additiveExpression->punctuator.type) {
         case TOKEN_PLUS:
@@ -307,12 +310,12 @@ static void visitAdditiveExpression(CompilerUnit* compiler, AdditiveExpression* 
         default:
             break;
     }
-    decreaseStackHeight(compiler);
+    decreaseStackHeight(compilerState, compiler);
 }
 
-static void visitMultiplicativeExpression(CompilerUnit* compiler, MultiplicativeExpression* multiplicativeExpression) {
-    visitExpression(compiler, multiplicativeExpression->leftExpression);
-    visitExpression(compiler, multiplicativeExpression->rightExpression);
+static void visitMultiplicativeExpression(CompilerState* compilerState, CompilerUnit* compiler, MultiplicativeExpression* multiplicativeExpression) {
+    visitExpression(compilerState, compiler, multiplicativeExpression->leftExpression);
+    visitExpression(compilerState, compiler, multiplicativeExpression->rightExpression);
 
     switch (multiplicativeExpression->punctuator.type) {
         case TOKEN_STAR:
@@ -324,12 +327,12 @@ static void visitMultiplicativeExpression(CompilerUnit* compiler, Multiplicative
         default:
             break;
     }
-    decreaseStackHeight(compiler);
+    decreaseStackHeight(compilerState, compiler);
 }
 
-static void visitEqualityExpression(CompilerUnit* compiler, EqualityExpression* equalityExpression) {
-    visitExpression(compiler, equalityExpression->leftExpression);
-    visitExpression(compiler, equalityExpression->rightExpression);
+static void visitEqualityExpression(CompilerState* compilerState, CompilerUnit* compiler, EqualityExpression* equalityExpression) {
+    visitExpression(compilerState, compiler, equalityExpression->leftExpression);
+    visitExpression(compilerState, compiler, equalityExpression->rightExpression);
 
     switch (equalityExpression->punctuator.type) {
         case TOKEN_EQUAL_EQUAL:
@@ -341,27 +344,27 @@ static void visitEqualityExpression(CompilerUnit* compiler, EqualityExpression* 
         default:
             break;
     }
-    decreaseStackHeight(compiler);
+    decreaseStackHeight(compilerState, compiler);
 }
 
-static void visitLogicalOrExpression(CompilerUnit* compiler, LogicalOrExpression* logicalOrExpression) {
-    visitExpression(compiler, logicalOrExpression->leftExpression);
-    visitExpression(compiler, logicalOrExpression->rightExpression);
+static void visitLogicalOrExpression(CompilerState* compilerState, CompilerUnit* compiler, LogicalOrExpression* logicalOrExpression) {
+    visitExpression(compilerState, compiler, logicalOrExpression->leftExpression);
+    visitExpression(compilerState, compiler, logicalOrExpression->rightExpression);
     emitBytecode(compiler, BYTECODE(OP_BINARY_LOGICAL_OR));
-    decreaseStackHeight(compiler);
+    decreaseStackHeight(compilerState, compiler);
 }
 
-static void visitLogicalAndExpression(CompilerUnit* compiler, LogicalAndExpression* logicalAndExpression) {
-    visitExpression(compiler, logicalAndExpression->leftExpression);
-    visitExpression(compiler, logicalAndExpression->rightExpression);
+static void visitLogicalAndExpression(CompilerState* compilerState, CompilerUnit* compiler, LogicalAndExpression* logicalAndExpression) {
+    visitExpression(compilerState, compiler, logicalAndExpression->leftExpression);
+    visitExpression(compilerState, compiler, logicalAndExpression->rightExpression);
     emitBytecode(compiler, BYTECODE(OP_BINARY_LOGICAL_AND));
-    decreaseStackHeight(compiler);
+    decreaseStackHeight(compilerState, compiler);
 }
 
 // Visit the two expression on left and write, emit bytecode to add them
-static void visitComparisonExpression(CompilerUnit* compiler, ComparisonExpression* comparisonExpression) {
-    visitExpression(compiler, comparisonExpression->leftExpression);
-    visitExpression(compiler, comparisonExpression->rightExpression);
+static void visitComparisonExpression(CompilerState* compilerState, CompilerUnit* compiler, ComparisonExpression* comparisonExpression) {
+    visitExpression(compilerState, compiler, comparisonExpression->leftExpression);
+    visitExpression(compilerState, compiler, comparisonExpression->rightExpression);
 
     switch (comparisonExpression->punctuator.type) {
         case TOKEN_GREATER:
@@ -379,11 +382,11 @@ static void visitComparisonExpression(CompilerUnit* compiler, ComparisonExpressi
         default:
             break;
     }
-    decreaseStackHeight(compiler);
+    decreaseStackHeight(compilerState, compiler);
 }
 
-static void visitUnaryExpression(CompilerUnit* compiler, UnaryExpression* unaryExpression) {
-    visitExpression(compiler, unaryExpression->rightExpression);
+static void visitUnaryExpression(CompilerState* compilerState, CompilerUnit* compiler, UnaryExpression* unaryExpression) {
+    visitExpression(compilerState, compiler, unaryExpression->rightExpression);
     if (unaryExpression->punctuator.type == TOKEN_MINUS) {
         emitBytecode(compiler, BYTECODE(OP_UNARY_NEGATE));
     } else if (unaryExpression->punctuator.type == TOKEN_EXCLAMATION) {
@@ -391,26 +394,26 @@ static void visitUnaryExpression(CompilerUnit* compiler, UnaryExpression* unaryE
     }
 }
 
-static void visitPrimaryExpression(CompilerUnit* compiler, PrimaryExpression* primaryExpression) {
-    visitLiteral(compiler, primaryExpression->literal);
+static void visitPrimaryExpression(CompilerState* compilerState, CompilerUnit* compiler, PrimaryExpression* primaryExpression) {
+    visitLiteral(compilerState, compiler, primaryExpression->literal);
 }
 
 // Visit the expression. (Should be executed only for its side-effects)
-static void visitExpressionStatement(CompilerUnit* compiler, ExpressionStatement* expressionStatement) {
-    visitExpression(compiler, expressionStatement->expression);
+static void visitExpressionStatement(CompilerState* compilerState, CompilerUnit* compiler, ExpressionStatement* expressionStatement) {
+    visitExpression(compilerState, compiler, expressionStatement->expression);
 
     // The expression will always add a Value to the stack, but by definition it's not used
     // (otherwise it wouldn't be an expression statement) so we need to remove it.
     emitBytecode(compiler, BYTECODE_OPERAND_1(OP_POPN, 1));
-    decreaseStackHeight(compiler);
+    decreaseStackHeight(compilerState, compiler);
 }
 
-static void visitAssignmentStatement(CompilerUnit* compiler, AssignmentStatement* assignmentStatement) {
+static void visitAssignmentStatement(CompilerState* compilerState, CompilerUnit* compiler, AssignmentStatement* assignmentStatement) {
     // Compile the code to compute the new value
-    visitExpression(compiler, assignmentStatement->value);
+    visitExpression(compilerState, compiler, assignmentStatement->value);
 
     // We don't need to visit the target expression.
-    // visitExpression(compiler, assignmentStatement->target);
+    // visitExpression(compilerState, compiler, assignmentStatement->target);
 
     // Emit bytecode based on the target type
     if (assignmentStatement->target->type == PRIMARY_EXPRESSION) {
@@ -424,8 +427,8 @@ static void visitAssignmentStatement(CompilerUnit* compiler, AssignmentStatement
 
             if (stackIndex == -1) {  // Not a local variable
                 if (isGlobalInTable(compiler, identifierName)) {
-                    if (isGlobalConstant(compiler, identifierName)) {
-                        errorAndExit("Error: Cannot modify global constant '%s'.", identifierName);
+                    if (isGlobalConstant(compilerState, compiler, identifierName)) {
+                        error("Error: Cannot modify global constant '%s'.", identifierName);
                     }
 
                     // Global variable assignment
@@ -433,36 +436,36 @@ static void visitAssignmentStatement(CompilerUnit* compiler, AssignmentStatement
                     size_t constantIndex = addConstantToPool(compiler, constant);
                     emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAR, constantIndex));
                 } else {
-                    errorAndExit("Error: identifier '%s' not declared.", identifierName);
+                    error("Error: identifier '%s' not declared.", identifierName);
                 }
             } else {
-                if (isLocalConstantByIndex(compiler, stackIndex)) {
-                    errorAndExit("Error: Cannot modify local constant '%s'.", identifierName);
+                if (isLocalConstantByIndex(compilerState, compiler, stackIndex)) {
+                    error("Error: Cannot modify local constant '%s'.", identifierName);
                 }
 
                 if (stackIndex != -1) {
                     emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_LOCAL_VAR_FAST, stackIndex));
                 } else {
-                    errorAndExit("Error: identifier '%s' not declared.", identifierName);
+                    error("Error: identifier '%s' not declared.", identifierName);
                 }
             }
         } else {
-            errorAndExit("Invalid assignment target. Invalid type of primary-expression.");
+            error("Invalid assignment target. Invalid type of primary-expression.");
         }
     } else {
-        errorAndExit("Invalid assignment target.");
+        error("Invalid assignment target.");
     }
 
     // The new value is already popped by the `OP_SET_*` operation, so we just need to update the stack height.
-    decreaseStackHeight(compiler);
+    decreaseStackHeight(compilerState, compiler);
 }
 
 /**
  * Visit the expression after the val declaration, save the variable identifier to constant pool,
  * emit instruction to set identifier = val
  */
-static void visitValDeclarationStatement(CompilerUnit* compiler, ValDeclarationStatement* valDeclarationStatement) {
-    visitExpression(compiler, valDeclarationStatement->expression);
+static void visitValDeclarationStatement(CompilerState* compilerState, CompilerUnit* compiler, ValDeclarationStatement* valDeclarationStatement) {
+    visitExpression(compilerState, compiler, valDeclarationStatement->expression);
     // The expression will add 1 to the stack height. We leave the value on the stack - that's the variable.
 
     Constant constant = IDENTIFIER_CONST(copyStringToHeap(valDeclarationStatement->identifier->token.start,
@@ -471,29 +474,29 @@ static void visitValDeclarationStatement(CompilerUnit* compiler, ValDeclarationS
     bool isVariableModifiable = true;  // Vals cannot be modified
 
     if (compiler->isInGlobalScope) {
-        if (isGlobalInTable(compiler, constant.as.string)) errorAndExit("Error: val \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
+        if (isGlobalInTable(compiler, constant.as.string)) error("Error: val \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
 
         size_t constantIndex = addConstantToPool(compiler, constant);
         addGlobalToTable(compiler, constant.as.string, isVariableModifiable);  // We also keep track that this global exists so we can prevent redeclaration later.
 
         emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, constantIndex));
 
-        decreaseStackHeight(compiler);  // Globals are popped from the stack.
+        decreaseStackHeight(compilerState, compiler);  // Globals are popped from the stack.
     } else {
-        if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit("Error: val \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
+        if (findLocalByName(compiler, constant.as.string) != -1) error("Error: val \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
 
         addLocalToTempStack(compiler, constant.as.string, isVariableModifiable);
         emitBytecode(compiler, BYTECODE(OP_DEFINE_LOCAL_VAL_FAST));
     }
 }
 
-static void visitVarDeclarationStatement(CompilerUnit* compiler, VarDeclarationStatement* varDeclarationStatement) {
+static void visitVarDeclarationStatement(CompilerState* compilerState, CompilerUnit* compiler, VarDeclarationStatement* varDeclarationStatement) {
     bool isValueNull = varDeclarationStatement->maybeExpression == NULL;
     if (!isValueNull)
-        visitExpression(compiler, varDeclarationStatement->maybeExpression);
+        visitExpression(compilerState, compiler, varDeclarationStatement->maybeExpression);
     else {
         emitBytecode(compiler, BYTECODE(OP_NULL));
-        increaseStackHeight(compiler);
+        increaseStackHeight(compilerState, compiler);
     }
 
     Constant constant = IDENTIFIER_CONST(copyStringToHeap(varDeclarationStatement->identifier->token.start,
@@ -503,16 +506,16 @@ static void visitVarDeclarationStatement(CompilerUnit* compiler, VarDeclarationS
 
     if (compiler->isInGlobalScope) {
         // Preventing global redeclaration is an arbitrary choice.
-        if (isGlobalInTable(compiler, constant.as.string)) errorAndExit("Error: var \"%s\" is already declared. Redeclaration is not permitted as it often leads to confusion.", constant.as.string);
+        if (isGlobalInTable(compiler, constant.as.string)) error("Error: var \"%s\" is already declared. Redeclaration is not permitted as it often leads to confusion.", constant.as.string);
 
         size_t constantIndex = addConstantToPool(compiler, constant);
         addGlobalToTable(compiler, constant.as.string, isVariableModifiable);  // We also keep track that this global exists so we can prevent redeclaration later.
 
         emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAR, constantIndex));
 
-        decreaseStackHeight(compiler);  // The value assigned to the Global is popped from the stack after we set the Global.
+        decreaseStackHeight(compilerState, compiler);  // The value assigned to the Global is popped from the stack after we set the Global.
     } else {
-        if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit("Error: var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
+        if (findLocalByName(compiler, constant.as.string) != -1) error("Error: var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
 
         addLocalToTempStack(compiler, constant.as.string, isVariableModifiable);
 
@@ -521,13 +524,13 @@ static void visitVarDeclarationStatement(CompilerUnit* compiler, VarDeclarationS
 }
 
 // Visit expression following print, then emit bytecode to print that expression
-static void visitPrintStatement(CompilerUnit* compiler, PrintStatement* printStatement) {
-    visitExpression(compiler, printStatement->expression);
+static void visitPrintStatement(CompilerState* compilerState, CompilerUnit* compiler, PrintStatement* printStatement) {
+    visitExpression(compilerState, compiler, printStatement->expression);
     emitBytecode(compiler, BYTECODE(OP_PRINT));
-    decreaseStackHeight(compiler);
+    decreaseStackHeight(compilerState, compiler);
 }
 
-static void visitBlockExpression(CompilerUnit* compiler, BlockExpression* blockExpression) {
+static void visitBlockExpression(CompilerState* compilerState, CompilerUnit* compiler, BlockExpression* blockExpression) {
     bool wasCompilerInGlobalScopeBeforeThisBlock = compiler->isInGlobalScope;
     compiler->isInGlobalScope = false;
 
@@ -536,15 +539,15 @@ static void visitBlockExpression(CompilerUnit* compiler, BlockExpression* blockE
 
     for (size_t i = 0; i < blockExpression->statementArray.used; i++) {
         Statement* statement = blockExpression->statementArray.values[i];
-        visitStatement(compiler, statement);
+        visitStatement(compilerState, compiler, statement);
     }
 
     // If there's a final expression, visit it. Otherwise emit a NULL.
     if (blockExpression->lastExpression) {
-        visitExpression(compiler, blockExpression->lastExpression);
+        visitExpression(compilerState, compiler, blockExpression->lastExpression);
     } else {
         emitBytecode(compiler, BYTECODE(OP_NULL));
-        increaseStackHeight(compiler);
+        increaseStackHeight(compilerState, compiler);
     }
 
     // Calculate the stack effect of this entire block so we can clean up at the end of the block.
@@ -564,7 +567,7 @@ static void visitBlockExpression(CompilerUnit* compiler, BlockExpression* blockE
     emitBytecode(compiler, BYTECODE_OPERAND_1(OP_POPN, blockStmtStackEffect - 1));
 
     // Pop all the Locals that were put in the Compiler stack in the block, except for the final expression.
-    removeLocalsFromTempStack(compiler, blockStmtStackEffect - 1);
+    removeLocalsFromTempStack(compilerState, compiler, blockStmtStackEffect - 1);
 
     // Undo stack height, except for final expression
     compiler->predictedStack.currentStackHeight = stackHeightBeforeBlockStmt + 1;
@@ -572,7 +575,7 @@ static void visitBlockExpression(CompilerUnit* compiler, BlockExpression* blockE
     compiler->isInGlobalScope = wasCompilerInGlobalScopeBeforeThisBlock;
 }
 
-static void visitBlockStatement(CompilerUnit* compiler, BlockStatement* blockStatement) {
+static void visitBlockStatement(CompilerState* compilerState, CompilerUnit* compiler, BlockStatement* blockStatement) {
     bool wasCompilerInGlobalScopeBeforeThisBlock = compiler->isInGlobalScope;
     compiler->isInGlobalScope = false;
 
@@ -581,7 +584,7 @@ static void visitBlockStatement(CompilerUnit* compiler, BlockStatement* blockSta
 
     for (size_t i = 0; i < blockStatement->statementArray.used; i++) {
         Statement* statement = blockStatement->statementArray.values[i];
-        visitStatement(compiler, statement);
+        visitStatement(compilerState, compiler, statement);
     }
 
     // Calculate the stack effect of this entire block so we can clean up at the end of the block.
@@ -593,7 +596,7 @@ static void visitBlockStatement(CompilerUnit* compiler, BlockStatement* blockSta
     emitBytecode(compiler, BYTECODE_OPERAND_1(OP_POPN, blockStmtStackEffect));
 
     // Pop all the Locals that were put in the Compiler stack in the block.
-    removeLocalsFromTempStack(compiler, blockStmtStackEffect);
+    removeLocalsFromTempStack(compilerState, compiler, blockStmtStackEffect);
 
     // Undo stack height
     compiler->predictedStack.currentStackHeight = stackHeightBeforeBlockStmt;
@@ -601,9 +604,9 @@ static void visitBlockStatement(CompilerUnit* compiler, BlockStatement* blockSta
     compiler->isInGlobalScope = wasCompilerInGlobalScopeBeforeThisBlock;
 }
 
-static void visitSelectionStatement(CompilerUnit* compiler, SelectionStatement* selectionStatement) {
+static void visitSelectionStatement(CompilerState* compilerState, CompilerUnit* compiler, SelectionStatement* selectionStatement) {
     // Visit the condition
-    visitExpression(compiler, selectionStatement->conditionExpression);
+    visitExpression(compilerState, compiler, selectionStatement->conditionExpression);
 
     // Emit bytecode for conditional jump, keep track of its index in jumpIfFalsePosition.
     // 999999 is a placeholder. We don't know how much bytecode is in the statement for the "then" branch so
@@ -613,10 +616,10 @@ static void visitSelectionStatement(CompilerUnit* compiler, SelectionStatement* 
 
     // Visiting the expression grows the stack, but running OP_JUMP_IF_FALSE in the VM will
     // decrease it.
-    decreaseStackHeight(compiler);
+    decreaseStackHeight(compilerState, compiler);
 
     // Visit the true (a.k.a. "then") branch.
-    visitStatement(compiler, selectionStatement->trueStatement);
+    visitStatement(compilerState, compiler, selectionStatement->trueStatement);
 
     // If there's an else branch, we need to jump over it once the true branch is executed
     size_t jumpToEndPosition = 0;
@@ -630,7 +633,7 @@ static void visitSelectionStatement(CompilerUnit* compiler, SelectionStatement* 
 
     // Visit the false (a.k.a. "else") branch if it exists.
     if (selectionStatement->falseStatement != NULL) {
-        visitStatement(compiler, selectionStatement->falseStatement);
+        visitStatement(compilerState, compiler, selectionStatement->falseStatement);
         // Back-patch the jump-to-end position.
         compiler->compiledCodeObject.bytecodeArray.values[jumpToEndPosition].maybeOperand1 = compiler->compiledCodeObject.bytecodeArray.used;
     }
@@ -652,7 +655,7 @@ static Function* createFunction(u_int8_t parameterCount, CompiledCodeObject* cod
  *
  * TODO: Handle closures. For now, only globals and variables that are local to the function can be referenced.
  */
-static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lambdaExpression) {
+static void visitLambdaExpression(CompilerState* compilerState, CompilerUnit* compiler, LambdaExpression* lambdaExpression) {
     CompilerUnit functionCompiler = initCompilerUnit(compiler, compiler->globals);
 
     // Define all parameters as locals
@@ -660,13 +663,13 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
         Constant constant = IDENTIFIER_CONST(copyStringToHeap(lambdaExpression->parameters->values[i].token.start,
                                                               lambdaExpression->parameters->values[i].token.length));
         if (findLocalByName(&functionCompiler, constant.as.string) != -1)
-            errorAndExit("Error: var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
-        increaseStackHeight(&functionCompiler);
+            error("Error: var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
+        increaseStackHeight(compilerState, &functionCompiler);
         addLocalToTempStack(&functionCompiler, constant.as.string, false);
     }
 
     // Compile the function body
-    visitBlockExpression(&functionCompiler, lambdaExpression->bodyBlock);
+    visitBlockExpression(compilerState, &functionCompiler, lambdaExpression->bodyBlock);
     // TODO (optimization): visitBlockExpression will always emit a POP_N. For function compilation, we can skip the
     // POP_N as it is redudant. The VM will pop the entire CallFrame, which is effectively the same as POP_N.
 
@@ -688,7 +691,7 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
     emitBytecode(compiler, (Bytecode){.type = OP_LAMBDA, .maybeOperand1 = constantIndex});
 
     // The VM will be putting an ObjFunction in the stack, so we have to increase the height
-    increaseStackHeight(compiler);
+    increaseStackHeight(compilerState, compiler);
 }
 
 /**
@@ -700,10 +703,10 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
  *  5) Emit bytecode to put function object being caled on the stack.
  *  6) Emit bytecode to execute the function object
  */
-static void visitCallExpression(CompilerUnit* compiler, CallExpression* callExpression) {
+static void visitCallExpression(CompilerState* compilerState, CompilerUnit* compiler, CallExpression* callExpression) {
     // Compile the arguments
     for (size_t i = 0; i < callExpression->arguments->used; i++) {
-        visitExpression(compiler, callExpression->arguments->values[i]);
+        visitExpression(compilerState, compiler, callExpression->arguments->values[i]);
     }
 
     // Verify that the identifier being called exists in the lexical scope
@@ -713,7 +716,7 @@ static void visitCallExpression(CompilerUnit* compiler, CallExpression* callExpr
 
     if (functionIndex == -1) {
         // It's not a local variable, so we check if it's a global
-        if (!isGlobalInTable(compiler, functionNameConstant.as.string)) errorAndExit("Error: identifier '%s' referenced before declaration.", functionNameConstant.as.string);
+        if (!isGlobalInTable(compiler, functionNameConstant.as.string)) error("Error: identifier '%s' referenced before declaration.", functionNameConstant.as.string);
 
         // Then check whether the name is in the current constant pool.
         // If it's not, we add it. This can happen when compiling a function; the actual
@@ -721,19 +724,19 @@ static void visitCallExpression(CompilerUnit* compiler, CallExpression* callExpr
         int index = addConstantToPool(compiler, functionNameConstant);
 
         // Emit bytecode to load the function object onto the stack
-        Bytecode bytecodeToGetVariable = isGlobalConstant(compiler, functionNameConstant.as.string)
+        Bytecode bytecodeToGetVariable = isGlobalConstant(compilerState, compiler, functionNameConstant.as.string)
                                              ? BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index)
                                              : BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, index);
         emitBytecode(compiler, bytecodeToGetVariable);
     } else {
-        Bytecode bytecodeToGetVariable = isLocalConstant(compiler, functionNameConstant.as.string)
+        Bytecode bytecodeToGetVariable = isLocalConstant(compilerState, compiler, functionNameConstant.as.string)
                                              ? BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, functionIndex)
                                              : BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, functionIndex);
         emitBytecode(compiler, bytecodeToGetVariable);
     }
 
     // The call will put a value on the stack (even if its null)
-    increaseStackHeight(compiler);
+    increaseStackHeight(compilerState, compiler);
 
     // TODO: Add compile-time type check. Only functions should be callable. (This could be done by adding
     // a type field to the Local struct)
@@ -744,15 +747,15 @@ static void visitCallExpression(CompilerUnit* compiler, CallExpression* callExpr
     emitBytecode(compiler, BYTECODE(OP_CALL));
 }
 
-static void visitReturnStatement(CompilerUnit* compiler, ReturnStatement* returnStatement) {
-    if (compiler->enclosingCompilerUnit == NULL) errorAndExit("Cannot return from global scope.");
+static void visitReturnStatement(CompilerState* compilerState, CompilerUnit* compiler, ReturnStatement* returnStatement) {
+    if (compiler->enclosingCompilerUnit == NULL) error("Cannot return from global scope.");
 
     if (returnStatement->expression != NULL) {
-        visitExpression(compiler, returnStatement->expression);
+        visitExpression(compilerState, compiler, returnStatement->expression);
     } else {
         // If no expression, return null
         emitBytecode(compiler, BYTECODE(OP_NULL));
-        increaseStackHeight(compiler);
+        increaseStackHeight(compilerState, compiler);
     }
 
     emitBytecode(compiler, BYTECODE(OP_RETURN));
@@ -768,12 +771,12 @@ static void visitReturnStatement(CompilerUnit* compiler, ReturnStatement* return
  *
  * TODO: benchmark having condition at the end of the loop and doing a jump-if-true to start
  */
-static void visitIterationStatement(CompilerUnit* compiler, IterationStatement* iterationStatement) {
+static void visitIterationStatement(CompilerState* compilerState, CompilerUnit* compiler, IterationStatement* iterationStatement) {
     // Keep a pointer to the condition expression so we can jump to it later
     size_t expressionInstructionPosition = compiler->compiledCodeObject.bytecodeArray.used;
 
     // Compile the actual expression
-    visitExpression(compiler, iterationStatement->conditionExpression);
+    visitExpression(compilerState, compiler, iterationStatement->conditionExpression);
 
     // In the VM, if the expression is falsey, we need to jump past the body of the loop.
     // '999999' is a placeholder; at this point we don't know how much bytecode the body will
@@ -783,10 +786,10 @@ static void visitIterationStatement(CompilerUnit* compiler, IterationStatement* 
 
     // Visiting the expression grows the stack, but running OP_JUMP_IF_FALSE in the VM will
     // decrease it.
-    decreaseStackHeight(compiler);
+    decreaseStackHeight(compilerState, compiler);
 
     // Visit the body of the loop
-    visitStatement(compiler, iterationStatement->bodyStatement);
+    visitStatement(compilerState, compiler, iterationStatement->bodyStatement);
 
     // Jump to condition expression so we can re-evaluate it
     emitBytecode(compiler, BYTECODE_OPERAND_1(OP_JUMP, expressionInstructionPosition));
@@ -796,7 +799,7 @@ static void visitIterationStatement(CompilerUnit* compiler, IterationStatement* 
 }
 
 // Add number to constant pool and emit bytecode to load it onto the stack
-static void visitNumberLiteral(CompilerUnit* compiler, NumberLiteral* numberLiteral) {
+static void visitNumberLiteral(CompilerState* compilerState, CompilerUnit* compiler, NumberLiteral* numberLiteral) {
     double number = tokenTodouble(numberLiteral->token);
     Constant constant = DOUBLE_CONST(number);
     size_t constantIndex = addConstantToPool(compiler, constant);
@@ -804,10 +807,10 @@ static void visitNumberLiteral(CompilerUnit* compiler, NumberLiteral* numberLite
     Bytecode bytecode = BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, constantIndex);
     emitBytecode(compiler, bytecode);
 
-    increaseStackHeight(compiler);
+    increaseStackHeight(compilerState, compiler);
 }
 
-static void visitBooleanLiteral(CompilerUnit* compiler, BooleanLiteral* booleanLiteral) {
+static void visitBooleanLiteral(CompilerState* compilerState, CompilerUnit* compiler, BooleanLiteral* booleanLiteral) {
     switch (booleanLiteral->token.type) {
         case TOKEN_FALSE:
             emitBytecode(compiler, BYTECODE(OP_FALSE));
@@ -816,20 +819,20 @@ static void visitBooleanLiteral(CompilerUnit* compiler, BooleanLiteral* booleanL
             emitBytecode(compiler, BYTECODE(OP_TRUE));
             break;
         default:
-            errorAndExit("Error: failed to parse boolean from token '%.*s'.", booleanLiteral->token.length, booleanLiteral->token.start);
+            error("Error: failed to parse boolean from token '%.*s'.", booleanLiteral->token.length, booleanLiteral->token.start);
             break;
     }
-    increaseStackHeight(compiler);
+    increaseStackHeight(compilerState, compiler);
 }
 
-static void visitIdentifierLiteral(CompilerUnit* compiler, IdentifierLiteral* identifierLiteral) {
+static void visitIdentifierLiteral(CompilerState* compilerState, CompilerUnit* compiler, IdentifierLiteral* identifierLiteral) {
     // Check if the identifier is a local variable
     char* identifierNameNullTerminated = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
     size_t stackIndex = findLocalByName(compiler, identifierNameNullTerminated);
 
     if (stackIndex == -1) {  // Its not a local variable
         // First confirm it's a global
-        if (!isGlobalInTable(compiler, identifierNameNullTerminated)) errorAndExit("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
+        if (!isGlobalInTable(compiler, identifierNameNullTerminated)) error("Error: identifier '%s' referenced before declaration.", identifierNameNullTerminated);
 
         // Then check whether the name is in the current constant pool.
         // If we didn't find the constant in the current pool, we add it. This can happen when compiling a
@@ -839,21 +842,21 @@ static void visitIdentifierLiteral(CompilerUnit* compiler, IdentifierLiteral* id
             .as = {identifierNameNullTerminated}};
         int index = addConstantToPool(compiler, constant);
 
-        Bytecode bytecodeToGetVariable = isGlobalConstant(compiler, identifierNameNullTerminated)
+        Bytecode bytecodeToGetVariable = isGlobalConstant(compilerState, compiler, identifierNameNullTerminated)
                                              ? BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index)
                                              : BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, index);
         emitBytecode(compiler, bytecodeToGetVariable);
     } else {
-        Bytecode bytecodeToGetVariable = isLocalConstant(compiler, identifierNameNullTerminated)
+        Bytecode bytecodeToGetVariable = isLocalConstant(compilerState, compiler, identifierNameNullTerminated)
                                              ? BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, stackIndex)
                                              : BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, stackIndex);
         emitBytecode(compiler, bytecodeToGetVariable);
     }
 
-    increaseStackHeight(compiler);
+    increaseStackHeight(compilerState, compiler);
 }
 
-static void visitStringLiteral(CompilerUnit* compiler, StringLiteral* stringLiteral) {
+static void visitStringLiteral(CompilerState* compilerState, CompilerUnit* compiler, StringLiteral* stringLiteral) {
     // Remove "'s from left and right of the string
     char* stringTrimmedAndNullTerminated = strndup(stringLiteral->token.start + 1, stringLiteral->token.length - 2);
     Constant constant = (Constant){
@@ -864,22 +867,22 @@ static void visitStringLiteral(CompilerUnit* compiler, StringLiteral* stringLite
     Bytecode bytecodeToGetVariable = BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, constantIndex);
     emitBytecode(compiler, bytecodeToGetVariable);
 
-    increaseStackHeight(compiler);
+    increaseStackHeight(compilerState, compiler);
 }
 
-static void visitLiteral(CompilerUnit* compiler, Literal* literal) {
+static void visitLiteral(CompilerState* compilerState, CompilerUnit* compiler, Literal* literal) {
     switch (literal->type) {
         case NUMBER_LITERAL:
-            visitNumberLiteral(compiler, literal->as.numberLiteral);
+            visitNumberLiteral(compilerState, compiler, literal->as.numberLiteral);
             break;
         case IDENTIFIER_LITERAL:
-            visitIdentifierLiteral(compiler, literal->as.identifierLiteral);
+            visitIdentifierLiteral(compilerState, compiler, literal->as.identifierLiteral);
             break;
         case STRING_LITERAL:
-            visitStringLiteral(compiler, literal->as.stringLiteral);
+            visitStringLiteral(compilerState, compiler, literal->as.stringLiteral);
             break;
         case BOOLEAN_LITERAL:
-            visitBooleanLiteral(compiler, literal->as.booleanLiteral);
+            visitBooleanLiteral(compilerState, compiler, literal->as.booleanLiteral);
             break;
         default:
             fprintf(stderr, "Unimplemented literal type %d.", literal->type);
@@ -888,40 +891,40 @@ static void visitLiteral(CompilerUnit* compiler, Literal* literal) {
     }
 }
 
-static void visitExpression(CompilerUnit* compiler, Expression* expression) {
+static void visitExpression(CompilerState* compilerState, CompilerUnit* compiler, Expression* expression) {
     switch (expression->type) {
         case ADDITIVE_EXPRESSION:
-            visitAdditiveExpression(compiler, expression->as.additiveExpression);
+            visitAdditiveExpression(compilerState, compiler, expression->as.additiveExpression);
             break;
         case MULTIPLICATIVE_EXPRESSION:
-            visitMultiplicativeExpression(compiler, expression->as.multiplicativeExpression);
+            visitMultiplicativeExpression(compilerState, compiler, expression->as.multiplicativeExpression);
             break;
         case UNARY_EXPRESSION:
-            visitUnaryExpression(compiler, expression->as.unaryExpression);
+            visitUnaryExpression(compilerState, compiler, expression->as.unaryExpression);
             break;
         case PRIMARY_EXPRESSION:
-            visitPrimaryExpression(compiler, expression->as.primaryExpression);
+            visitPrimaryExpression(compilerState, compiler, expression->as.primaryExpression);
             break;
         case EQUALITY_EXPRESSION:
-            visitEqualityExpression(compiler, expression->as.equalityExpression);
+            visitEqualityExpression(compilerState, compiler, expression->as.equalityExpression);
             break;
         case LOGICAL_OR_EXPRESSION:
-            visitLogicalOrExpression(compiler, expression->as.logicalOrExpression);
+            visitLogicalOrExpression(compilerState, compiler, expression->as.logicalOrExpression);
             break;
         case LOGICAL_AND_EXPRESSION:
-            visitLogicalAndExpression(compiler, expression->as.logicalAndExpression);
+            visitLogicalAndExpression(compilerState, compiler, expression->as.logicalAndExpression);
             break;
         case COMPARISON_EXPRESSION:
-            visitComparisonExpression(compiler, expression->as.comparisonExpression);
+            visitComparisonExpression(compilerState, compiler, expression->as.comparisonExpression);
             break;
         case BLOCK_EXPRESSION:
-            visitBlockExpression(compiler, expression->as.blockExpression);
+            visitBlockExpression(compilerState, compiler, expression->as.blockExpression);
             break;
         case LAMBDA_EXPRESSION:
-            visitLambdaExpression(compiler, expression->as.lambdaExpression);
+            visitLambdaExpression(compilerState, compiler, expression->as.lambdaExpression);
             break;
         case CALL_EXPRESSION:
-            visitCallExpression(compiler, expression->as.callExpression);
+            visitCallExpression(compilerState, compiler, expression->as.callExpression);
             break;
         default:
             fprintf(stderr, "Unimplemented expression type %d.", expression->type);
@@ -930,34 +933,34 @@ static void visitExpression(CompilerUnit* compiler, Expression* expression) {
     }
 }
 
-static void visitStatement(CompilerUnit* compiler, Statement* statement) {
+static void visitStatement(CompilerState* compilerState, CompilerUnit* compiler, Statement* statement) {
     switch (statement->type) {
         case EXPRESSION_STATEMENT:
-            visitExpressionStatement(compiler, statement->as.expressionStatement);
+            visitExpressionStatement(compilerState, compiler, statement->as.expressionStatement);
             break;
         case VAL_DECLARATION_STATEMENT:
-            visitValDeclarationStatement(compiler, statement->as.valDeclarationStatement);
+            visitValDeclarationStatement(compilerState, compiler, statement->as.valDeclarationStatement);
             break;
         case VAR_DECLARATION_STATEMENT:
-            visitVarDeclarationStatement(compiler, statement->as.varDeclarationStatement);
+            visitVarDeclarationStatement(compilerState, compiler, statement->as.varDeclarationStatement);
             break;
         case ASSIGNMENT_STATEMENT:
-            visitAssignmentStatement(compiler, statement->as.assignmentStatement);
+            visitAssignmentStatement(compilerState, compiler, statement->as.assignmentStatement);
             break;
         case PRINT_STATEMENT:
-            visitPrintStatement(compiler, statement->as.printStatement);
+            visitPrintStatement(compilerState, compiler, statement->as.printStatement);
             break;
         case BLOCK_STATEMENT:
-            visitBlockStatement(compiler, statement->as.blockStatement);
+            visitBlockStatement(compilerState, compiler, statement->as.blockStatement);
             break;
         case SELECTION_STATEMENT:
-            visitSelectionStatement(compiler, statement->as.selectionStatement);
+            visitSelectionStatement(compilerState, compiler, statement->as.selectionStatement);
             break;
         case ITERATION_STATEMENT:
-            visitIterationStatement(compiler, statement->as.iterationStatement);
+            visitIterationStatement(compilerState, compiler, statement->as.iterationStatement);
             break;
         case RETURN_STATEMENT:
-            visitReturnStatement(compiler, statement->as.returnStatement);
+            visitReturnStatement(compilerState, compiler, statement->as.returnStatement);
             break;
         default:
             fprintf(stderr, "Unimplemented statement type %d.\n", statement->type);
@@ -972,9 +975,16 @@ CompiledCode compile(CompilerState* initializedRootCompilerState) {
     printf("Started compiling.\n");
 #endif
 
+    initializedRootCompilerState->panicMode = false;
+
     for (int i = 0; i < initializedRootCompilerState->ASTSource->numberOfStatements; i++) {
         Statement* statement = initializedRootCompilerState->ASTSource->rootStatements[i];
-        visitStatement(&initializedRootCompilerState->currentCompilerUnit, statement);
+        visitStatement(initializedRootCompilerState, &initializedRootCompilerState->currentCompilerUnit, statement);
+
+    error:
+        if (initializedRootCompilerState->panicMode) {
+            synchronize(initializedRootCompilerState);
+        }
     }
 
     CompiledCode code = (CompiledCode){

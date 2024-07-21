@@ -17,6 +17,14 @@ void addError(ErrorArray* errorArray, const char* message, Token token, ErrorTyp
     INSERT_ARRAY((*errorArray), error, Error);
 }
 
+void addErrorWithoutToken(ErrorArray* errorArray, const char* message, ErrorType type) {
+    Error error = {
+        .message = message,
+        .type = type,
+        .hasToken = false};
+    INSERT_ARRAY((*errorArray), error, Error);
+}
+
 static char const* tokenTypeStrings[] = {
     [SCANNER_ERROR] = "ScannerError",
     [PARSER_ERROR] = "ParserError",
@@ -76,7 +84,9 @@ void printErrors(ErrorArray* errorArray) {
     for (size_t i = 0; i < errorArray->used; i++) {
         Error* error = &errorArray->values[i];
         printErrorMessage(error);
-        printSourceLine(error);
+        if (error->hasToken) {
+            printSourceLine(error);
+        }
         fprintf(stderr, "\n");
     }
 }

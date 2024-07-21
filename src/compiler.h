@@ -67,6 +67,7 @@ typedef struct {
     HashTable globals;                 // A hash table to keep track of globals to prevent redefinition and enforce constant `val`s.
     CompilerUnit currentCompilerUnit;  // The current compiler unit being executed.
     ErrorArray errors;
+    bool panicMode;  // This field is set while the compiler is recovering from an error
 } CompilerState;
 
 /* Initialize a Compiler with an AST to be parsed */
