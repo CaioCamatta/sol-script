@@ -351,11 +351,11 @@ The following features are necessary a proper v1.0 release, in rough order:
  - [X] Implement functions and returns
  - [X] Add end-to-end tests
  - [x] Make debug logs optional for REPL or program execution
- - [ ] Improve error logs; print line and column
  - [ ] Add Panic Mode error recovery; stop crashing the compiler on every error.
+ - [ ] Improve error logs; print line and column
  - [ ] Implement objects / structs
- - [ ] Add garbage collector
  - [ ] Implement closures
+ - [ ] Add garbage collector
 
 ## v1.1 Tasks
  - [ ] Add native functions

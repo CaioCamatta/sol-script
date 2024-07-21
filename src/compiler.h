@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "bytecode.h"
+#include "error.h"
 #include "syntax.h"
 #include "token.h"
 #include "util/hash_table.h"
@@ -65,6 +66,7 @@ typedef struct {
     Source* ASTSource;                 // Root of the AST
     HashTable globals;                 // A hash table to keep track of globals to prevent redefinition and enforce constant `val`s.
     CompilerUnit currentCompilerUnit;  // The current compiler unit being executed.
+    ErrorArray errors;
 } CompilerState;
 
 /* Initialize a Compiler with an AST to be parsed */
