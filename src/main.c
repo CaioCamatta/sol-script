@@ -39,16 +39,13 @@ static void repl() {
         ASTParser treeParser;
 
         TokenArray tokens = scanTokensFromString(&scanner, input);
-        printTokenList(tokens);
 
         Source* source = parseASTFromTokens(&treeParser, &tokens);
-        printAST(source);
 
         // Reset compiled bytecode and feed new AST, but maintain same constant pool
         INIT_ARRAY(compiler.currentCompilerUnit.compiledCodeObject.bytecodeArray, Bytecode);
         compiler.ASTSource = source;
         CompiledCode newCode = compile(&compiler);
-        printCompiledCode(newCode);
 
         // Add new bytecode to VM
         for (int i = 0; i < newCode.topLevelCodeObject.bytecodeArray.used; i++) {

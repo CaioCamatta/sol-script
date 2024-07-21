@@ -5,6 +5,7 @@
 
 #include "config.h"
 #include "debug.h"
+#include "error.h"
 #include "syntax.h"
 #include "util/colors.h"
 
@@ -12,12 +13,15 @@
 // ------------------------- PARSER HELPER FUNCTIONS -------------------------
 // ---------------------------------------------------------------------------
 
+static void reportParserErrorAndSynchronize(ASTParser* parser, const char* message);
+
 void initASTParser(ASTParser* parser, const TokenArray tokens) {
     parser->current = tokens.values;
     parser->tokenArray = tokens;
     parser->source = (Source*)malloc(sizeof(Source));
     parser->source->numberOfStatements = 0;
     parser->previous = NULL;
+    initErrorArray(&parser->errors);
 }
 
 // Allocate an AST node (literal, expression, statement) on the heap and return a pointer to the allocated node.
@@ -32,53 +36,8 @@ void freeSource(Source* source) {
     free(source);
 }
 
-// Print error at current token, halt execution
-static void errorAtCurrent(ASTParser* parser, const char* message) {
-    Token* token = parser->current;
-
-    // Error tokens come from the scanner, so we handle it differently.
-    if (token->type == TOKEN_ERROR) {
-        fprintf(stderr, KRED "ScannerError" KGRY "[%d:%d]" RESET, token->lineNo, token->colNo);
-
-        fprintf(stderr, ": %.*s\n", token->length, token->start);
-        exit(EXIT_FAILURE);
-    }
-
-    fprintf(stderr, KRED "ParserError" KGRY "[%d:%d]" RESET, token->lineNo, token->colNo);
-
-    if (token->type == TOKEN_EOF) {
-        fprintf(stderr, " at end");
-    } else if (token->type != TOKEN_ERROR) {
-        fprintf(stderr, " at '%.*s'", token->length, token->start);
-    }
-
-    fprintf(stderr, ": %s\n", message);
-
-    // Find the beginning of the line
-    const char* lineStart = token->start;
-    while (lineStart > parser->tokenArray.values[0].start && lineStart[-1] != '\n') {
-        lineStart--;
-    }
-
-    // Find the end of the line
-    const char* lineEnd = token->start;
-    while (lineEnd < parser->tokenArray.values[parser->tokenArray.used - 1].start + parser->tokenArray.values[parser->tokenArray.used - 1].length && *lineEnd != '\n') {
-        lineEnd++;
-    }
-
-    // Print the line
-    int lineLength = lineEnd - lineStart;
-    fprintf(stderr, "    %.*s\n", lineLength, lineStart);
-
-    // Print the pointer to the error column
-    for (int i = 0; i < token->colNo - 1; i++) {
-        fprintf(stderr, " ");
-    }
-    fprintf(stderr, "    ^\n");
-
-    // TODO: Change this so we instead of exiting, we track that there are errors and move to the
-    // next statement. Then after all statements are parsed we report the errors. This is a better UX.
-    exit(EXIT_FAILURE);
+void freeParser(ASTParser* parser) {
+    FREE_ARRAY(parser->errors);
 }
 
 // Peek token to be immediately parsed.
@@ -102,7 +61,7 @@ static Token* consume(ASTParser* parser, TokenType type, const char* message) {
         return currToken;
     }
 
-    errorAtCurrent(parser, message);
+    reportParserErrorAndSynchronize(parser, message);
     return NULL;
 }
 
@@ -130,7 +89,7 @@ static bool match(ASTParser* parser, TokenType type) {
         char errorMessage[parser->current->length + strlen(messagePrefix)];     \
         strcpy(errorMessage, messagePrefix);                                    \
         strncat(errorMessage, parser->current->start, parser->current->length); \
-        errorAtCurrent(parser, errorMessage);                                   \
+        reportParserErrorAndSynchronize(parser, errorMessage);                  \
     } while (0);
 
 /**
@@ -143,6 +102,38 @@ static void checkSemicolonAfterExpression(ASTParser* parser, Expression* maybeLa
         consume(parser, TOKEN_SEMICOLON, message);
     }
 }
+
+/**
+ * Recover from an error. Skip tokens until we finds a synchronization point, which
+ * is as the next.
+ */
+static void synchronizeAfterError(ASTParser* parser) {
+    advance(parser);
+
+    while (!check(parser, TOKEN_EOF)) {
+        if (parser->previous->type == TOKEN_SEMICOLON) return;
+
+        switch (peek(parser)->type) {
+            case TOKEN_VAL:
+            case TOKEN_VAR:
+            case TOKEN_PRINT:
+            case TOKEN_IF:
+            case TOKEN_WHILE:
+            case TOKEN_RETURN:
+            case TOKEN_LAMBDA:
+                return;
+            default:
+                advance(parser);
+        }
+    }
+}
+
+static void reportParserErrorAndSynchronize(ASTParser* parser, const char* message) {
+    ErrorType type = parser->current->type == TOKEN_ERROR ? SCANNER_ERROR : PARSER_ERROR;
+    addError(&parser->errors, message, *parser->current, type);
+    synchronizeAfterError(parser);
+}
+
 // ---------------------------------------------------------------------------
 // ------------------------------- PRODUCTIONS -------------------------------
 // ---------------------------------------------------------------------------
@@ -298,7 +289,7 @@ static Expression* primaryExpression(ASTParser* parser) {
             break;
         }
         default: {
-            errorAtCurrent(parser, "Expected expression.");
+            reportParserErrorAndSynchronize(parser, "Expected expression.");
             return NULL;
             break;
         }
@@ -556,13 +547,13 @@ static Expression* blockExpression(ASTParser* parser) {
                 break;
             }
         } else {
-            errorAtCurrent(parser, "Error parsing statement in block expression.");
+            reportParserErrorAndSynchronize(parser, "Error parsing statement in block expression.");
         }
     }
     consume(parser, TOKEN_RIGHT_CURLY, "Unclosed block expression. Expected '}'.");
 
     // Block expressions must have at least one expression in them.
-    if (!blockExpr->statementArray.used && !blockExpr->lastExpression) errorAtCurrent(parser, "Encountered an empty block-expression. This isn't allowed in SolScript.");
+    if (!blockExpr->statementArray.used && !blockExpr->lastExpression) reportParserErrorAndSynchronize(parser, "Encountered an empty block-expression. This isn't allowed in SolScript.");
 
     // Make the last ExpressionStatement the block's `lastExpression`
 
@@ -579,7 +570,7 @@ static IdentifierArray* parameterList(ASTParser* parser) {
 
     if (peek(parser)->type == TOKEN_IDENTIFIER) {
         do {
-            if (parameters->used == UINT8_MAX) errorAtCurrent(parser, "Exceeded maximum number of parameters.");
+            if (parameters->used == UINT8_MAX) reportParserErrorAndSynchronize(parser, "Exceeded maximum number of parameters.");
             Literal* literal = identifierLiteral(parser);
             INSERT_ARRAY((*parameters), *(literal->as.identifierLiteral), IdentifierLiteral);
         } while (match(parser, TOKEN_COMMA));
@@ -709,7 +700,7 @@ static Statement* declaration(ASTParser* parser) {
     } else if (peek(parser)->type == TOKEN_VAR) {
         return varDeclaration(parser);
     } else {
-        errorAtCurrent(parser, "Expected 'var' or 'val' in a declaration.");  // This should be unreacheable
+        reportParserErrorAndSynchronize(parser, "Expected 'var' or 'val' in a declaration.");  // This should be unreacheable
         return NULL;
     }
 }
@@ -764,7 +755,7 @@ static Statement* blockStatement(ASTParser* parser) {
         if (statementNode != NULL) {
             INSERT_ARRAY(blockStmt->statementArray, statementNode, Statement*);
         } else {
-            errorAtCurrent(parser, "Error parsing statement.");
+            reportParserErrorAndSynchronize(parser, "Error parsing statement.");
         }
     }
     consume(parser, TOKEN_RIGHT_CURLY, "Unclosed block. Expected '}'.");
@@ -861,12 +852,6 @@ static Statement* returnStatement(ASTParser* parser) {
  *  print-statement
  */
 static Statement* statement(ASTParser* parser) {
-    // NOTE
-    // I don't love this, but in this `statement` function, but to make the parser efficient,
-    // we need logic from the child productions. We need look ahead to see if the next token
-    // matches the first token of a child production. If it does, we need to call that child.
-    // This could be refactored so the logic to "check" is in the child functions; it'd be
-    // cleaner IMO but probably less efficient.
     TokenType currentType = peek(parser)->type;
     switch (currentType) {
         case TOKEN_VAR:
@@ -887,6 +872,7 @@ static Statement* statement(ASTParser* parser) {
             Expression* tempExpression = expression(parser);
 
             // If that expression is followed by an "=", it's the LHS of an assigment statement.
+            // (I don't love having to look-ahead here, but it'll do for now.)
             if (check(parser, TOKEN_EQUAL))
                 return assignmentStatement(parser, tempExpression);
 
@@ -905,7 +891,7 @@ static Statement* statement(ASTParser* parser) {
 static void source(ASTParser* parser) {
     while (!check(parser, TOKEN_EOF)) {
         if (parser->source->numberOfStatements >= MAX_NUMBER_STATEMENTS) {
-            errorAtCurrent(parser, "Exceeded maximum number of statements.");
+            reportParserErrorAndSynchronize(parser, "Exceeded maximum number of statements.");
         }
 
         Statement* statementNode = statement(parser);
@@ -921,10 +907,16 @@ static void source(ASTParser* parser) {
 Source* parseAST(ASTParser* parser) {
     source(parser);
 
+    if (hadError(&parser->errors)) {
+        printErrors(&parser->errors);
+    }
+
 #if DEBUG_PARSER
     printf("AST\n");
     printAST(parser->source);
 #endif
+
+    freeParser(parser);
 
     return parser->source;
 }

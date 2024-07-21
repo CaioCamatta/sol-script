@@ -3,6 +3,8 @@ val f = lambda(b){ b+2; };
 print f(7);
 print f(8);
 
+das ds ads;
+
 print "";
 print "Expecting 5 and 25 to be printed:";
 val a = lambda(b, c){ print b+c; };
