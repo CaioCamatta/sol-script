@@ -105,7 +105,7 @@ static void checkSemicolonAfterExpression(ASTParser* parser, Expression* maybeLa
 
 /**
  * Recover from an error. Skip tokens until we finds a synchronization point, which
- * is as the next.
+ * we define as being the start of the next statement.
  */
 static void synchronizeAfterError(ASTParser* parser) {
     advance(parser);

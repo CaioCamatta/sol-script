@@ -27,9 +27,6 @@ typedef struct {
 /**
  * An array of compile-time errors. This struct can be used by the
  * scanner, parser, or compiler, but it shouldn't be shared across them.
- *
- * A pointer to the source code is required so the line where the error
- * occurred can be printed.
  */
 typedef struct {
     Error* values;
