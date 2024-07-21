@@ -351,8 +351,7 @@ The following features are necessary a proper v1.0 release, in rough order:
  - [X] Implement functions and returns
  - [X] Add end-to-end tests
  - [x] Make debug logs optional for REPL or program execution
- - [ ] Add Panic Mode error recovery; stop crashing the compiler on every error.
- - [ ] Improve error logs; print line and column
+ - [X] Add Panic Mode error recovery to parser; stop crashing on every error.
  - [ ] Implement objects / structs
  - [ ] Implement closures
  - [ ] Add garbage collector
@@ -361,4 +360,6 @@ The following features are necessary a proper v1.0 release, in rough order:
  - [ ] Add native functions
  - [ ] Add benchmark tests
  - [ ] Profile execution and find opportunities for optimization
+ - [ ] Add Panic Mode error recovery to compiler
+ - [ ] Improve compiler error logging; print line and column
  - [ ] Implement [NaN boxing](https://piotrduperas.com/posts/nan-boxing)
