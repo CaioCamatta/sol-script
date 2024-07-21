@@ -350,7 +350,7 @@ The following features are necessary a proper v1.0 release, in rough order:
  - [X] Implement iteration statement (loops)
  - [X] Implement functions and returns
  - [X] Add end-to-end tests
- - [ ] Add CLI argument to enable or disable debugging logs in the REPL.
+ - [x] Make debug logs optional for REPL or program execution
  - [ ] Improve error logs; print line and column
  - [ ] Add Panic Mode error recovery; stop crashing the compiler on every error.
  - [ ] Implement objects / structs
