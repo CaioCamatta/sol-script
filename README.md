@@ -2,7 +2,7 @@
 
 SolScript is an interpreted, stack-based, prototype-based, garbage-collected programming language.
 
-To get started, clone the repository, run `make` to build the project, and run `./sol` to start the REPL. To execute a SolScript program, use `./sol program.sol`.
+To get started, clone the repository, run `make` to build the project or `make debug` to include debug logs. Run `./sol` to start the REPL or `./sol program.sol` execute a SolScript program.
 
 
 **Important:** SolScript is a [work in progress](https://github.com/CaioCamatta/sol-script?tab=readme-ov-file#v10-release-tracker).

@@ -6,6 +6,7 @@
 
 #include "array.h"
 #include "config.h"
+#include "debug.h"
 
 void initScanner(Scanner* scanner, const char* sourceCode) {
     scanner->start = sourceCode;
@@ -258,6 +259,10 @@ TokenArray scanTokens(Scanner* scanner) {
         token = scanNext(scanner);
         INSERT_ARRAY(tokens, token, Token);
     } while (token.type != TOKEN_EOF);
+
+#if DEBUG_SCANNER
+    printTokenList(tokens);
+#endif
 
     return tokens;
 }

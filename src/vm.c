@@ -391,11 +391,15 @@ void run(VM* vm) {
     Bytecode* lastInstruction = &(vm->currFrame->codeObject->bytecodeArray.values[vm->currFrame->codeObject->bytecodeArray.used]);
 
 #if DEBUG_VM
-    printf("Started executing VM.\n");
+    printf("Started executing the VM.\n");
 #endif
 
     // Loop if we're currently in a function or until the last instruction in the main function
     while (vm->currFrame != vm->frames || vm->currFrame->IP < lastInstruction) {
         step(vm);
     }
+
+#if DEBUG_VM
+    printf("Finished executing the VM.\n");
+#endif
 }

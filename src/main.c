@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "array.h"
 #include "bytecode.h"
 #include "compiler.h"
+#include "config.h"
 #include "debug.h"
 #include "file.h"
 #include "parser.h"
@@ -69,19 +71,16 @@ static void executeFile(const char* path) {
     Scanner scanner;
     initScanner(&scanner, sourceCode);
     TokenArray tokens = scanTokens(&scanner);
-    printTokenList(tokens);
 
     // Then, parse the tokens into an Abstract Syntax Tree.
     ASTParser treeParser;
     initASTParser(&treeParser, tokens);
     Source* source = parseAST(&treeParser);
-    printAST(source);
 
     // Then, compile the AST into bytecode.
     CompilerState compiler;
     initCompilerState(&compiler, source);
     CompiledCode compiledCode = compile(&compiler);
-    printCompiledCode(compiledCode);
 
     // Then, execute the compiledCode.
     VM vm;
@@ -96,7 +95,7 @@ int main(int argc, const char* argv[]) {
     } else if (argc == 2) {
         executeFile(argv[1]);
     } else {
-        fprintf(stderr, "Usage: sol [path]\n");
+        fprintf(stderr, "Usage: sol [-d] [path]\n");
         exit(1);
     }
 
