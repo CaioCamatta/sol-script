@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../minunit.h"
-#include "../utils.h"
+#include "../../minunit.h"
+#include "../../utils.h"
 #include "bytecode.h"
 
 // Helper function to compare values

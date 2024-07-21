@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "minunit.h"
+#include "../minunit.h"
 #include "src/compiler_test.c"
 #include "src/parser_test.c"
 #include "src/scanner_test.c"
@@ -8,7 +8,7 @@
 #include "src/util/hash_table_test.c"
 #include "src/vm_test.c"
 
-static void all_tests() {
+void all_unit_tests() {
     // Array (util) tests
     RUN_TEST(test_array);
 
@@ -132,6 +132,6 @@ static void all_tests() {
     RUN_TEST(test_vm_lambda_nested_calls);
 }
 
-int main(int argc, char **argv) {
-    RUN_SUITE(all_tests);
+int run_all_unit_tests() {
+    RUN_SUITE(all_unit_tests);
 }

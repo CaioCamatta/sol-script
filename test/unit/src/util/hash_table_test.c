@@ -1,6 +1,6 @@
 #include "hash_table.h"
 
-#include "../../minunit.h"
+#include "../../../minunit.h"
 
 // Hash table initialization test
 int test_hashTable_init() {

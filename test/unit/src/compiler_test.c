@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include "../minunit.h"
+#include "../../minunit.h"
 #include "debug.h"
 #include "syntax.h"
 
