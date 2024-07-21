@@ -2,7 +2,7 @@
 
 SolScript is an interpreted, stack-based, prototype-based, garbage-collected programming language.
 
-To get started, clone the repository, run `make` to build the project, and run `./sol` to start the REPL. To execute a SolScript program, use `./sol program.sol`.
+To get started, clone the repository, run `make` to build the project or `make debug` to include debug logs. Run `./sol` to start the REPL or `./sol program.sol` execute a SolScript program.
 
 
 **Important:** SolScript is a [work in progress](https://github.com/CaioCamatta/sol-script?tab=readme-ov-file#v10-release-tracker).
@@ -350,7 +350,7 @@ The following features are necessary a proper v1.0 release, in rough order:
  - [X] Implement iteration statement (loops)
  - [X] Implement functions and returns
  - [X] Add end-to-end tests
- - [ ] Add CLI argument to enable or disable debugging logs in the REPL.
+ - [x] Make debug logs optional for REPL or program execution
  - [ ] Improve error logs; print line and column
  - [ ] Add Panic Mode error recovery; stop crashing the compiler on every error.
  - [ ] Implement objects / structs

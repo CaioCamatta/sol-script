@@ -23,13 +23,13 @@ TEST_SRC_FILES := $(wildcard $(TEST_DIR)/*.c)
 TEST_EXEC := $(TEST_DIR)/test
 
 # Targets
-.PHONY: all clean test
+.PHONY: all clean test debug
 
 all: $(MAIN_EXEC)
 
-# For debugging, add a couple flags
-debug: CFLAGS += -g -p
-debug: $(MAIN_EXEC)
+# Debug target
+debug: CFLAGS += -DDEBUG_MODE -g
+debug: clean $(MAIN_EXEC)
 
 $(MAIN_EXEC): $(OBJ_FILES)
 	$(CC) $(CFLAGS) $(OBJ_FILES) -o $@
@@ -46,7 +46,7 @@ test: $(TEST_EXEC)
 	$(TEST_EXEC)
 
 $(TEST_EXEC): $(filter-out $(SRC_DIR)/main.c, $(SRC_FILES)) $(TEST_SRC_FILES) $(SRC_UTIL_FILES) # Everything but src/main.c
-	$(CC) -DENV_TEST $(CFLAGS) -g -p $(filter-out $(SRC_DIR)/main.c, $(SRC_FILES)) $(TEST_SRC_FILES) $(SRC_UTIL_FILES) -o $@
+	$(CC) -DENV_TEST $(CFLAGS) -g	 $(filter-out $(SRC_DIR)/main.c, $(SRC_FILES)) $(TEST_SRC_FILES) $(SRC_UTIL_FILES) -o $@
 
 clean:
 	rm -rf $(OBJ_DIR) $(MAIN_EXEC) $(TEST_EXEC)

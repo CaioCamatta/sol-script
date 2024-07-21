@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "config.h"
+#include "debug.h"
 #include "syntax.h"
 #include "util/colors.h"
 
@@ -918,6 +920,12 @@ static void source(ASTParser* parser) {
 
 Source* parseAST(ASTParser* parser) {
     source(parser);
+
+#if DEBUG_PARSER
+    printf("AST\n");
+    printAST(parser->source);
+#endif
+
     return parser->source;
 }
 

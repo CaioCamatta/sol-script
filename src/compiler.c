@@ -977,14 +977,15 @@ CompiledCode compile(CompilerState* initializedRootCompilerState) {
         visitStatement(&initializedRootCompilerState->currentCompilerUnit, statement);
     }
 
+    CompiledCode code = (CompiledCode){
+        .topLevelCodeObject = initializedRootCompilerState->currentCompilerUnit.compiledCodeObject};
+
 #if DEBUG_COMPILER
     clock_t endTime = clock();
     double timeTaken = ((double)(endTime - startTime)) / CLOCKS_PER_SEC;
     printf("Done compiling in %.5f seconds.\n\n", timeTaken);
+    printCompiledCode(code);
 #endif
-
-    CompiledCode code = (CompiledCode){
-        .topLevelCodeObject = initializedRootCompilerState->currentCompilerUnit.compiledCodeObject};
 
     return code;
 }
