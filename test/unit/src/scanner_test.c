@@ -1,6 +1,6 @@
 #include "scanner.h"
 
-#include "../minunit.h"
+#include "../../minunit.h"
 #include "debug.h"
 #include "file.h"
 

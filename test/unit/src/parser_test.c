@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include "../minunit.h"
+#include "../../minunit.h"
 #include "debug.h"
 
 // Helper function to create a token array based on types, with no meaningful lexeme or other info.

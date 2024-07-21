@@ -34,6 +34,7 @@
 *.hex
 ./sol
 unit_test
+test/test
 sol
 
 # Debug files

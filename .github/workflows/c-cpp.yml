@@ -1,4 +1,4 @@
-name: C/C++ CI
+name: C CI Tests
 
 on:
   push:
@@ -9,10 +9,12 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
 
     steps:
     - uses: actions/checkout@v4
+    - name: make clean
+      run: make clean
     - name: make
       run: make
     - name: make test

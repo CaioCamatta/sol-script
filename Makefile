@@ -7,7 +7,6 @@ SRC_DIR := src
 UTIL_DIR := $(SRC_DIR)/util
 OBJ_DIR := obj
 TEST_DIR := test
-UNIT_TEST_DIR := $(TEST_DIR)/unit
 
 # Source files
 SRC_FILES := $(wildcard $(SRC_DIR)/*.c)
@@ -19,9 +18,9 @@ OBJ_FILES := $(SRC_OBJ_FILES) $(SRC_UTIL_FILES)
 # Main executable
 MAIN_EXEC := sol
 
-# Unit test files
-UNIT_TEST_SRC_FILES := $(wildcard $(UNIT_TEST_DIR)/*.c)
-UNIT_TEST_EXEC := $(UNIT_TEST_DIR)/unit_test
+# Test files
+TEST_SRC_FILES := $(wildcard $(TEST_DIR)/*.c)
+TEST_EXEC := $(TEST_DIR)/test
 
 # Targets
 .PHONY: all clean test
@@ -43,11 +42,11 @@ $(OBJ_DIR)/%.o: $(UTIL_DIR)/%.c
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-test: $(UNIT_TEST_EXEC)
-	$(UNIT_TEST_EXEC)
+test: $(TEST_EXEC)
+	$(TEST_EXEC)
 
-$(UNIT_TEST_EXEC): $(filter-out $(SRC_DIR)/main.c, $(SRC_FILES)) $(UNIT_TEST_SRC_FILES) $(SRC_UTIL_FILES) # Everything but src/main.c
-	$(CC) -DENV_TEST $(CFLAGS) -g -p $(filter-out $(SRC_DIR)/main.c, $(SRC_FILES)) $(UNIT_TEST_SRC_FILES) $(SRC_UTIL_FILES) -o $@
+$(TEST_EXEC): $(filter-out $(SRC_DIR)/main.c, $(SRC_FILES)) $(TEST_SRC_FILES) $(SRC_UTIL_FILES) # Everything but src/main.c
+	$(CC) -DENV_TEST $(CFLAGS) -g -p $(filter-out $(SRC_DIR)/main.c, $(SRC_FILES)) $(TEST_SRC_FILES) $(SRC_UTIL_FILES) -o $@
 
 clean:
-	rm -rf $(OBJ_DIR) $(MAIN_EXEC) $(UNIT_TEST_EXEC)
+	rm -rf $(OBJ_DIR) $(MAIN_EXEC) $(TEST_EXEC)

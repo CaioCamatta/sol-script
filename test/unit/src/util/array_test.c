@@ -1,6 +1,6 @@
 #include "array.h"
 
-#include "../../minunit.h"
+#include "../../../minunit.h"
 
 int test_array() {
     IntArray arr;
