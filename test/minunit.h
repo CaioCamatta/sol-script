@@ -104,13 +104,13 @@ static int assertionsFailed = 0;
             /* Seek to the beginning of the temp file */              \
             rewind(tempFile);                                         \
                                                                       \
-            printf(KBOLD KRED "%s\n\n" RESET KBOFF, #test);           \
+            printf(KBOLD KRED "\n%s\n" RESET KBOFF, #test);           \
             /* Read and print the contents of the temp file */        \
             char buffer[1024];                                        \
             while (fgets(buffer, sizeof(buffer), tempFile) != NULL) { \
                 printf("%s", buffer);                                 \
             }                                                         \
-            printf(KDGRY "------------------------------\n" RESET);   \
+            printf(KDGRY "------------------------------" RESET);     \
                                                                       \
             testsFailed++;                                            \
         }                                                             \

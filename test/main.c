@@ -8,7 +8,7 @@
 int main(int argc, char **argv) {
     printf(KBOLD "Executing unit tests:" KBOFF);
     run_all_unit_tests();
-    printf(KBOLD "Executing end-to-end tests:" KBOFF);
+    printf(KBOLD "\nExecuting end-to-end tests:" KBOFF);
     run_all_end_to_end_tests();
     return 0;
 }
