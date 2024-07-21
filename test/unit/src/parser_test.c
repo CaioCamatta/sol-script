@@ -95,6 +95,7 @@ int test_parser_simple_expression() {
 
     // Clean up
     freeSource(source);
+    freeParser(&parser);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -110,6 +111,7 @@ int test_parser_print_statement() {
 
     FREE_ARRAY(tokens);
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -152,6 +154,7 @@ int test_parser_logical_or_expression() {
     ASSERT(strcmp(rightPrimary->literal->as.booleanLiteral->token.start, "false") == 0);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -192,6 +195,7 @@ int test_parser_logical_and_expression() {
     ASSERT(strcmp(rightPrimary->literal->as.booleanLiteral->token.start, "true") == 0);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -232,6 +236,7 @@ int test_parser_equality_expression() {
     ASSERT(strcmp(rightPrimary->literal->as.numberLiteral->token.start, "5") == 0);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -271,6 +276,7 @@ int test_parser_comparison_expression() {
     ASSERT(strcmp(rightPrimary->literal->as.numberLiteral->token.start, "5") == 0);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -310,6 +316,7 @@ int test_parser_multiplicative_expression() {
     ASSERT(strcmp(rightPrimary->literal->as.numberLiteral->token.start, "2") == 0);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -343,6 +350,7 @@ int test_parser_unary_expression() {
     ASSERT(strcmp(rightPrimary->literal->as.numberLiteral->token.start, "1") == 0);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -372,6 +380,7 @@ int test_parser_boolean_literal() {
     ASSERT(strcmp(primaryExpr->literal->as.booleanLiteral->token.start, "true") == 0);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -471,6 +480,7 @@ int test_parser_complex_expression() {
     ASSERT(strcmp(subRightPrimary->literal->as.numberLiteral->token.start, "2") == 0);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -516,6 +526,7 @@ int test_parser_nested_parentheses_expression() {
 
     // Cleanup
     freeSource(source);
+    freeParser(&parser);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -564,6 +575,7 @@ int test_parser_variable_declaration_and_reading() {
 
     // Cleanup
     freeSource(source);
+    freeParser(&parser);
     FREE_ARRAY(tokens);
 
     return SUCCESS_RETURN_CODE;
@@ -597,6 +609,7 @@ int test_parser_string_literal() {
 
     // Cleanup
     freeSource(source);
+    freeParser(&parser);
     FREE_ARRAY(tokens);
 
     return SUCCESS_RETURN_CODE;
@@ -638,6 +651,7 @@ int test_parser_block_statement() {
 
     // Cleanup
     freeSource(source);
+    freeParser(&parser);
     FREE_ARRAY(tokens);
     return SUCCESS_RETURN_CODE;
 }
@@ -666,6 +680,7 @@ int test_parser_if_statement_true_branch_only() {
     ASSERT(strcmp(printStmt->expression->as.primaryExpression->literal->as.stringLiteral->token.start, "\"Hello, World!\"") == 0);
 
     freeSource(source);
+    freeParser(&parser);
     FREE_ARRAY(tokens);
     return SUCCESS_RETURN_CODE;
 }
@@ -697,6 +712,7 @@ int test_parser_if_statement_with_else_branch() {
     ASSERT(strcmp(falsePrintStmt->expression->as.primaryExpression->literal->as.stringLiteral->token.start, "\"Goodbye, World!\"") == 0);
 
     freeSource(source);
+    freeParser(&parser);
     FREE_ARRAY(tokens);
     return SUCCESS_RETURN_CODE;
 }
@@ -735,6 +751,7 @@ int test_parser_block_expression_simple() {
     ASSERT(strcmp(blockExpr->lastExpression->as.primaryExpression->literal->as.numberLiteral->token.start, "3") == 0);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -783,6 +800,7 @@ int test_parser_block_expression_nested() {
     ASSERT(strcmp(innerBlockExpr->lastExpression->as.primaryExpression->literal->as.numberLiteral->token.start, "3") == 0);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -827,6 +845,7 @@ int test_parser_block_expression_with_statements() {
     ASSERT(strcmp(blockExpr->lastExpression->as.primaryExpression->literal->as.numberLiteral->token.start, "3") == 0);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -890,6 +909,7 @@ int test_parser_block_expression_as_if_condition() {
     ASSERT(trueBlock->statementArray.values[0]->type == PRINT_STATEMENT);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -917,6 +937,7 @@ int test_parser_var_declaration() {
     ASSERT(varDecl->maybeExpression == NULL);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -949,6 +970,7 @@ int test_parser_var_declaration_with_initializer() {
     ASSERT(strcmp(varDecl->maybeExpression->as.primaryExpression->literal->as.numberLiteral->token.start, "42") == 0);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -982,6 +1004,7 @@ int test_parser_assignment() {
     ASSERT(strcmp(assignmentStmt->value->as.primaryExpression->literal->as.numberLiteral->token.start, "2") == 0);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1013,6 +1036,7 @@ int test_parser_iteration_statement_no_curlys() {
     ASSERT(iterStmt->bodyStatement->type == PRINT_STATEMENT);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1042,6 +1066,7 @@ int test_parser_iteration_statement_no_parentheses_no_curlys() {
     ASSERT(iterStmt->bodyStatement->type == PRINT_STATEMENT);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1080,6 +1105,7 @@ int test_parser_iteration_statement_with_block() {
     ASSERT(iterStmt->bodyStatement->as.blockStatement->statementArray.used == 2);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1119,6 +1145,7 @@ int test_parser_lambda_expression_no_parameters() {
     ASSERT(strcmp(lambdaExpr->bodyBlock->lastExpression->as.primaryExpression->literal->as.numberLiteral->token.start, "42") == 0);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1160,6 +1187,7 @@ int test_parser_lambda_expression_single_parameter() {
     ASSERT(strcmp(lambdaExpr->bodyBlock->lastExpression->as.primaryExpression->literal->as.identifierLiteral->token.start, "x") == 0);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1204,6 +1232,7 @@ int test_parser_lambda_expression_multiple_parameters() {
     ASSERT(lambdaExpr->bodyBlock->lastExpression->type == ADDITIVE_EXPRESSION);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1246,6 +1275,7 @@ int test_parser_lambda_expression_no_last_expression_in_block() {
     ASSERT(lambdaExpr->bodyBlock->lastExpression == NULL);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1312,6 +1342,7 @@ int test_parser_call_with_args() {
     ASSERT(callBob->as.expressionStatement->expression->as.callExpression->arguments->used == 1);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1368,6 +1399,7 @@ int test_parser_call_in_binary_expression() {
     ASSERT(strcmp(addExpr->as.additiveExpression->rightExpression->as.primaryExpression->literal->as.numberLiteral->token.start, "10") == 0);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1410,6 +1442,7 @@ int test_parser_call_no_args() {
     ASSERT(callExpr->as.callExpression->arguments->used == 0);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1479,6 +1512,7 @@ int test_parser_recursive_call() {
     ASSERT(recursiveCallExpr->as.multiplicativeExpression->rightExpression->as.callExpression->arguments->used == 1);
 
     freeSource(source);
+    freeParser(&parser);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -1545,6 +1579,7 @@ int test_parser_call_with_block_expression_arg() {
     ASSERT(callExpr->as.callExpression->arguments->values[1]->type == LAMBDA_EXPRESSION);
 
     freeSource(source);
+    freeParser(&parser);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -1622,6 +1657,7 @@ int test_parser_nested_calls() {
     ASSERT(strcmp(callAddTwo->as.callExpression->arguments->values[0]->as.primaryExpression->literal->as.numberLiteral->token.start, "5") == 0);
 
     freeSource(source);
+    freeParser(&parser);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -1707,6 +1743,7 @@ int test_parser_call_with_expression_args() {
     ASSERT(strcmp(secondArg->as.additiveExpression->rightExpression->as.primaryExpression->literal->as.numberLiteral->token.start, "3") == 0);
 
     freeSource(source);
+    freeParser(&parser);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -1775,6 +1812,7 @@ int test_parser_call_in_if_condition() {
     ASSERT(strcmp(conditionExpr->as.callExpression->arguments->values[0]->as.primaryExpression->literal->as.identifierLiteral->token.start, "num") == 0);
 
     freeSource(source);
+    freeParser(&parser);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -1803,6 +1841,7 @@ int test_parser_simple_return() {
     ASSERT(strcmp(returnStmt->expression->as.primaryExpression->literal->as.numberLiteral->token.start, "42") == 0);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1827,6 +1866,7 @@ int test_parser_return_without_expression() {
     ASSERT(returnStmt->expression == NULL);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1870,6 +1910,7 @@ int test_parser_return_in_lambda() {
     ASSERT(strcmp(returnStmt->expression->as.primaryExpression->literal->as.numberLiteral->token.start, "10") == 0);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1937,5 +1978,6 @@ int test_parser_multiple_returns() {
     ASSERT(falseBlock->statementArray.values[0]->type == RETURN_STATEMENT);
 
     freeSource(source);
+    freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
