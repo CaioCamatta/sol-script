@@ -143,6 +143,10 @@ static int assertionsFailed = 0;
  */
 #define RUN_SUITE(tests)                                                                  \
     do {                                                                                  \
+        testsRun = 0;                                                                     \
+        testsFailed = 0;                                                                  \
+        assertionsRun = 0;                                                                \
+        assertionsFailed = 0;                                                             \
         clock_t startTime = clock();                                                      \
         tests();                                                                          \
         clock_t endTime = clock();                                                        \

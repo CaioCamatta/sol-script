@@ -18,7 +18,7 @@ OBJ_FILES := $(SRC_OBJ_FILES) $(SRC_UTIL_FILES)
 # Main executable
 MAIN_EXEC := sol
 
-# Unit test files
+# Test files
 TEST_SRC_FILES := $(wildcard $(TEST_DIR)/*.c)
 TEST_EXEC := $(TEST_DIR)/test
 
