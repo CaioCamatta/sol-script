@@ -314,7 +314,6 @@ static ExpressionArray* argumentList(ASTParser* parser) {
  *  postfix-expression "(" ")"
  *  postfix-expression "(" argument-list ")"
  *  postfix-expression "." identifier
- *  "this" "." postfix-expression
  *
  * Note: postfixExpression() is slightly different than other parsing functions because it can return
  * different types of AST nodes (e.g. CallExpression, MemberExpression). This is fine; Sol combines its
