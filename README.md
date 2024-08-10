@@ -366,5 +366,6 @@ These tasks are outside the scope of v1:
 ### Small Fixes To implement
 These are smaller-ish items to do at any time:
 
+- [X] Fix chained function calls
 - [ ] If-expressions at the end of function blocks should be used as function return.
 - [ ] Get recursive functions working
