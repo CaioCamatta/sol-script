@@ -1,11 +1,10 @@
 # SolScript
 
-SolScript is an interpreted, stack-based, prototype-based, garbage-collected programming language.
+SolScript is an interpreted, stack-based programming language. Its syntax draws from Scala and C, and its internal virtual machine is inspired by Python and the JVM.
 
-To get started, clone the repository, run `make` to build the project or `make debug` to include debug logs. Run `./sol` to start the REPL or `./sol program.sol` execute a SolScript program.
+To begin using SolScript, clone the repository and build the project by running `make`. For additional debugging information, use `make debug`. Once built, you can start the REPL by executing `./sol`, or run a SolScript program with `./sol program.sol`.
 
-
-**Important:** SolScript is a [work in progress](https://github.com/CaioCamatta/sol-script?tab=readme-ov-file#v10-release-tracker).
+**Important:** Please note that SolScript is currently [a work in progress](https://github.com/CaioCamatta/sol-script?tab=readme-ov-file#v10) and has only been tested on ARM-based macOS systems.
 
 
 ## Example program
