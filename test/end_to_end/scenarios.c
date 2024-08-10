@@ -275,18 +275,18 @@ static int test_functions_single_parameter() {
     EXPECT("5.000000\nhello");
 }
 
-static int test_functions_recursive() {
-    SCENARIO(
-        "val factorial = lambda (n) {"
-        "    if (n <= 1) {"
-        "        1;"
-        "    } else {"
-        "        n * factorial(n - 1);"
-        "    };"
-        "};"
-        "print factorial(5);");
-    EXPECT("120.000000");
-}
+// static int test_functions_recursive() {
+//     SCENARIO(
+//         "val factorial = lambda (n) {"
+//         "    if (n <= 1) {"
+//         "        1;"
+//         "    } else {"
+//         "        n * factorial(n - 1);"
+//         "    };"
+//         "};"
+//         "print factorial(5);");
+//     EXPECT("120.000000");
+// }
 
 static int test_functions_modify_global() {
     SCENARIO(
@@ -346,12 +346,12 @@ static int test_functions_lambda_as_argument() {
     EXPECT("10.000000");
 }
 
-static int test_functions_if_statement_in_lambda() {
-    SCENARIO(
-        "val calculate = lambda (x) { val result = x * 2; if (result > 10) { result + 1; } else { result - 1; } };"
-        "print calculate(6);");
-    EXPECT("13.000000");
-}
+// static int test_functions_if_statement_in_lambda() {
+//     SCENARIO(
+//         "val calculate = lambda (x) { val result = x * 2; if (result > 10) { result + 1; } else { result - 1; } };"
+//         "print calculate(6);");
+//     EXPECT("13.000000");
+// }
 
 static int test_functions_return_in_if_statement() {
     SCENARIO(
@@ -418,6 +418,13 @@ static int test_functions_immediately_invoked() {
         ""); // Should produce an error or unexpected behavior
 }
 */
+
+static int test_functions_chained_calls() {
+    SCENARIO(
+        "val makePrinter = lambda() { lambda(strToPrint) { print strToPrint; }; };"
+        "makePrinter()(\"Success\");");
+    EXPECT("Success")
+}
 
 static int test_if_statements_multiple_ifs() {
     SCENARIO(

@@ -1,11 +1,10 @@
 # SolScript
 
-SolScript is an interpreted, stack-based, prototype-based, garbage-collected programming language.
+SolScript is an interpreted, stack-based programming language. Its syntax draws from Scala and C, and its internal virtual machine is inspired by Python and the JVM.
 
-To get started, clone the repository, run `make` to build the project or `make debug` to include debug logs. Run `./sol` to start the REPL or `./sol program.sol` execute a SolScript program.
+To begin using SolScript, clone the repository and build the project by running `make`. For additional debugging information, use `make debug`. Once built, you can start the REPL by executing `./sol`, or run a SolScript program with `./sol program.sol`.
 
-
-**Important:** SolScript is a [work in progress](https://github.com/CaioCamatta/sol-script?tab=readme-ov-file#v10-release-tracker).
+**Important:** Please note that SolScript is currently [a work in progress](https://github.com/CaioCamatta/sol-script?tab=readme-ov-file#v10) and has only been tested on ARM-based macOS systems.
 
 
 ## Example program
@@ -108,7 +107,7 @@ TOKEN_EOF(lexeme="", line=2, column=2)
 
 ### Syntactical Grammar
 
-The syntactical grammar _should_ be an LALR(2) grammar, i.e. it can be parsed by a left-to-right parser with 2 tokens of look-ahead. In SolScript, a program Source is a series of Statements. Statements use Expressions and Literals. Expressions are evaluated to a Value at run time.
+The syntactical grammar _should_ be an LALR(1) grammar, i.e. it can be parsed by a left-to-right parser with 2 tokens of look-ahead. In SolScript, a program Source is a series of Statements. Statements use Expressions and Literals. Expressions are evaluated to a Value at run time.
 
 This grammar is primarily inspired by the [ANSI C grammar](https://slebok.github.io/zoo/c/c90/sdf/extracted/index.html#Statement), [Lox](https://craftinginterpreters.com/) and Scala.
 
@@ -219,15 +218,10 @@ unary-expression:
   ( "-" )* postfix-expression
 
 postfix-expression:
-  postfix-call-expression
-  postfix-call-expression "." postfix-expression
-  "this" "." postfix-expression
-  identifier "." postfix-expression
-
-postfix-call-expression:
   primary-expression
-  identifier "(" ")"  
-  identifier "(" argument-list ")"  
+  postfix-expression "(" ")"
+  postfix-expression "(" argument-list ")"
+  postfix-expression "." identifier
 
 primary-expression:
   number-literal
@@ -238,6 +232,7 @@ primary-expression:
   "true"
   "false"
   "null"
+  "this"
 
 
 number-literal      # terminal
@@ -320,9 +315,10 @@ Additionally, run time performance is more critical than compilation time perfor
 `test/sol/` - tests written in SolScript
 
 
-## v1.0 Release Tracker
+## Release Tracker
 
-The following features are necessary a proper v1.0 release, in rough order:
+## v1.0 
+To-do before v1.0 is released:
 
  - [x] Design the lexical grammar
  - [x] Design the syntax grammar
@@ -356,10 +352,19 @@ The following features are necessary a proper v1.0 release, in rough order:
  - [ ] Implement closures
  - [ ] Add garbage collector
 
-## v1.1 Tasks
+### v1.1 Tasks
+These tasks are outside the scope of v1:
+
  - [ ] Add native functions
  - [ ] Add benchmark tests
  - [ ] Profile execution and find opportunities for optimization
  - [ ] Add Panic Mode error recovery to compiler
  - [ ] Improve compiler error logging; print line and column
  - [ ] Implement [NaN boxing](https://piotrduperas.com/posts/nan-boxing)
+
+### Small Fixes To implement
+These are smaller-ish items to do at any time:
+
+- [X] Fix chained function calls
+- [ ] If-expressions at the end of function blocks should be used as function return.
+- [ ] Get recursive functions working

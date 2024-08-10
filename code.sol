@@ -1,6 +1,5 @@
-// Errors (on purpose);
-val a = 2;
-va b = 3;
+val a = lambda() {
+    lambda() {print "here";};
+};
 
-prin 2;
-print a;
+a()();
