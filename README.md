@@ -316,9 +316,10 @@ Additionally, run time performance is more critical than compilation time perfor
 `test/sol/` - tests written in SolScript
 
 
-## v1.0 Release Tracker
+## Release Tracker
 
-The following features are necessary a proper v1.0 release, in rough order:
+## v1.0 
+To-do before v1.0 is released:
 
  - [x] Design the lexical grammar
  - [x] Design the syntax grammar
@@ -352,10 +353,18 @@ The following features are necessary a proper v1.0 release, in rough order:
  - [ ] Implement closures
  - [ ] Add garbage collector
 
-## v1.1 Tasks
+### v1.1 Tasks
+These tasks are outside the scope of v1:
+
  - [ ] Add native functions
  - [ ] Add benchmark tests
  - [ ] Profile execution and find opportunities for optimization
  - [ ] Add Panic Mode error recovery to compiler
  - [ ] Improve compiler error logging; print line and column
  - [ ] Implement [NaN boxing](https://piotrduperas.com/posts/nan-boxing)
+
+### Small Fixes To implement
+These are smaller-ish items to do at any time:
+
+- [ ] If-expressions at the end of function blocks should be used as function return.
+- [ ] Get recursive functions working

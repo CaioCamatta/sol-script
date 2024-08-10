@@ -1527,6 +1527,66 @@ int test_compiler_call_expression_nested() {
     return SUCCESS_RETURN_CODE;
 }
 
+int test_compiler_chained_calls() {
+    Source testSource = {
+        .rootStatements = {
+            VAL_DECLARATION_STATEMENT(
+                "add",
+                LAMBDA_EXPRESSION(
+                    IDENTIFIER_ARRAY(
+                        {.token = IDENTIFIER_TOKEN("a")},
+                        {.token = IDENTIFIER_TOKEN("b")}),
+                    ADDITIVE_EXPRESSION(
+                        PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("a")),
+                        TOKEN(TOKEN_PLUS),
+                        PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("b"))))),
+            EXPRESSION_STATEMENT(
+                CALL_EXPRESSION(
+                    CALL_EXPRESSION(
+                        CALL_EXPRESSION(
+                            PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("add")),
+                            EXPRESSION_ARRAY(
+                                PRIMARY_EXPRESSION(NUMBER_LITERAL("1")),
+                                PRIMARY_EXPRESSION(NUMBER_LITERAL("2")))),
+                        EXPRESSION_ARRAY(
+                            PRIMARY_EXPRESSION(NUMBER_LITERAL("3")),
+                            PRIMARY_EXPRESSION(NUMBER_LITERAL("4")))),
+                    EXPRESSION_ARRAY(
+                        PRIMARY_EXPRESSION(NUMBER_LITERAL("5")),
+                        PRIMARY_EXPRESSION(NUMBER_LITERAL("6")))))},
+        .numberOfStatements = 2,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    // Verify the constant pool
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.used == 8);  // 'add', 1, 2, 3, 4, 5, 6
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].type == CONST_TYPE_LAMBDA);
+    ASSERT(strcmp(compiledCode.topLevelCodeObject.constantPool.values[1].as.string, "add") == 0);
+    for (int i = 2; i <= 7; i++) {
+        ASSERT(compiledCode.topLevelCodeObject.constantPool.values[i].type == CONST_TYPE_DOUBLE);
+    }
+
+    // Verify the bytecode for the chained function calls
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[0].type == OP_LAMBDA);             // 'add'
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[1].type == OP_DEFINE_GLOBAL_VAL);  // 'add'
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[2].type == OP_LOAD_CONSTANT);      // 1
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[3].type == OP_LOAD_CONSTANT);      // 2
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[4].type == OP_LOAD_CONSTANT);      // 3
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[5].type == OP_LOAD_CONSTANT);      // 4
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[6].type == OP_LOAD_CONSTANT);      // 5
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[7].type == OP_LOAD_CONSTANT);      // 6
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[8].type == OP_GET_GLOBAL_VAL);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[9].type == OP_CALL);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[10].type == OP_CALL);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[11].type == OP_CALL);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[12].type == OP_POPN);
+
+    FREE_COMPILER
+
+    return SUCCESS_RETURN_CODE;
+}
+
 int test_compiler_lambda_with_return() {
     Source testSource = {
         .rootStatements = {

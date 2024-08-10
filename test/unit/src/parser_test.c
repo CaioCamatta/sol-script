@@ -1817,6 +1817,64 @@ int test_parser_call_in_if_condition() {
     return SUCCESS_RETURN_CODE;
 }
 
+int test_parser_chained_calls() {
+    // add(1, 2)(3, 4)(5, 6)
+    Token tokensArray[] = {
+        createToken(TOKEN_IDENTIFIER, "add"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_NUMBER, "1"),
+        createToken(TOKEN_COMMA, ","),
+        createToken(TOKEN_NUMBER, "2"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_NUMBER, "3"),
+        createToken(TOKEN_COMMA, ","),
+        createToken(TOKEN_NUMBER, "4"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_NUMBER, "5"),
+        createToken(TOKEN_COMMA, ","),
+        createToken(TOKEN_NUMBER, "6"),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_SEMICOLON, ")"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = sizeof(tokensArray) / sizeof(Token),
+        .size = sizeof(tokensArray) / sizeof(Token)};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* stmt = source->rootStatements[0];
+    ASSERT(stmt->type == EXPRESSION_STATEMENT);
+
+    Expression* expr = stmt->as.expressionStatement->expression;
+    ASSERT(expr->type == CALL_EXPRESSION);
+
+    CallExpression* call1 = expr->as.callExpression;
+    ASSERT(call1->arguments->used == 2);
+    ASSERT(call1->leftHandSide->type == CALL_EXPRESSION);
+
+    CallExpression* call2 = call1->leftHandSide->as.callExpression;
+    ASSERT(call2->arguments->used == 2);
+    ASSERT(call2->leftHandSide->type == CALL_EXPRESSION);
+
+    CallExpression* call3 = call2->leftHandSide->as.callExpression;
+    ASSERT(call3->arguments->used == 2);
+    ASSERT(call3->leftHandSide->type == PRIMARY_EXPRESSION);
+
+    PrimaryExpression* primary = call3->leftHandSide->as.primaryExpression;
+    ASSERT(primary->literal->type == IDENTIFIER_LITERAL);
+    ASSERT(strcmp(primary->literal->as.identifierLiteral->token.start, "add") == 0);
+
+    freeSource(source);
+    freeParser(&parser);
+
+    return SUCCESS_RETURN_CODE;
+}
+
 int test_parser_simple_return() {
     // return 42;
     Token tokensArray[] = {
