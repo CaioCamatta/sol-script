@@ -43,7 +43,7 @@ static void runtimeError(CallFrame* callframe, const char* format, ...) {
     va_start(args, format);
     fprintf(stderr, KRED);
     vfprintf(stderr, format, args);
-    fprintf(stderr, RESET);
+    fprintf(stderr, RESET "\n");
     va_end(args);
 
     // TODO: make this not exit during a REPL session.

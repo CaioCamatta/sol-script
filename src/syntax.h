@@ -25,6 +25,7 @@ typedef struct UnaryExpression UnaryExpression;
 typedef struct PrimaryExpression PrimaryExpression;
 typedef struct LambdaExpression LambdaExpression;
 typedef struct CallExpression CallExpression;
+typedef struct MemberExpression MemberExpression;
 typedef struct BooleanLiteral BooleanLiteral;
 typedef struct NumberLiteral NumberLiteral;
 typedef struct IdentifierLiteral IdentifierLiteral;
@@ -51,18 +52,19 @@ typedef enum {
     COMPARISON_EXPRESSION,      // Stack effect: -1
     ADDITIVE_EXPRESSION,        // Stack effect: -1
     MULTIPLICATIVE_EXPRESSION,  // Stack effect: -1
-    BLOCK_EXPRESSION,           // Stack effect: 0 per se
+    BLOCK_EXPRESSION,           // Stack effect: 1
     UNARY_EXPRESSION,           // Stack effect: 0
-    PRIMARY_EXPRESSION,         // Stack effect: 0 per se
+    PRIMARY_EXPRESSION,         // Stack effect: 0
     LAMBDA_EXPRESSION,          // Stack effect: 1
-    CALL_EXPRESSION             // Stack effect: 1
+    CALL_EXPRESSION,            // Stack effect: 1
+    MEMBER_EXPRESSION           // Stack effect: 0
 } ExpressionType;
 
 typedef enum {
-    BOOLEAN_LITERAL,     // Stack effect: +1
-    NUMBER_LITERAL,      // Stack effect: +1
-    IDENTIFIER_LITERAL,  // Stack effect: +1
-    STRING_LITERAL       // Stack effect: +1
+    BOOLEAN_LITERAL,     // Stack effect: 1
+    NUMBER_LITERAL,      // Stack effect: 1
+    IDENTIFIER_LITERAL,  // Stack effect: 1
+    STRING_LITERAL       // Stack effect: 1
 } LiteralType;
 
 // --- Abstract productions ---
@@ -95,6 +97,7 @@ typedef struct {
         PrimaryExpression *primaryExpression;
         LambdaExpression *lambdaExpression;
         CallExpression *callExpression;
+        MemberExpression *memberExpression;
     } as;
 } Expression;
 
@@ -224,8 +227,12 @@ typedef struct {
 } ExpressionArray;
 
 struct CallExpression {
-    IdentifierLiteral *lambdaFunctionName;
+    Expression *leftHandSide;
     ExpressionArray *arguments;  // May be an empty array
+};
+struct MemberExpression {
+    Expression *leftHandSide;
+    Expression *rightHandSide;
 };
 
 struct BooleanLiteral {

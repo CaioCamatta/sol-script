@@ -70,11 +70,6 @@ static bool check(ASTParser* parser, TokenType type) {
     return parser->current->type == type;
 }
 
-/* Check if the next token is of a given type. */
-static bool checkNext(ASTParser* parser, TokenType type) {
-    return (parser->current->type != TOKEN_EOF && (parser->current + 1)->type == type);
-}
-
 /* Consume current token if it's of a given type. Returns true if a token was consumed and false otherwise. */
 static bool match(ASTParser* parser, TokenType type) {
     if (check(parser, type)) {
@@ -314,41 +309,58 @@ static ExpressionArray* argumentList(ASTParser* parser) {
 }
 
 /**
- * postfix-call-expression:
- *  primary-expression
- *  identifier "(" ")"
- *  identifier "(" argument-list ")"
- */
-static Expression* postfixCallExpression(ASTParser* parser) {
-    if (check(parser, TOKEN_IDENTIFIER) && checkNext(parser, TOKEN_LEFT_PAREN)) {
-        CallExpression* postfixCallExpr = allocateASTNode(CallExpression);
-
-        // Parse function name
-        postfixCallExpr->lambdaFunctionName = identifierLiteral(parser)->as.identifierLiteral;
-
-        // Parse optional arguments
-        consume(parser, TOKEN_LEFT_PAREN, "Impossible. Expected '(' in postfix-call-expression.");
-        postfixCallExpr->arguments = argumentList(parser);
-        consume(parser, TOKEN_RIGHT_PAREN, "Expected ')' after lambda parameters.");
-
-        Expression* expr = allocateASTNode(Expression);
-        expr->type = CALL_EXPRESSION;
-        expr->as.callExpression = postfixCallExpr;
-
-        return expr;
-    }
-    return primaryExpression(parser);
-}
-
-/**
  * postfix-expression:
- *  postfix-call-expression
- *  postfix-call-expression "." postfix-expression
+ *  primary-expression
+ *  postfix-expression "(" ")"
+ *  postfix-expression "(" argument-list ")"
+ *  postfix-expression "." identifier
  *  "this" "." postfix-expression
- *  identifier "." postfix-expression
+ *
+ * Note: postfixExpression() is slightly different than other parsing functions because it can return
+ * different types of AST nodes (e.g. CallExpression, MemberExpression). This is fine; Sol combines its
+ * concrete tree parser and abstract syntax tree parser.
  */
+
 static Expression* postfixExpression(ASTParser* parser) {
-    return postfixCallExpression(parser);
+    Expression* expr = primaryExpression(parser);
+
+    while (true) {
+        if (match(parser, TOKEN_LEFT_PAREN)) {
+            // Function call
+            CallExpression* callExpr = allocateASTNode(CallExpression);
+            callExpr->leftHandSide = expr;
+            callExpr->arguments = argumentList(parser);
+
+            consume(parser, TOKEN_RIGHT_PAREN, "Expected ')' after arguments.");
+
+            expr = allocateASTNode(Expression);
+            expr->type = CALL_EXPRESSION;
+            expr->as.callExpression = callExpr;
+        } else if (match(parser, TOKEN_DOT)) {
+            // Member access
+            Token* identifier = consume(parser, TOKEN_IDENTIFIER, "Expected an identifier after '.'.");
+
+            MemberExpression* memberExpr = allocateASTNode(MemberExpression);
+            memberExpr->leftHandSide = expr;
+
+            IdentifierLiteral* identifierLiteral = allocateASTNode(IdentifierLiteral);
+            identifierLiteral->token = *identifier;
+
+            Expression* identifierExpr = allocateASTNode(Expression);
+            identifierExpr->type = PRIMARY_EXPRESSION;
+            identifierExpr->as.primaryExpression = allocateASTNode(PrimaryExpression);
+            identifierExpr->as.primaryExpression->literal = allocateASTNode(Literal);
+            identifierExpr->as.primaryExpression->literal->type = IDENTIFIER_LITERAL;
+            identifierExpr->as.primaryExpression->literal->as.identifierLiteral = identifierLiteral;
+
+            expr = allocateASTNode(Expression);
+            expr->type = MEMBER_EXPRESSION;
+            expr->as.memberExpression = memberExpr;
+        } else {
+            break;
+        }
+    }
+    return expr;
 }
 
 /**

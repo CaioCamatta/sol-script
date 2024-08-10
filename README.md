@@ -108,7 +108,7 @@ TOKEN_EOF(lexeme="", line=2, column=2)
 
 ### Syntactical Grammar
 
-The syntactical grammar _should_ be an LALR(2) grammar, i.e. it can be parsed by a left-to-right parser with 2 tokens of look-ahead. In SolScript, a program Source is a series of Statements. Statements use Expressions and Literals. Expressions are evaluated to a Value at run time.
+The syntactical grammar _should_ be an LALR(1) grammar, i.e. it can be parsed by a left-to-right parser with 2 tokens of look-ahead. In SolScript, a program Source is a series of Statements. Statements use Expressions and Literals. Expressions are evaluated to a Value at run time.
 
 This grammar is primarily inspired by the [ANSI C grammar](https://slebok.github.io/zoo/c/c90/sdf/extracted/index.html#Statement), [Lox](https://craftinginterpreters.com/) and Scala.
 
@@ -219,15 +219,10 @@ unary-expression:
   ( "-" )* postfix-expression
 
 postfix-expression:
-  postfix-call-expression
-  postfix-call-expression "." postfix-expression
-  "this" "." postfix-expression
-  identifier "." postfix-expression
-
-postfix-call-expression:
   primary-expression
-  identifier "(" ")"  
-  identifier "(" argument-list ")"  
+  postfix-expression "(" ")"
+  postfix-expression "(" argument-list ")"
+  postfix-expression "." identifier
 
 primary-expression:
   number-literal
@@ -238,6 +233,7 @@ primary-expression:
   "true"
   "false"
   "null"
+  "this"
 
 
 number-literal      # terminal

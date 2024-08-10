@@ -703,11 +703,8 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
 
 /**
  * Call a lambda function.
- *  1) Put all arguments on the stack; the bottommost one is the first argument.
- *  2) Verify function exists in lexical scope
- *  3) TODO: Check that identifier being called is actually a calalble
- *  4) TODO: Check arity
- *  5) Emit bytecode to put function object being caled on the stack.
+ *  1) Put left-hand side on the stack. Usually, this is a variable.
+ *  1) Put all arguments on the stack.
  *  6) Emit bytecode to execute the function object
  */
 static void visitCallExpression(CompilerUnit* compiler, CallExpression* callExpression) {
@@ -716,39 +713,15 @@ static void visitCallExpression(CompilerUnit* compiler, CallExpression* callExpr
         visitExpression(compiler, callExpression->arguments->values[i]);
     }
 
-    // Verify that the identifier being called exists in the lexical scope
-    char* identifierNameNullTerminated = strndup(callExpression->lambdaFunctionName->token.start, callExpression->lambdaFunctionName->token.length);
-    int functionIndex = findLocalByName(compiler, identifierNameNullTerminated);
-    Constant functionNameConstant = IDENTIFIER_CONST(identifierNameNullTerminated);
-
-    if (functionIndex == -1) {
-        // It's not a local variable, so we check if it's a global
-        if (!isGlobalInTable(compiler, functionNameConstant.as.string)) errorAndExit(compiler, "Identifier '%s' referenced before declaration.", functionNameConstant.as.string);
-
-        // Then check whether the name is in the current constant pool.
-        // If it's not, we add it. This can happen when compiling a function; the actual
-        // Constant corresponding to the global might be in an enclosing constant pool.
-        int index = addConstantToPool(compiler, functionNameConstant);
-
-        // Emit bytecode to load the function object onto the stack
-        Bytecode bytecodeToGetVariable = isGlobalConstant(compiler, functionNameConstant.as.string)
-                                             ? BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index)
-                                             : BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, index);
-        emitBytecode(compiler, bytecodeToGetVariable);
-    } else {
-        Bytecode bytecodeToGetVariable = isLocalConstant(compiler, functionNameConstant.as.string)
-                                             ? BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, functionIndex)
-                                             : BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, functionIndex);
-        emitBytecode(compiler, bytecodeToGetVariable);
-    }
+    // Compile the left-hand side expression
+    visitExpression(compiler, callExpression->leftHandSide);
 
     // The call will put a value on the stack (even if its null)
     increaseStackHeight(compiler);
 
-    // TODO: Add compile-time type check. Only functions should be callable. (This could be done by adding
-    // a type field to the Local struct)
-
-    // TODO: Add arity check.
+    // Note: It would be nice to do compile-time arity and type check here. Type-checking
+    // could be done by adding a type field to the Local/Global struct, then checking here
+    // that the local/global being called is actually *callable*.
 
     // Emit bytecode for the function call
     emitBytecode(compiler, BYTECODE(OP_CALL));

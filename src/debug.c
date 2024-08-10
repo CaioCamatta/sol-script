@@ -286,14 +286,8 @@ static void printExpression(const Expression* expression, int depth) {
         case CALL_EXPRESSION: {
             CallExpression* callExpr = expression->as.callExpression;
             printf("CallExpression" KGRY "(numberOfArguments=%hhu)\n" RESET, callExpr->arguments->used);
-            printIndent(depth + 1);
-            printf("FunctionName\n");
 
-            Literal* tempLiteral = (Literal*)malloc(sizeof(Literal));
-            tempLiteral->type = IDENTIFIER_LITERAL;
-            tempLiteral->as.identifierLiteral = callExpr->lambdaFunctionName;
-            printLiteral(tempLiteral, depth + 2);
-            free(tempLiteral);
+            printExpression(callExpr->leftHandSide, depth + 1);
 
             printIndent(depth + 1);
             printf("Arguments" KGRY "(numberOfArguments=%hhu)\n" RESET, callExpr->arguments->used);

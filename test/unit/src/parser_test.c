@@ -1332,13 +1332,13 @@ int test_parser_call_with_args() {
     Statement* callAlice = source->rootStatements[1];
     ASSERT(callAlice->type == EXPRESSION_STATEMENT);
     ASSERT(callAlice->as.expressionStatement->expression->type == CALL_EXPRESSION);
-    ASSERT(strcmp(callAlice->as.expressionStatement->expression->as.callExpression->lambdaFunctionName->token.start, "greet") == 0);
+    ASSERT(strcmp(callAlice->as.expressionStatement->expression->as.callExpression->leftHandSide->as.primaryExpression->literal->as.identifierLiteral->token.start, "greet") == 0);
     ASSERT(callAlice->as.expressionStatement->expression->as.callExpression->arguments->used == 1);
 
     Statement* callBob = source->rootStatements[2];
     ASSERT(callBob->type == EXPRESSION_STATEMENT);
     ASSERT(callBob->as.expressionStatement->expression->type == CALL_EXPRESSION);
-    ASSERT(strcmp(callBob->as.expressionStatement->expression->as.callExpression->lambdaFunctionName->token.start, "greet") == 0);
+    ASSERT(strcmp(callBob->as.expressionStatement->expression->as.callExpression->leftHandSide->as.primaryExpression->literal->as.identifierLiteral->token.start, "greet") == 0);
     ASSERT(callBob->as.expressionStatement->expression->as.callExpression->arguments->used == 1);
 
     freeSource(source);
@@ -1392,7 +1392,7 @@ int test_parser_call_in_binary_expression() {
     Expression* addExpr = valResult->as.valDeclarationStatement->expression;
     ASSERT(addExpr->type == ADDITIVE_EXPRESSION);
     ASSERT(addExpr->as.additiveExpression->leftExpression->type == CALL_EXPRESSION);
-    ASSERT(strcmp(addExpr->as.additiveExpression->leftExpression->as.callExpression->lambdaFunctionName->token.start, "double") == 0);
+    ASSERT(strcmp(addExpr->as.additiveExpression->leftExpression->as.callExpression->leftHandSide->as.primaryExpression->literal->as.identifierLiteral->token.start, "double") == 0);
     ASSERT(addExpr->as.additiveExpression->leftExpression->as.callExpression->arguments->used == 1);
     ASSERT(addExpr->as.additiveExpression->rightExpression->type == PRIMARY_EXPRESSION);
     ASSERT(addExpr->as.additiveExpression->rightExpression->as.primaryExpression->literal->type == NUMBER_LITERAL);
@@ -1438,7 +1438,7 @@ int test_parser_call_no_args() {
 
     Expression* callExpr = callMyFunc->as.expressionStatement->expression;
     ASSERT(callExpr->type == CALL_EXPRESSION);
-    ASSERT(strcmp(callExpr->as.callExpression->lambdaFunctionName->token.start, "myFunc") == 0);
+    ASSERT(strcmp(callExpr->as.callExpression->leftHandSide->as.primaryExpression->literal->as.identifierLiteral->token.start, "myFunc") == 0);
     ASSERT(callExpr->as.callExpression->arguments->used == 0);
 
     freeSource(source);
@@ -1508,7 +1508,7 @@ int test_parser_recursive_call() {
     Expression* recursiveCallExpr = ifStmt->as.selectionStatement->falseStatement->as.blockStatement->statementArray.values[0]->as.expressionStatement->expression;
     ASSERT(recursiveCallExpr->type == MULTIPLICATIVE_EXPRESSION);
     ASSERT(recursiveCallExpr->as.multiplicativeExpression->rightExpression->type == CALL_EXPRESSION);
-    ASSERT(strcmp(recursiveCallExpr->as.multiplicativeExpression->rightExpression->as.callExpression->lambdaFunctionName->token.start, "factorial") == 0);
+    ASSERT(strcmp(recursiveCallExpr->as.multiplicativeExpression->rightExpression->as.callExpression->leftHandSide->as.primaryExpression->literal->as.identifierLiteral->token.start, "factorial") == 0);
     ASSERT(recursiveCallExpr->as.multiplicativeExpression->rightExpression->as.callExpression->arguments->used == 1);
 
     freeSource(source);
@@ -1574,7 +1574,7 @@ int test_parser_call_with_block_expression_arg() {
 
     Expression* callExpr = valResult->as.valDeclarationStatement->expression;
     ASSERT(callExpr->type == CALL_EXPRESSION);
-    ASSERT(strcmp(callExpr->as.callExpression->lambdaFunctionName->token.start, "applyOperation") == 0);
+    ASSERT(strcmp(callExpr->as.callExpression->leftHandSide->as.primaryExpression->literal->as.identifierLiteral->token.start, "applyOperation") == 0);
     ASSERT(callExpr->as.callExpression->arguments->used == 2);
     ASSERT(callExpr->as.callExpression->arguments->values[1]->type == LAMBDA_EXPRESSION);
 
@@ -1645,12 +1645,12 @@ int test_parser_nested_calls() {
 
     Expression* callMultiplyByThree = valResult->as.valDeclarationStatement->expression;
     ASSERT(callMultiplyByThree->type == CALL_EXPRESSION);
-    ASSERT(strcmp(callMultiplyByThree->as.callExpression->lambdaFunctionName->token.start, "multiplyByThree") == 0);
+    ASSERT(strcmp(callMultiplyByThree->as.callExpression->leftHandSide->as.primaryExpression->literal->as.identifierLiteral->token.start, "multiplyByThree") == 0);
     ASSERT(callMultiplyByThree->as.callExpression->arguments->used == 1);
 
     Expression* callAddTwo = callMultiplyByThree->as.callExpression->arguments->values[0];
     ASSERT(callAddTwo->type == CALL_EXPRESSION);
-    ASSERT(strcmp(callAddTwo->as.callExpression->lambdaFunctionName->token.start, "addTwo") == 0);
+    ASSERT(strcmp(callAddTwo->as.callExpression->leftHandSide->as.primaryExpression->literal->as.identifierLiteral->token.start, "addTwo") == 0);
     ASSERT(callAddTwo->as.callExpression->arguments->used == 1);
     ASSERT(callAddTwo->as.callExpression->arguments->values[0]->type == PRIMARY_EXPRESSION);
     ASSERT(callAddTwo->as.callExpression->arguments->values[0]->as.primaryExpression->literal->type == NUMBER_LITERAL);
@@ -1725,7 +1725,7 @@ int test_parser_call_with_expression_args() {
 
     Expression* callExpr = valResult->as.valDeclarationStatement->expression;
     ASSERT(callExpr->type == CALL_EXPRESSION);
-    ASSERT(strcmp(callExpr->as.callExpression->lambdaFunctionName->token.start, "sum") == 0);
+    ASSERT(strcmp(callExpr->as.callExpression->leftHandSide->as.primaryExpression->literal->as.identifierLiteral->token.start, "sum") == 0);
     ASSERT(callExpr->as.callExpression->arguments->used == 2);
 
     Expression* firstArg = callExpr->as.callExpression->arguments->values[0];
@@ -1806,7 +1806,7 @@ int test_parser_call_in_if_condition() {
 
     Expression* conditionExpr = ifStmt->as.selectionStatement->conditionExpression;
     ASSERT(conditionExpr->type == CALL_EXPRESSION);
-    ASSERT(strcmp(conditionExpr->as.callExpression->lambdaFunctionName->token.start, "isTen") == 0);
+    ASSERT(strcmp(conditionExpr->as.callExpression->leftHandSide->as.primaryExpression->literal->as.identifierLiteral->token.start, "isTen") == 0);
     ASSERT(conditionExpr->as.callExpression->arguments->used == 1);
     ASSERT(conditionExpr->as.callExpression->arguments->values[0]->type == PRIMARY_EXPRESSION);
     ASSERT(strcmp(conditionExpr->as.callExpression->arguments->values[0]->as.primaryExpression->literal->as.identifierLiteral->token.start, "num") == 0);

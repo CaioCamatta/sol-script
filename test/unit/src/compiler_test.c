@@ -279,14 +279,13 @@
         }                                                                 \
     }
 
-#define CALL_EXPRESSION(functionName, argumentsArg)                                                                 \
-    &(Expression) {                                                                                                 \
-        .type = CALL_EXPRESSION,                                                                                    \
-        .as.callExpression = &(CallExpression) {                                                                    \
-            .lambdaFunctionName = &(IdentifierLiteral){                                                             \
-                .token = (Token){.type = TOKEN_IDENTIFIER, .start = functionName, .length = strlen(functionName)}}, \
-            .arguments = argumentsArg                                                                               \
-        }                                                                                                           \
+#define CALL_EXPRESSION(leftHandSideExpr, argumentsArg) \
+    &(Expression) {                                     \
+        .type = CALL_EXPRESSION,                        \
+        .as.callExpression = &(CallExpression) {        \
+            .leftHandSide = (leftHandSideExpr),         \
+            .arguments = (argumentsArg)                 \
+        }                                               \
     }
 
 // Helper macro for creating IdentifierArray
@@ -1439,7 +1438,7 @@ int test_compiler_call_expression_simple() {
             VAL_DECLARATION_STATEMENT(
                 "result",
                 CALL_EXPRESSION(
-                    "add",
+                    PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("add")),
                     EXPRESSION_ARRAY(
                         PRIMARY_EXPRESSION(NUMBER_LITERAL("5")),
                         PRIMARY_EXPRESSION(NUMBER_LITERAL("3")))))},
@@ -1492,10 +1491,10 @@ int test_compiler_call_expression_nested() {
                         PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("b"))))),
             VAL_DECLARATION_STATEMENT(
                 "result",
-                CALL_EXPRESSION("add",
+                CALL_EXPRESSION(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("add")),
                                 EXPRESSION_ARRAY(
                                     PRIMARY_EXPRESSION(NUMBER_LITERAL("5")),
-                                    CALL_EXPRESSION("multiply",
+                                    CALL_EXPRESSION(PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("multiply")),
                                                     EXPRESSION_ARRAY(
                                                         PRIMARY_EXPRESSION(NUMBER_LITERAL("3")),
                                                         PRIMARY_EXPRESSION(NUMBER_LITERAL("2")))))))},
