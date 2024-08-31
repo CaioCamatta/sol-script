@@ -2039,3 +2039,151 @@ int test_parser_multiple_returns() {
     freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
+
+int test_parser_member_expression_simple() {
+    // a.b;
+    Token tokensArray[] = {
+        createToken(TOKEN_IDENTIFIER, "a"),
+        createToken(TOKEN_DOT, "."),
+        createToken(TOKEN_IDENTIFIER, "b"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = sizeof(tokensArray) / sizeof(Token),
+        .size = sizeof(tokensArray) / sizeof(Token)};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* stmt = source->rootStatements[0];
+    ASSERT(stmt->type == EXPRESSION_STATEMENT);
+    Expression* expr = stmt->as.expressionStatement->expression;
+    ASSERT(expr->type == MEMBER_EXPRESSION);
+    ASSERT(expr->as.memberExpression->leftHandSide->type == PRIMARY_EXPRESSION);
+    ASSERT(expr->as.memberExpression->leftHandSide->as.primaryExpression->literal->type == IDENTIFIER_LITERAL);
+    ASSERT(strcmp(expr->as.memberExpression->leftHandSide->as.primaryExpression->literal->as.identifierLiteral->token.start, "a") == 0);
+    ASSERT(expr->as.memberExpression->rightHandSide->type == PRIMARY_EXPRESSION);
+    ASSERT(expr->as.memberExpression->rightHandSide->as.primaryExpression->literal->type == IDENTIFIER_LITERAL);
+    ASSERT(strcmp(expr->as.memberExpression->rightHandSide->as.primaryExpression->literal->as.identifierLiteral->token.start, "b") == 0);
+
+    freeSource(source);
+    freeParser(&parser);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_member_and_call_expression() {
+    // a.b();
+    Token tokensArray[] = {
+        createToken(TOKEN_IDENTIFIER, "a"),
+        createToken(TOKEN_DOT, "."),
+        createToken(TOKEN_IDENTIFIER, "b"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = sizeof(tokensArray) / sizeof(Token),
+        .size = sizeof(tokensArray) / sizeof(Token)};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* stmt = source->rootStatements[0];
+    ASSERT(stmt->type == EXPRESSION_STATEMENT);
+    Expression* expr = stmt->as.expressionStatement->expression;
+    ASSERT(expr->type == CALL_EXPRESSION);
+    ASSERT(expr->as.callExpression->leftHandSide->type == MEMBER_EXPRESSION);
+    ASSERT(expr->as.callExpression->leftHandSide->as.memberExpression->leftHandSide->type == PRIMARY_EXPRESSION);
+    ASSERT(expr->as.callExpression->leftHandSide->as.memberExpression->leftHandSide->as.primaryExpression->literal->type == IDENTIFIER_LITERAL);
+    ASSERT(strcmp(expr->as.callExpression->leftHandSide->as.memberExpression->leftHandSide->as.primaryExpression->literal->as.identifierLiteral->token.start, "a") == 0);
+    ASSERT(expr->as.callExpression->leftHandSide->as.memberExpression->rightHandSide->type == PRIMARY_EXPRESSION);
+    ASSERT(expr->as.callExpression->leftHandSide->as.memberExpression->rightHandSide->as.primaryExpression->literal->type == IDENTIFIER_LITERAL);
+    ASSERT(strcmp(expr->as.callExpression->leftHandSide->as.memberExpression->rightHandSide->as.primaryExpression->literal->as.identifierLiteral->token.start, "b") == 0);
+    ASSERT(expr->as.callExpression->arguments->used == 0);
+
+    freeSource(source);
+    freeParser(&parser);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_complex_member_and_call_expression() {
+    // a().b().c;
+    Token tokensArray[] = {
+        createToken(TOKEN_IDENTIFIER, "a"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_DOT, "."),
+        createToken(TOKEN_IDENTIFIER, "b"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_DOT, "."),
+        createToken(TOKEN_IDENTIFIER, "c"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = sizeof(tokensArray) / sizeof(Token),
+        .size = sizeof(tokensArray) / sizeof(Token)};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* stmt = source->rootStatements[0];
+    ASSERT(stmt->type == EXPRESSION_STATEMENT);
+    Expression* expr = stmt->as.expressionStatement->expression;
+    ASSERT(expr->type == MEMBER_EXPRESSION);
+    ASSERT(expr->as.memberExpression->leftHandSide->type == CALL_EXPRESSION);
+    ASSERT(expr->as.memberExpression->leftHandSide->as.callExpression->leftHandSide->type == MEMBER_EXPRESSION);
+    ASSERT(expr->as.memberExpression->leftHandSide->as.callExpression->leftHandSide->as.memberExpression->leftHandSide->type == CALL_EXPRESSION);
+    ASSERT(expr->as.memberExpression->leftHandSide->as.callExpression->leftHandSide->as.memberExpression->leftHandSide->as.callExpression->leftHandSide->type == PRIMARY_EXPRESSION);
+    ASSERT(expr->as.memberExpression->leftHandSide->as.callExpression->leftHandSide->as.memberExpression->leftHandSide->as.callExpression->leftHandSide->as.primaryExpression->literal->type == IDENTIFIER_LITERAL);
+    ASSERT(strcmp(expr->as.memberExpression->leftHandSide->as.callExpression->leftHandSide->as.memberExpression->leftHandSide->as.callExpression->leftHandSide->as.primaryExpression->literal->as.identifierLiteral->token.start, "a") == 0);
+    ASSERT(expr->as.memberExpression->rightHandSide->type == PRIMARY_EXPRESSION);
+    ASSERT(expr->as.memberExpression->rightHandSide->as.primaryExpression->literal->type == IDENTIFIER_LITERAL);
+    ASSERT(strcmp(expr->as.memberExpression->rightHandSide->as.primaryExpression->literal->as.identifierLiteral->token.start, "c") == 0);
+
+    freeSource(source);
+    freeParser(&parser);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_nested_call_expression() {
+    // a()()();
+    Token tokensArray[] = {
+        createToken(TOKEN_IDENTIFIER, "a"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_LEFT_PAREN, "("),
+        createToken(TOKEN_RIGHT_PAREN, ")"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = sizeof(tokensArray) / sizeof(Token),
+        .size = sizeof(tokensArray) / sizeof(Token)};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* stmt = source->rootStatements[0];
+    ASSERT(stmt->type == EXPRESSION_STATEMENT);
+    Expression* expr = stmt->as.expressionStatement->expression;
+    ASSERT(expr->type == CALL_EXPRESSION);
+    ASSERT(expr->as.callExpression->leftHandSide->type == CALL_EXPRESSION);
+    ASSERT(expr->as.callExpression->leftHandSide->as.callExpression->leftHandSide->type == CALL_EXPRESSION);
+    ASSERT(expr->as.callExpression->leftHandSide->as.callExpression->leftHandSide->as.callExpression->leftHandSide->type == PRIMARY_EXPRESSION);
+    ASSERT(expr->as.callExpression->leftHandSide->as.callExpression->leftHandSide->as.callExpression->leftHandSide->as.primaryExpression->literal->type == IDENTIFIER_LITERAL);
+    ASSERT(strcmp(expr->as.callExpression->leftHandSide->as.callExpression->leftHandSide->as.callExpression->leftHandSide->as.primaryExpression->literal->as.identifierLiteral->token.start, "a") == 0);
+
+    freeSource(source);
+    freeParser(&parser);
+    return SUCCESS_RETURN_CODE;
+}
