@@ -296,6 +296,13 @@ static void printExpression(const Expression* expression, int depth) {
             }
             break;
         }
+        case MEMBER_EXPRESSION: {
+            MemberExpression* memberExpr = expression->as.memberExpression;
+            printf("MemberExpression\n");
+            printExpression(memberExpr->leftHandSide, depth + 1);
+            printExpression(memberExpr->rightHandSide, depth + 1);
+            break;
+        }
     }
 }
 
