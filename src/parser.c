@@ -337,7 +337,7 @@ static Expression* postfixExpression(ASTParser* parser) {
             expr->as.callExpression = callExpr;
         } else if (match(parser, TOKEN_DOT)) {
             // Member access
-            Token* identifier = consume(parser, TOKEN_IDENTIFIER, "Expected an identifier after '.'.");
+            Token* identifier = consume(parser, TOKEN_IDENTIFIER, "Expected an identifier after '.' in member expression.");
 
             MemberExpression* memberExpr = allocateASTNode(MemberExpression);
             memberExpr->leftHandSide = expr;
@@ -351,6 +351,8 @@ static Expression* postfixExpression(ASTParser* parser) {
             identifierExpr->as.primaryExpression->literal = allocateASTNode(Literal);
             identifierExpr->as.primaryExpression->literal->type = IDENTIFIER_LITERAL;
             identifierExpr->as.primaryExpression->literal->as.identifierLiteral = identifierLiteral;
+
+            memberExpr->rightHandSide = identifierExpr;
 
             expr = allocateASTNode(Expression);
             expr->type = MEMBER_EXPRESSION;

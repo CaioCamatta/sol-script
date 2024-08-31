@@ -65,6 +65,10 @@ void all_unit_tests() {
     RUN_TEST(test_parser_return_without_expression);
     RUN_TEST(test_parser_return_in_lambda);
     RUN_TEST(test_parser_multiple_returns);
+    RUN_TEST(test_parser_member_expression_simple);
+    RUN_TEST(test_parser_member_and_call_expression);
+    RUN_TEST(test_parser_complex_member_and_call_expression);
+    RUN_TEST(test_parser_nested_call_expression);
 
     // Compiler tests
     RUN_TEST(test_compiler);
