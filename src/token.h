@@ -16,6 +16,7 @@ typedef enum {
     TOKEN_PRINT,
     TOKEN_WHILE,
     TOKEN_LAMBDA,
+    TOKEN_PROTOTYPE,
 
     // Identifier
     TOKEN_IDENTIFIER,
@@ -49,6 +50,7 @@ typedef enum {
     TOKEN_AND_AND,
     TOKEN_SEMICOLON,
     TOKEN_COMMA,
+    TOKEN_COLON,
 
     // Special tokens
     TOKEN_ERROR,

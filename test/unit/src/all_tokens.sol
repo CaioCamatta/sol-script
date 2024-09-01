@@ -11,6 +11,7 @@ var
 print
 while
 lambda
+prototype
 
 // Identifier
 valName
@@ -44,6 +45,7 @@ valName
 &&
 ;
 ,
+:
 
 // Special tokens
 "unterminatedString
