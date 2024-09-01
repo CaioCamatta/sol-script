@@ -143,6 +143,7 @@ static Token identifierOrKeyword(Scanner* scanner) {
         }
         case 'p':
             matchKeyword(scanner, "print", TOKEN_PRINT);
+            matchKeyword(scanner, "prototype", TOKEN_PROTOTYPE);
         case 'r':
             matchKeyword(scanner, "return", TOKEN_RETURN);
         case 't':
@@ -243,6 +244,8 @@ Token scanNext(Scanner* scanner) {
                 return makeToken(scanner, TOKEN_AND_AND);
         case ';':
             return makeToken(scanner, TOKEN_SEMICOLON);
+        case ':':
+            return makeToken(scanner, TOKEN_COLON);
         case ',':
             return makeToken(scanner, TOKEN_COMMA);
     }

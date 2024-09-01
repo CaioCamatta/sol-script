@@ -1,6 +1,8 @@
 #ifndef sol_script_syntax_h
 #define sol_script_syntax_h
 
+#include <stdbool.h>
+
 #include "token.h"
 #include "util/array.h"
 
@@ -26,6 +28,7 @@ typedef struct PrimaryExpression PrimaryExpression;
 typedef struct LambdaExpression LambdaExpression;
 typedef struct CallExpression CallExpression;
 typedef struct MemberExpression MemberExpression;
+typedef struct StructExpression StructExpression;
 typedef struct BooleanLiteral BooleanLiteral;
 typedef struct NumberLiteral NumberLiteral;
 typedef struct IdentifierLiteral IdentifierLiteral;
@@ -57,7 +60,8 @@ typedef enum {
     PRIMARY_EXPRESSION,         // Stack effect: 0
     LAMBDA_EXPRESSION,          // Stack effect: 1
     CALL_EXPRESSION,            // Stack effect: 1
-    MEMBER_EXPRESSION           // Stack effect: 0
+    MEMBER_EXPRESSION,          // Stack effect: 0
+    STRUCT_EXPRESSION,          // Stack effect: 1
 } ExpressionType;
 
 typedef enum {
@@ -98,6 +102,7 @@ typedef struct {
         LambdaExpression *lambdaExpression;
         CallExpression *callExpression;
         MemberExpression *memberExpression;
+        StructExpression *structExpression;
     } as;
 } Expression;
 
@@ -233,6 +238,22 @@ struct CallExpression {
 struct MemberExpression {
     Expression *leftHandSide;
     Expression *rightHandSide;
+};
+
+typedef struct {
+    bool isPrototype;
+    IdentifierLiteral *identifier;
+    Expression *maybeExpression;  // Only present if not a prototype
+} StructDeclaration;
+
+typedef struct {
+    StructDeclaration **values;
+    size_t used;
+    size_t size;
+} StructDeclarationArray;
+
+struct StructExpression {
+    StructDeclarationArray declarationArray;
 };
 
 struct BooleanLiteral {

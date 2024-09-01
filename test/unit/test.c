@@ -69,6 +69,10 @@ void all_unit_tests() {
     RUN_TEST(test_parser_member_and_call_expression);
     RUN_TEST(test_parser_complex_member_and_call_expression);
     RUN_TEST(test_parser_nested_call_expression);
+    RUN_TEST(test_parser_empty_struct);
+    RUN_TEST(test_parser_struct_with_single_declaration);
+    RUN_TEST(test_parser_struct_with_multiple_declarations);
+    RUN_TEST(test_parser_struct_with_nested_struct);
 
     // Compiler tests
     RUN_TEST(test_compiler);
