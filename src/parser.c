@@ -154,7 +154,7 @@ static Literal* identifierLiteral(ASTParser* parser) {
 }
 
 /**
- * Terminal rule. Match string token.
+ * Terminal rule. Match a string token.
  */
 static Literal* stringLiteral(ASTParser* parser) {
     Token* string = consume(parser, TOKEN_STRING, "Expected string.");
@@ -169,9 +169,7 @@ static Literal* stringLiteral(ASTParser* parser) {
 }
 
 /**
- * Terminal rule. Match number literal.
- *
- * Returns a pointer to a dynamically-allocated Literal.
+ * Terminal rule. Match a number literal.
  */
 static Literal* numberLiteral(ASTParser* parser) {
     Token* currToken = consume(parser, TOKEN_NUMBER, "Expected number literal.");
@@ -186,6 +184,9 @@ static Literal* numberLiteral(ASTParser* parser) {
     return literal;
 }
 
+/**
+ * Terminal rule. Match a boolean literal.
+ */
 static Literal* booleanLiteral(ASTParser* parser) {
     Token* currToken = consume(parser, peek(parser)->type, "Expected boolean literal.");
 
@@ -517,6 +518,10 @@ static Expression* logicalOrExpression(ASTParser* parser) {
     return leftExpression;
 }
 
+/**
+ * block-expression:
+ *  "{" statement* expression "}"
+ */
 static Expression* blockExpression(ASTParser* parser) {
     consume(parser, TOKEN_LEFT_CURLY, "Expected '{' before the start of a block expression.");
     BlockExpression* blockExpr = allocateASTNode(BlockExpression);
@@ -577,6 +582,10 @@ static Expression* blockExpression(ASTParser* parser) {
     return expr;
 }
 
+/**
+ * parameter-list:
+ *  identifier ( "," identifier )*
+ */
 static IdentifierArray* parameterList(ASTParser* parser) {
     IdentifierArray* parameters = (IdentifierArray*)malloc(sizeof(IdentifierArray));
     INIT_ARRAY((*parameters), Token);
@@ -591,6 +600,11 @@ static IdentifierArray* parameterList(ASTParser* parser) {
     return parameters;
 }
 
+/**
+ * lambda-expression:
+ *  "lambda" "(" ")" "{" block-expression "}"
+ *  "lambda" "(" parameter-list ")" "{" block-expression "}"
+ */
 static Expression* lambdaExpression(ASTParser* parser) {
     consume(parser, TOKEN_LAMBDA, "Expected 'lambda' keyword in lambda expression.");
 
@@ -688,7 +702,7 @@ static Expression* expression(ASTParser* parser) {
 
 /**
  * val-declaration:
- *  "val" identifier ( "=" expression )? ";"
+ *  "val" identifier "=" expression ";"
  */
 static Statement* valDeclaration(ASTParser* parser) {
     consume(parser, TOKEN_VAL, "Expected 'val' in a val declaration.");
@@ -741,11 +755,13 @@ static Statement* varDeclaration(ASTParser* parser) {
     statement->as.varDeclarationStatement = varDeclarationStatement;
     return statement;
 }
+
 /**
  * assignment-statement:
  *  expression "=" expression
+ *
+ * (The compiler will ensures th expression is a valid target of assigment.)
  */
-
 static Statement* assignmentStatement(ASTParser* parser, Expression* optionalExpression) {
     Expression* targetExpr = optionalExpression ? optionalExpression : expression(parser);
 
@@ -767,8 +783,8 @@ static Statement* assignmentStatement(ASTParser* parser, Expression* optionalExp
 
 /**
  * declaration:
- *  var-declaration ";"
- *  val-declaration ";"
+ *  var-declaration
+ *  val-declaration
  */
 static Statement* declaration(ASTParser* parser) {
     if (peek(parser)->type == TOKEN_VAL) {
@@ -800,7 +816,12 @@ static Statement* printStatement(ASTParser* parser) {
     return stmt;
 }
 
-// If an expression is passed in, this function will use it to create the ExpressionStatement.
+/**
+ * expression-statement:
+ *  expression ";"
+ *
+ * If an expression is passed in, it will be used to create the ExpressionStatement.
+ */
 static Statement* expressionStatement(ASTParser* parser, Expression* optionalExpression) {
     Expression* expr = optionalExpression ? optionalExpression : expression(parser);
 
@@ -896,6 +917,11 @@ static Statement* iterationStatement(ASTParser* parser) {
     return stmt;
 }
 
+/**
+ * return-statement:
+ *  "return" ";"
+ *  "return" expression ";"
+ */
 static Statement* returnStatement(ASTParser* parser) {
     consume(parser, TOKEN_RETURN, "Expected 'return' keyword.");
 

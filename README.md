@@ -154,7 +154,7 @@ expression-statement:
   expression ";"
 
 assignment-statement: 
-  expression "=" expression  # the compiler ensures the expression is a valid target of assigment.
+  expression "=" expression
 
 print-statement:
   "print" expression ";"
@@ -178,7 +178,7 @@ struct-declaration:
   "prototype" ":" identifier
 
 
-function-expression:
+lambda-expression:
   "lambda" "(" ")" "{" block-expression "}"
   "lambda" "(" parameter-list ")" "{" block-expression "}"
   
@@ -200,7 +200,7 @@ logical-and-expression:
   equality-expression ( "and" equality-expression )*
 
 equality-expression: 
-  comparison-expression ( ("!=" | "==") comparison-expression) )*
+  comparison-expression ( ("!=" | "==") comparison-expression )*
 
 comparison-expression:
   additive-expression ( ( ">" | ">=" | "<" | "<=" ) additive-expression )*
