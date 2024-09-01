@@ -2187,3 +2187,119 @@ int test_parser_nested_call_expression() {
     freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
+
+int test_parser_empty_struct() {
+    Token tokensArray[] = {
+        createToken(TOKEN_STRUCT, "struct"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = sizeof(tokensArray) / sizeof(Token),
+        .size = sizeof(tokensArray) / sizeof(Token)};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* stmt = source->rootStatements[0];
+    ASSERT(stmt->type == EXPRESSION_STATEMENT);
+    ASSERT(stmt->as.expressionStatement->expression->type == STRUCT_EXPRESSION);
+    ASSERT(stmt->as.expressionStatement->expression->as.structExpression->declarationArray.used == 0);
+
+    freeSource(source);
+    freeParser(&parser);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_struct_with_single_declaration() {
+    Token tokensArray[] = {
+        createToken(TOKEN_STRUCT, "struct"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_IDENTIFIER, "x"),
+        createToken(TOKEN_COLON, ":"),
+        createToken(TOKEN_NUMBER, "42"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = sizeof(tokensArray) / sizeof(Token),
+        .size = sizeof(tokensArray) / sizeof(Token)};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* stmt = source->rootStatements[0];
+    ASSERT(stmt->type == EXPRESSION_STATEMENT);
+    ASSERT(stmt->as.expressionStatement->expression->type == STRUCT_EXPRESSION);
+
+    StructExpression* structExpr = stmt->as.expressionStatement->expression->as.structExpression;
+    ASSERT(structExpr->declarationArray.used == 1);
+    ASSERT(strcmp(structExpr->declarationArray.values[0]->identifier->token.start, "x") == 0);
+    ASSERT(structExpr->declarationArray.values[0]->maybeExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(structExpr->declarationArray.values[0]->maybeExpression->as.primaryExpression->literal->type == NUMBER_LITERAL);
+
+    freeSource(source);
+    freeParser(&parser);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_parser_struct_with_multiple_declarations() {
+    Token tokensArray[] = {
+        createToken(TOKEN_STRUCT, "struct"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_IDENTIFIER, "x"),
+        createToken(TOKEN_COLON, ":"),
+        createToken(TOKEN_NUMBER, "42"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_IDENTIFIER, "y"),
+        createToken(TOKEN_COLON, ":"),
+        createToken(TOKEN_STRING, "\"hello\""),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_PROTOTYPE, "prototype"),
+        createToken(TOKEN_COLON, ":"),
+        createToken(TOKEN_IDENTIFIER, "BaseStruct"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = sizeof(tokensArray) / sizeof(Token),
+        .size = sizeof(tokensArray) / sizeof(Token)};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* stmt = source->rootStatements[0];
+    ASSERT(stmt->type == EXPRESSION_STATEMENT);
+    ASSERT(stmt->as.expressionStatement->expression->type == STRUCT_EXPRESSION);
+
+    StructExpression* structExpr = stmt->as.expressionStatement->expression->as.structExpression;
+    ASSERT(structExpr->declarationArray.used == 3);
+
+    // Check first declaration
+    ASSERT(strcmp(structExpr->declarationArray.values[0]->identifier->token.start, "x") == 0);
+    ASSERT(structExpr->declarationArray.values[0]->maybeExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(structExpr->declarationArray.values[0]->maybeExpression->as.primaryExpression->literal->type == NUMBER_LITERAL);
+
+    // Check second declaration
+    ASSERT(strcmp(structExpr->declarationArray.values[1]->identifier->token.start, "y") == 0);
+    ASSERT(structExpr->declarationArray.values[1]->maybeExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(structExpr->declarationArray.values[1]->maybeExpression->as.primaryExpression->literal->type == STRING_LITERAL);
+
+    // Check prototype declaration
+    ASSERT(structExpr->declarationArray.values[2]->isPrototype);
+    ASSERT(strcmp(structExpr->declarationArray.values[2]->identifier->token.start, "BaseStruct") == 0);
+    ASSERT(structExpr->declarationArray.values[2]->maybeExpression == NULL);
+
+    freeSource(source);
+    freeParser(&parser);
+    return SUCCESS_RETURN_CODE;
+}
