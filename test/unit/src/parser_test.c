@@ -2303,3 +2303,51 @@ int test_parser_struct_with_multiple_declarations() {
     freeParser(&parser);
     return SUCCESS_RETURN_CODE;
 }
+
+// Add these additional test functions to parser_test.c
+
+int test_parser_struct_with_nested_struct() {
+    Token tokensArray[] = {
+        createToken(TOKEN_STRUCT, "struct"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_IDENTIFIER, "outer"),
+        createToken(TOKEN_COLON, ":"),
+        createToken(TOKEN_STRUCT, "struct"),
+        createToken(TOKEN_LEFT_CURLY, "{"),
+        createToken(TOKEN_IDENTIFIER, "inner"),
+        createToken(TOKEN_COLON, ":"),
+        createToken(TOKEN_NUMBER, "42"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_RIGHT_CURLY, "}"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = sizeof(tokensArray) / sizeof(Token),
+        .size = sizeof(tokensArray) / sizeof(Token)};
+
+    PARSE_TEST_AST
+
+    ASSERT(source->numberOfStatements == 1);
+    Statement* stmt = source->rootStatements[0];
+    ASSERT(stmt->type == EXPRESSION_STATEMENT);
+    ASSERT(stmt->as.expressionStatement->expression->type == STRUCT_EXPRESSION);
+
+    StructExpression* outerStruct = stmt->as.expressionStatement->expression->as.structExpression;
+    ASSERT(outerStruct->declarationArray.used == 1);
+    ASSERT(strcmp(outerStruct->declarationArray.values[0]->identifier->token.start, "outer") == 0);
+    ASSERT(outerStruct->declarationArray.values[0]->maybeExpression->type == STRUCT_EXPRESSION);
+
+    StructExpression* innerStruct = outerStruct->declarationArray.values[0]->maybeExpression->as.structExpression;
+    ASSERT(innerStruct->declarationArray.used == 1);
+    ASSERT(strcmp(innerStruct->declarationArray.values[0]->identifier->token.start, "inner") == 0);
+    ASSERT(innerStruct->declarationArray.values[0]->maybeExpression->type == PRIMARY_EXPRESSION);
+    ASSERT(innerStruct->declarationArray.values[0]->maybeExpression->as.primaryExpression->literal->type == NUMBER_LITERAL);
+
+    freeSource(source);
+    freeParser(&parser);
+    return SUCCESS_RETURN_CODE;
+}
