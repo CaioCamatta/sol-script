@@ -30,6 +30,7 @@ static char const* tokenTypeStrings[] = {
     "TOKEN_PRINT",
     "TOKEN_WHILE",
     "TOKEN_LAMBDA",
+    "TOKEN_PROTOTYPE",
 
     // Identifier
     "TOKEN_IDENTIFIER",
@@ -63,6 +64,7 @@ static char const* tokenTypeStrings[] = {
     "TOKEN_AND_AND",
     "TOKEN_SEMICOLON",
     "TOKEN_COMMA",
+    "TOKEN_COLON",
 
     // Special tokens
     "TOKEN_ERROR",
@@ -301,6 +303,18 @@ static void printExpression(const Expression* expression, int depth) {
             printf("MemberExpression\n");
             printExpression(memberExpr->leftHandSide, depth + 1);
             printExpression(memberExpr->rightHandSide, depth + 1);
+            break;
+        }
+        case STRUCT_EXPRESSION: {
+            StructExpression* structExpr = expression->as.structExpression;
+            printf("StructExpression\n");
+            for (int i = 0; i < structExpr->declarationArray.used; i++) {
+                printIndent(depth + 1);
+                printf("StructDeclaration\n");
+                printIndent(depth + 2);
+                printf("IdentifierLiteral" KGRY "(token=\"%.*s\")\n" RESET, structExpr->declarationArray.values[i]->identifier->token.length, structExpr->declarationArray.values[i]->identifier->token.start);
+                printExpression(structExpr->declarationArray.values[i]->maybeExpression, depth + 2);
+            }
             break;
         }
     }

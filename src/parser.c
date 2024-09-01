@@ -609,6 +609,67 @@ static Expression* lambdaExpression(ASTParser* parser) {
 }
 
 /**
+ * struct-declaration:
+ *  identifier ":" expression
+ *  "prototype" ":" identifier
+ */
+static StructDeclaration* structDeclaration(ASTParser* parser) {
+    StructDeclaration* declaration = allocateASTNode(StructDeclaration);
+
+    if (match(parser, TOKEN_PROTOTYPE)) {
+        consume(parser, TOKEN_COLON, "Expected ':' after 'prototype'.");
+        declaration->isPrototype = true;
+        declaration->identifier = identifierLiteral(parser)->as.identifierLiteral;
+        declaration->maybeExpression = NULL;
+    } else {
+        declaration->isPrototype = false;
+        declaration->identifier = identifierLiteral(parser)->as.identifierLiteral;
+        consume(parser, TOKEN_COLON, "Expected ':' after field identifier.");
+        declaration->maybeExpression = expression(parser);
+    }
+    consume(parser, TOKEN_SEMICOLON, "Expected semicolon after declaration in struct.");
+
+    return declaration;
+}
+
+/**
+ * struct-declaration-list:
+ *  struct-declaration
+ *  struct-declaration-list "," struct-declaration
+ */
+static StructDeclarationArray structDeclarationArray(ASTParser* parser) {
+    StructDeclarationArray array;
+    INIT_ARRAY(array, StructDeclaration*);
+
+    while (!check(parser, TOKEN_RIGHT_CURLY)) {
+        StructDeclaration* declaration = structDeclaration(parser);
+        INSERT_ARRAY(array, declaration, StructDeclaration*);
+    }
+
+    return array;
+}
+
+/**
+ * struct-expression:
+ *  "struct" "{" struct-declaration-list "}"
+ */
+static Expression* structExpression(ASTParser* parser) {
+    consume(parser, TOKEN_STRUCT, "Expected 'struct' keyword in struct-expression.");
+    consume(parser, TOKEN_LEFT_CURLY, "Expected '{' after 'struct'.");
+
+    StructExpression* structExpr = allocateASTNode(StructExpression);
+    structExpr->declarationArray = structDeclarationArray(parser);
+
+    consume(parser, TOKEN_RIGHT_CURLY, "Expected '}' after struct declarations.");
+
+    Expression* expr = allocateASTNode(Expression);
+    expr->type = STRUCT_EXPRESSION;
+    expr->as.structExpression = structExpr;
+
+    return expr;
+}
+
+/**
  * expression:
  *  struct-expression
  *  function-expression
@@ -618,6 +679,8 @@ static Expression* expression(ASTParser* parser) {
     switch (peek(parser)->type) {
         case TOKEN_LAMBDA:
             return lambdaExpression(parser);
+        case TOKEN_STRUCT:
+            return structExpression(parser);
         default:
             return logicalOrExpression(parser);
     }

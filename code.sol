@@ -1,5 +1,1 @@
-val a = lambda() {
-    lambda() {print "here";};
-};
-
-a()();
+val a = struct {b: 1+1; c: 2+2;};
