@@ -9,6 +9,8 @@
 #include "syntax.h"
 #include "util/colors.h"
 
+#define MAX_NUM_PARAMETERS_IN_FUNCTION UINT8_MAX
+
 // ---------------------------------------------------------------------------
 // ------------------------- PARSER HELPER FUNCTIONS -------------------------
 // ---------------------------------------------------------------------------
@@ -37,6 +39,7 @@ void freeSource(Source* source) {
 }
 
 void freeParser(ASTParser* parser) {
+    // TODO: complete this function
     FREE_ARRAY(parser->errors);
 }
 
@@ -79,6 +82,7 @@ static bool match(ASTParser* parser, TokenType type) {
     return false;
 }
 
+/* Print an error token produced by the scanner. */
 #define printErrorToken(parser, messagePrefix, errorToken)                      \
     do {                                                                        \
         char errorMessage[parser->current->length + strlen(messagePrefix)];     \
@@ -592,7 +596,7 @@ static IdentifierArray* parameterList(ASTParser* parser) {
 
     if (peek(parser)->type == TOKEN_IDENTIFIER) {
         do {
-            if (parameters->used == UINT8_MAX) reportParserErrorAndSynchronize(parser, "Exceeded maximum number of parameters.");
+            if (parameters->used == MAX_NUM_PARAMETERS_IN_FUNCTION) reportParserErrorAndSynchronize(parser, "Exceeded maximum number of parameters.");
             Literal* literal = identifierLiteral(parser);
             INSERT_ARRAY((*parameters), *(literal->as.identifierLiteral), IdentifierLiteral);
         } while (match(parser, TOKEN_COMMA));
