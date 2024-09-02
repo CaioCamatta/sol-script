@@ -8,6 +8,7 @@
 #include "colors.h"
 #include "config.h"
 #include "debug.h"
+#include "object.h"
 #include "util/hash_table.h"
 #include "value.h"
 
@@ -109,6 +110,9 @@ static void printValue(Value value) {
             break;
         case TYPE_LAMBDA:
             printf("%p", value.as.lambdaVal);
+            break;
+        case TYPE_STRUCT:
+            printf("%p", value.as.structVal);
             break;
     };
     printf("\n");
@@ -371,6 +375,37 @@ void step(VM* vm) {
             (frame - 1)->SP -= frame->parameterCount;
             vm->currFrame = frame - 1;
             push(vm->currFrame, result);
+            break;
+        }
+        case OP_NEW_STRUCT: {
+            ObjStruct* structure = newStruct();
+            push(frame, STRUCT_VAL(structure));
+            break;
+        }
+        case OP_SET_FIELD: {
+            Value value = pop(frame);
+            Value structValue = pop(frame);
+            if (!IS_STRUCT(structValue)) {
+                runtimeError(frame, "Cannot set field on non-struct value.");
+            }
+            ObjStruct* structure = structValue.as.structVal;
+            Constant constant = frame->codeObject->constantPool.values[instruction->maybeOperand1];
+            hashTableInsert(&structure->fields, constant.as.string, value);
+            push(frame, structValue);
+            break;
+        }
+        case OP_GET_FIELD: {
+            Value structValue = pop(frame);
+            if (!IS_STRUCT(structValue)) {
+                runtimeError(frame, "Cannot get field from non-struct value.");
+            }
+            ObjStruct* structure = structValue.as.structVal;
+            Constant constant = frame->codeObject->constantPool.values[instruction->maybeOperand1];
+            HashTableEntry* entry = hashTableGet(&structure->fields, constant.as.string);
+            if (entry == NULL) {
+                runtimeError(frame, "Undefined field '%s'.", constant.as.string);
+            }
+            push(frame, entry->value);
             break;
         }
         default:
