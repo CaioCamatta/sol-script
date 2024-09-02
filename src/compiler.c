@@ -103,6 +103,20 @@ int errorAndExit(CompilerUnit* compiler, const char* format, ...) {
     exit(EXIT_FAILURE);
 }
 
+/**
+ * Print warning and continue execution.
+ */
+
+void printWarning(CompilerUnit* compiler, const char* format, ...) {
+    fprintf(stderr, KRED "CompilerWarning. " RESET);
+
+    va_list args;
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    fprintf(stderr, "\n");
+    va_end(args);
+}
+
 // Add bytecode to the compiled program.
 static void emitBytecode(CompilerUnit* compiler, Bytecode bytecode) {
     INSERT_ARRAY(compiler->compiledCodeObject.bytecodeArray, bytecode, Bytecode);
@@ -191,7 +205,7 @@ static int findConstantInPool(CompilerUnit* compiler, Constant constant) {
  * If the constant is already in the pool, the index of the existing one is returned.
  * (These constants go alongwise the bytecode in the compiled code.)
  * */
-static size_t addConstantToPool(CompilerUnit* compiler, Constant constant) {
+static size_t upsertConstantToPool(CompilerUnit* compiler, Constant constant) {
     // Check if its already there
     int maybeIndexInPool = findConstantInPool(compiler, constant);
     if (maybeIndexInPool != -1) return maybeIndexInPool;
@@ -440,7 +454,7 @@ static void visitAssignmentStatement(CompilerUnit* compiler, AssignmentStatement
 
                     // Global variable assignment
                     Constant constant = IDENTIFIER_CONST(identifierName);
-                    size_t constantIndex = addConstantToPool(compiler, constant);
+                    size_t constantIndex = upsertConstantToPool(compiler, constant);
                     emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_GLOBAL_VAR, constantIndex));
                 } else {
                     errorAndExit(compiler, "Identifier '%s' not declared.", identifierName);
@@ -483,7 +497,7 @@ static void visitValDeclarationStatement(CompilerUnit* compiler, ValDeclarationS
     if (compiler->isInGlobalScope) {
         if (isGlobalInTable(compiler, constant.as.string)) errorAndExit(compiler, "Val \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
 
-        size_t constantIndex = addConstantToPool(compiler, constant);
+        size_t constantIndex = upsertConstantToPool(compiler, constant);
         addGlobalToTable(compiler, constant.as.string, isVariableModifiable);  // We also keep track that this global exists so we can prevent redeclaration later.
 
         emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, constantIndex));
@@ -515,7 +529,7 @@ static void visitVarDeclarationStatement(CompilerUnit* compiler, VarDeclarationS
         // Preventing global redeclaration is an arbitrary choice.
         if (isGlobalInTable(compiler, constant.as.string)) errorAndExit(compiler, "Var \"%s\" is already declared. Redeclaration is not permitted as it often leads to confusion.", constant.as.string);
 
-        size_t constantIndex = addConstantToPool(compiler, constant);
+        size_t constantIndex = upsertConstantToPool(compiler, constant);
         addGlobalToTable(compiler, constant.as.string, isVariableModifiable);  // We also keep track that this global exists so we can prevent redeclaration later.
 
         emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAR, constantIndex));
@@ -692,7 +706,7 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
 
     // Create a constant for the function
     Constant functionConstant = LAMBDA_CONST(function);
-    size_t constantIndex = addConstantToPool(compiler, functionConstant);
+    size_t constantIndex = upsertConstantToPool(compiler, functionConstant);
 
     // Emit bytecode to define the function
     emitBytecode(compiler, (Bytecode){.type = OP_LAMBDA, .maybeOperand1 = constantIndex});
@@ -725,6 +739,45 @@ static void visitCallExpression(CompilerUnit* compiler, CallExpression* callExpr
 
     // Emit bytecode for the function call
     emitBytecode(compiler, BYTECODE(OP_CALL));
+}
+
+static void visitMemberExpression(CompilerUnit* compiler, MemberExpression* memberExpression) {
+    // Compile the left-hand side (the struct)
+    visitExpression(compiler, memberExpression->leftHandSide);
+
+    // Upsert the field name to the constant pool
+    Constant constant = STRING_CONST(copyStringToHeap(memberExpression->rightHandSide->as.primaryExpression->literal->as.identifierLiteral->token.start,
+                                                      memberExpression->rightHandSide->as.primaryExpression->literal->as.identifierLiteral->token.length));
+    size_t constantIndex = upsertConstantToPool(compiler, constant);
+
+    // TODO: Consider adding compile time member checking
+
+    // Emit bytecode to get the field
+    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_GET_FIELD, constantIndex));
+}
+
+static void visitStructExpression(CompilerUnit* compiler, StructExpression* structExpression) {
+    emitBytecode(compiler, BYTECODE(OP_NEW_STRUCT));
+    increaseStackHeight(compiler);
+
+    // Set each field
+    for (size_t i = 0; i < structExpression->declarationArray.used; i++) {
+        StructDeclaration* declaration = structExpression->declarationArray.values[i];
+
+        // Emit warning if is prototype (Not supported yet)
+        if (declaration->isPrototype) printWarning(compiler, "Prototype-based inheritance is not supported yet. The 'prototype' field in this object will be used as a regular field.");
+
+        // Compile the value
+        visitExpression(compiler, declaration->maybeExpression);
+
+        // Add the field name to the constant pool
+        Constant constant = STRING_CONST(copyStringToHeap(declaration->identifier->token.start,
+                                                          declaration->identifier->token.length));
+        size_t constantIndex = upsertConstantToPool(compiler, constant);
+
+        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_FIELD, constantIndex));
+        decreaseStackHeight(compiler);
+    }
 }
 
 static void visitReturnStatement(CompilerUnit* compiler, ReturnStatement* returnStatement) {
@@ -782,7 +835,7 @@ static void visitIterationStatement(CompilerUnit* compiler, IterationStatement* 
 static void visitNumberLiteral(CompilerUnit* compiler, NumberLiteral* numberLiteral) {
     double number = tokenTodouble(numberLiteral->token);
     Constant constant = DOUBLE_CONST(number);
-    size_t constantIndex = addConstantToPool(compiler, constant);
+    size_t constantIndex = upsertConstantToPool(compiler, constant);
 
     Bytecode bytecode = BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, constantIndex);
     emitBytecode(compiler, bytecode);
@@ -820,7 +873,7 @@ static void visitIdentifierLiteral(CompilerUnit* compiler, IdentifierLiteral* id
         Constant constant = (Constant){
             .type = CONST_TYPE_IDENTIFIER,
             .as = {identifierNameNullTerminated}};
-        int index = addConstantToPool(compiler, constant);
+        int index = upsertConstantToPool(compiler, constant);
 
         Bytecode bytecodeToGetVariable = isGlobalConstant(compiler, identifierNameNullTerminated)
                                              ? BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index)
@@ -842,7 +895,7 @@ static void visitStringLiteral(CompilerUnit* compiler, StringLiteral* stringLite
     Constant constant = (Constant){
         .type = CONST_TYPE_STRING,
         .as = {stringTrimmedAndNullTerminated}};
-    size_t constantIndex = addConstantToPool(compiler, constant);
+    size_t constantIndex = upsertConstantToPool(compiler, constant);
 
     Bytecode bytecodeToGetVariable = BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, constantIndex);
     emitBytecode(compiler, bytecodeToGetVariable);
@@ -905,6 +958,12 @@ static void visitExpression(CompilerUnit* compiler, Expression* expression) {
             break;
         case CALL_EXPRESSION:
             visitCallExpression(compiler, expression->as.callExpression);
+            break;
+        case STRUCT_EXPRESSION:
+            visitStructExpression(compiler, expression->as.structExpression);
+            break;
+        case MEMBER_EXPRESSION:
+            visitMemberExpression(compiler, expression->as.memberExpression);
             break;
         default:
             fprintf(stderr, "Unimplemented expression type %d.", expression->type);

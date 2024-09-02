@@ -1,6 +1,8 @@
-#include "value.h"
+#include "object.h"
 
 #include <stdlib.h>
+
+#include "value.h"
 
 ObjStruct* newStruct() {
     ObjStruct* structure = (ObjStruct*)malloc(sizeof(ObjStruct));

@@ -6,26 +6,12 @@
 #include <stdlib.h>
 
 #include "bytecode.h"
-#include "hash_table.h"
 
-// --------------------------------------------------------------------------
-// ------------------------------- OBJECTS ----------------------------------
-// --------------------------------------------------------------------------
-
-// All objects and primitives in SolScript are Values. Objects are heap-allocated.
+// All objects in SolScript are Values. We create forward declarations here but define
+// the actual code/logic in object.c/h
 typedef struct Obj Obj;
 typedef struct ObjStruct ObjStruct;
 
-typedef struct {
-    HashTable fields;
-} ObjStruct;
-
-ObjStruct* newStruct();
-void freeStruct(ObjStruct* structure);
-
-// --------------------------------------------------------------------------
-// -------------------------------- VALUES ----------------------------------
-// --------------------------------------------------------------------------
 typedef enum {
     TYPE_DOUBLE,
     TYPE_STRING,
@@ -51,8 +37,8 @@ typedef struct {
         double doubleVal;
         const char* stringVal;  // This string should live in the constant pool, which persists through the VM's lifetime.
         bool booleanVal;
-        void* lambdaVal;  // Runtime function objects in SolScript are just a pointer to the code object.
-        ObjStruct* structVal;
+        void* lambdaVal;       // Runtime function objects in SolScript are just a pointer to the code object.
+        ObjStruct* structVal;  // All objects in SolScript are Values.
     } as;
 } Value;
 

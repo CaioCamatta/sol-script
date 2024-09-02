@@ -516,6 +516,15 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
             case OP_RETURN:
                 printf("RETURN\n");
                 break;
+            case OP_NEW_STRUCT:
+                printf("NEW_STRUCT\n");
+                break;
+            case OP_SET_FIELD:
+                printf("SET_FIELD #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                break;
+            case OP_GET_FIELD:
+                printf("GET_FIELD #%zu\n", bytecodeArray.values[i].maybeOperand1);
+                break;
         }
     }
 }
@@ -572,6 +581,9 @@ void printStack(const Value* topOfStack, const Value* bottomOfStack) {
                 break;
             case TYPE_LAMBDA:
                 printf(KGRY "{" RESET " %p " KGRY "} " RESET, val.as.lambdaVal);
+                break;
+            case TYPE_STRUCT:
+                printf(KGRY "{" RESET " struct:%p " KGRY "} " RESET, val.as.structVal);
                 break;
         }
     }

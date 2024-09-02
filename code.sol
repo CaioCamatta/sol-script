@@ -1,1 +1,1 @@
-val a = struct {b: 1+1; c: 2+2;};
+val a = struct { prototype: 1; };
