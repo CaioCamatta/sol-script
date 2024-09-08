@@ -144,6 +144,10 @@ void all_unit_tests() {
     RUN_TEST(test_vm_lambda_one_param);
     RUN_TEST(test_vm_lambda_two_params);
     RUN_TEST(test_vm_lambda_nested_calls);
+    RUN_TEST(test_vm_simple_struct);
+    RUN_TEST(test_vm_nested_structs);
+    RUN_TEST(test_vm_struct_field_assignment);
+    RUN_TEST(test_vm_struct_in_function_call);
 }
 
 int run_all_unit_tests() {
