@@ -109,6 +109,10 @@ void all_unit_tests() {
     RUN_TEST(test_compiler_chained_calls);
     RUN_TEST(test_compiler_lambda_with_return);
     RUN_TEST(test_compiler_lambda_with_conditional_returns);
+    RUN_TEST(test_compiler_simple_struct);
+    RUN_TEST(test_compiler_struct_field_access);
+    RUN_TEST(test_compiler_nested_struct);
+    RUN_TEST(test_compiler_struct_assignment);
 
     // VM tests
     RUN_TEST(test_vm_addition);
