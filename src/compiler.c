@@ -473,6 +473,28 @@ static void visitAssignmentStatement(CompilerUnit* compiler, AssignmentStatement
         } else {
             errorAndExit(compiler, "Invalid assignment target. Invalid type of primary-expression.");
         }
+    } else if (assignmentStatement->target->type == MEMBER_EXPRESSION) {
+        // TODO: make it so users can decide whether struct fields are mutable.
+        MemberExpression* memberExpr = assignmentStatement->target->as.memberExpression;
+
+        // Compile the struct expression (left-hand side of the dot)
+        visitExpression(compiler, memberExpr->leftHandSide);
+
+        // Get the field name (right-hand side of the dot)
+        if (memberExpr->rightHandSide->type != PRIMARY_EXPRESSION ||
+            memberExpr->rightHandSide->as.primaryExpression->literal->type != IDENTIFIER_LITERAL) {
+            errorAndExit(compiler, "Invalid struct field access.");
+        }
+
+        IdentifierLiteral* fieldIdentifier = memberExpr->rightHandSide->as.primaryExpression->literal->as.identifierLiteral;
+
+        // Add the field name to the constant pool
+        Constant fieldNameConstant = STRING_CONST(copyStringToHeap(fieldIdentifier->token.start, fieldIdentifier->token.length));
+        size_t constantIndex = upsertConstantToPool(compiler, fieldNameConstant);
+
+        // Emit bytecode to set the field
+        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_FIELD, constantIndex));
+        decreaseStackHeight(compiler);  // The struct and value are consumed, nothing is pushed
     } else {
         errorAndExit(compiler, "Invalid assignment target.");
     }
