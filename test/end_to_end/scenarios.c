@@ -779,3 +779,67 @@ static int test_var_declaration_use_before_declaration() {
         ""); // Should produce an error
 }
 */
+
+static int test_struct_simple_declaration() {
+    SCENARIO(
+        "var person = struct { name: \"Alice\"; age: 30; };"
+        "print person.name;"
+        "print person.age;");
+    EXPECT("Alice\n30.000000");
+}
+
+static int test_struct_nested() {
+    SCENARIO(
+        "var address = struct { street: \"123 Main St\"; city: \"Anytown\"; };"
+        "var person = struct { name: \"Bob\"; address: address; };"
+        "print person.name;"
+        "print person.address.street;"
+        "print person.address.city;");
+    EXPECT("Bob\n123 Main St\nAnytown");
+}
+
+static int test_struct_modification() {
+    SCENARIO(
+        "var car = struct { make: \"Toyota\"; model: \"Corolla\"; year: 2020; };"
+        "print car.year;"
+        "car.year = 2021;"
+        "print car.year;");
+    EXPECT("2020.000000\n2021.000000");
+}
+
+static int test_struct_in_function() {
+    SCENARIO(
+        "val createPerson = lambda (name, age) { struct { name: name; age: age; }; };"
+        "var john = createPerson(\"John\", 25);"
+        "print john.name;"
+        "print john.age;");
+    EXPECT("John\n25.000000");
+}
+
+static int test_struct_array_simulation() {
+    SCENARIO(
+        "var array = struct { "
+        "   length: 3;"
+        "   get: lambda(index) {"
+        "       if (index == 0) { 10; }"
+        "       else if (index == 1) { 20; }"
+        "       else if (index == 2) { 30; }"
+        "       else { null; }"
+        "   };"
+        "};"
+        "print array.length;"
+        "print array.get(0);"
+        "print array.get(1);"
+        "print array.get(2);"
+        "print array.get(3);");
+    EXPECT("3.000000\n10.000000\n20.000000\n30.000000\nnull");
+}
+
+static int test_struct_chained_access() {
+    SCENARIO(
+        "var complex = struct {"
+        "   a: lambda() { struct { b: struct { c: lambda() { 42; }; }; }; };"
+        "};"
+        "print complex.a().b.c();");
+    EXPECT("42.000000");
+}
