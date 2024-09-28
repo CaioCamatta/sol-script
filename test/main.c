@@ -6,9 +6,9 @@
 #include "unit/test.c"
 
 int main(int argc, char **argv) {
-    printf(KBOLD "Executing unit tests:" KBOFF);
+    printf(KBOLD "Executing unit tests." KBOFF);
     run_all_unit_tests();
-    printf(KBOLD "\nExecuting end-to-end tests:" KBOFF);
+    printf(KBOLD "\nExecuting end-to-end tests.\n" KBOFF);
     run_all_end_to_end_tests();
     return 0;
 }

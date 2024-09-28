@@ -430,14 +430,11 @@ static void visitExpressionStatement(CompilerUnit* compiler, ExpressionStatement
 }
 
 static void visitAssignmentStatement(CompilerUnit* compiler, AssignmentStatement* assignmentStatement) {
-    // Compile the code to compute the new value
-    visitExpression(compiler, assignmentStatement->value);
-
-    // We don't need to visit the target expression.
-    // visitExpression(compiler, assignmentStatement->target);
-
-    // Emit bytecode based on the target type
+    // Different targets types are compiled differently.
     if (assignmentStatement->target->type == PRIMARY_EXPRESSION) {
+        // Compile the value, put it on the stack
+        visitExpression(compiler, assignmentStatement->value);
+
         PrimaryExpression* primaryExpr = assignmentStatement->target->as.primaryExpression;
         if (primaryExpr->literal->type == IDENTIFIER_LITERAL) {
             IdentifierLiteral* identifierLiteral = primaryExpr->literal->as.identifierLiteral;
@@ -479,6 +476,10 @@ static void visitAssignmentStatement(CompilerUnit* compiler, AssignmentStatement
 
         // Compile the struct expression (left-hand side of the dot)
         visitExpression(compiler, memberExpr->leftHandSide);
+
+        // Because OP_SET_FIELD expects the value to be on top of the stack, we compile
+        // it after the struct.
+        visitExpression(compiler, assignmentStatement->value);
 
         // Get the field name (right-hand side of the dot)
         if (memberExpr->rightHandSide->type != PRIMARY_EXPRESSION ||

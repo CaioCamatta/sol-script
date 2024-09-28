@@ -1831,8 +1831,8 @@ int test_compiler_struct_assignment() {
     ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[1].type == OP_LOAD_CONSTANT);
     ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[2].type == OP_SET_FIELD);
     ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[3].type == OP_DEFINE_GLOBAL_VAR);
-    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[4].type == OP_LOAD_CONSTANT);
-    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[5].type == OP_GET_GLOBAL_VAR);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[4].type == OP_GET_GLOBAL_VAR);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[5].type == OP_LOAD_CONSTANT);
     ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[6].type == OP_SET_FIELD);
 
     FREE_COMPILER

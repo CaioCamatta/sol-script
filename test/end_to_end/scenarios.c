@@ -33,11 +33,11 @@ static int captureStdout(const char* input, char* output, size_t outputSize) {
 #define SCENARIO(solCode) \
     const char* input = solCode;
 
-#define EXPECT(expectedOutput)                                    \
-    do {                                                          \
-        captureStdout(input, capturedOutput, MAX_OUTPUT_SIZE);    \
-        ASSERT(strcmp(capturedOutput, expectedOutput "\n") == 0); \
-        return 0;                                                 \
+#define EXPECT(expectedOutput)                                 \
+    do {                                                       \
+        captureStdout(input, capturedOutput, MAX_OUTPUT_SIZE); \
+        ASSERT_STRINGS_EQUAL(capturedOutput, expectedOutput);  \
+        return 0;                                              \
     } while (0);
 
 static int test_assignment_compound_assignment() {
@@ -824,7 +824,7 @@ static int test_struct_array_simulation() {
         "       if (index == 0) { 10; }"
         "       else if (index == 1) { 20; }"
         "       else if (index == 2) { 30; }"
-        "       else { null; }"
+        "       else { \"OutOfBounds\"; }"
         "   };"
         "};"
         "print array.length;"
@@ -832,7 +832,7 @@ static int test_struct_array_simulation() {
         "print array.get(1);"
         "print array.get(2);"
         "print array.get(3);");
-    EXPECT("3.000000\n10.000000\n20.000000\n30.000000\nnull");
+    EXPECT("3.000000\n10.000000\n20.000000\n30.000000\nOutOfBounds");
 }
 
 static int test_struct_chained_access() {

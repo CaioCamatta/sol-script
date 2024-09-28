@@ -14,7 +14,7 @@
       "name": "Build & Debug tests",
       "type": "lldb",
       "request": "launch",
-      "program": "${workspaceFolder}/test/unit/unit_test",
+      "program": "${workspaceFolder}/test/test",
       "cwd": "${workspaceFolder}",
       "preLaunchTask": "Make debuggable test program"
     }
