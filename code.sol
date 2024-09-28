@@ -2,8 +2,8 @@ var array = struct {
     length: 3;
     get: lambda(index) {
         if (index == 0) { return 10; }
-        if (index == 1) { return 20; }
-        if (index == 2) { return 30; }
+        else if (index == 1) { return 20; }
+        else if (index == 2) { return 30; }
         "OutOfBounds"; 
     };
 };
