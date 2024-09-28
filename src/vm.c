@@ -145,12 +145,25 @@ static bool isFalsey(Value value) {
     return IS_NULL(value) || (IS_BOOLEAN(value) && !(value.as.booleanVal)) || (IS_DOUBLE(value) && (value.as.doubleVal == 0));
 }
 
-// Apply an operation to two booleans (converting if needed), push boolean to stack
-#define BINARY_TRUTHY_OP(operation)                                               \
+// Apply an operation to two values, converting them to boolean if needed.
+// Push boolean to stack
+#define BINARY_COERCED_TRUTHY_OP(operation)                                       \
     do {                                                                          \
         Value operand2 = pop(frame);                                              \
         Value operand1 = pop(frame);                                              \
         push(frame, BOOL_VAL(!isFalsey(operand1) operation !isFalsey(operand2))); \
+    } while (false)
+
+// Apply an operation to two values, push boolean to stack.
+#define BINARY_TRUTHY_OP(operation)                                                              \
+    do {                                                                                         \
+        Value operand2 = pop(frame);                                                             \
+        Value operand1 = pop(frame);                                                             \
+        if (IS_DOUBLE(operand2) && IS_DOUBLE(operand1)) {                                        \
+            push(frame, BOOL_VAL((operand1.as.doubleVal operation operand2.as.doubleVal) == 1)); \
+        } else {                                                                                 \
+            push(frame, BOOL_VAL(!isFalsey(operand1) operation !isFalsey(operand2)));            \
+        }                                                                                        \
     } while (false)
 
 #if DEBUG_VM
@@ -294,11 +307,11 @@ void step(VM* vm) {
             break;
         }
         case OP_BINARY_LOGICAL_AND: {
-            BINARY_TRUTHY_OP(&&);
+            BINARY_COERCED_TRUTHY_OP(&&);
             break;
         }
         case OP_BINARY_LOGICAL_OR: {
-            BINARY_TRUTHY_OP(||);
+            BINARY_COERCED_TRUTHY_OP(||);
             break;
         }
         case OP_BINARY_EQUAL: {

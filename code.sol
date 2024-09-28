@@ -4,7 +4,7 @@ var array = struct {
         if (index == 0) { return 10; }
         if (index == 1) { return 20; }
         if (index == 2) { return 30; }
-        return "OutOfBounds"; 
+        "OutOfBounds"; 
     };
 };
 print array.length;
