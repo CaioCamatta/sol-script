@@ -11,6 +11,15 @@
       "preLaunchTask": "Make debuggable program"
     },
     {
+      "name": "Build & Debug REPL",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/sol",
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "Make debuggable program",
+      "console": "integratedTerminal"
+    },
+    {
       "name": "Build & Debug tests",
       "type": "lldb",
       "request": "launch",
