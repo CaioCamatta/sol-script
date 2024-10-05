@@ -45,6 +45,7 @@ static void repl() {
         Source* source = parseASTFromTokens(&treeParser, &tokens);
 
         // Compile the new input
+        INIT_ARRAY(compiler.currentCompilerUnit.compiledCodeObject.bytecodeArray, Bytecode);
         compiler.ASTSource = source;
         CompiledCode newCode = compile(&compiler);
 
