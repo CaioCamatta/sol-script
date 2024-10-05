@@ -8,6 +8,7 @@
 #include "colors.h"
 #include "config.h"
 #include "debug.h"
+#include "object.h"
 #include "util/hash_table.h"
 #include "value.h"
 
@@ -110,6 +111,9 @@ static void printValue(Value value) {
         case TYPE_LAMBDA:
             printf("%p", value.as.lambdaVal);
             break;
+        case TYPE_STRUCT:
+            printf("%p", value.as.structVal);
+            break;
     };
     printf("\n");
 }
@@ -141,12 +145,25 @@ static bool isFalsey(Value value) {
     return IS_NULL(value) || (IS_BOOLEAN(value) && !(value.as.booleanVal)) || (IS_DOUBLE(value) && (value.as.doubleVal == 0));
 }
 
-// Apply an operation to two booleans (converting if needed), push boolean to stack
-#define BINARY_TRUTHY_OP(operation)                                               \
+// Apply an operation to two values, converting them to boolean if needed.
+// Push boolean to stack
+#define BINARY_COERCED_TRUTHY_OP(operation)                                       \
     do {                                                                          \
         Value operand2 = pop(frame);                                              \
         Value operand1 = pop(frame);                                              \
         push(frame, BOOL_VAL(!isFalsey(operand1) operation !isFalsey(operand2))); \
+    } while (false)
+
+// Apply an operation to two values, push boolean to stack.
+#define BINARY_TRUTHY_OP(operation)                                                              \
+    do {                                                                                         \
+        Value operand2 = pop(frame);                                                             \
+        Value operand1 = pop(frame);                                                             \
+        if (IS_DOUBLE(operand2) && IS_DOUBLE(operand1)) {                                        \
+            push(frame, BOOL_VAL((operand1.as.doubleVal operation operand2.as.doubleVal) == 1)); \
+        } else {                                                                                 \
+            push(frame, BOOL_VAL(!isFalsey(operand1) operation !isFalsey(operand2)));            \
+        }                                                                                        \
     } while (false)
 
 #if DEBUG_VM
@@ -290,11 +307,11 @@ void step(VM* vm) {
             break;
         }
         case OP_BINARY_LOGICAL_AND: {
-            BINARY_TRUTHY_OP(&&);
+            BINARY_COERCED_TRUTHY_OP(&&);
             break;
         }
         case OP_BINARY_LOGICAL_OR: {
-            BINARY_TRUTHY_OP(||);
+            BINARY_COERCED_TRUTHY_OP(||);
             break;
         }
         case OP_BINARY_EQUAL: {
@@ -371,6 +388,37 @@ void step(VM* vm) {
             (frame - 1)->SP -= frame->parameterCount;
             vm->currFrame = frame - 1;
             push(vm->currFrame, result);
+            break;
+        }
+        case OP_NEW_STRUCT: {
+            ObjStruct* structure = newStruct();
+            push(frame, STRUCT_VAL(structure));
+            break;
+        }
+        case OP_SET_FIELD: {
+            Value value = pop(frame);
+            Value structValue = pop(frame);
+            if (!IS_STRUCT(structValue)) {
+                runtimeError(frame, "Cannot set field on non-struct value.");
+            }
+            ObjStruct* structure = structValue.as.structVal;
+            Constant constant = frame->codeObject->constantPool.values[instruction->maybeOperand1];
+            hashTableInsert(&structure->fields, constant.as.string, value);
+            push(frame, structValue);
+            break;
+        }
+        case OP_GET_FIELD: {
+            Value structValue = pop(frame);
+            if (!IS_STRUCT(structValue)) {
+                runtimeError(frame, "Cannot get field from non-struct value.");
+            }
+            ObjStruct* structure = structValue.as.structVal;
+            Constant constant = frame->codeObject->constantPool.values[instruction->maybeOperand1];
+            HashTableEntry* entry = hashTableGet(&structure->fields, constant.as.string);
+            if (entry == NULL) {
+                runtimeError(frame, "Undefined field '%s'.", constant.as.string);
+            }
+            push(frame, entry->value);
             break;
         }
         default:

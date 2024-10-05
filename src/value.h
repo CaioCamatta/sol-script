@@ -7,18 +7,29 @@
 
 #include "bytecode.h"
 
-/**
- * The stack holds Values. A Value represents any SolScript type like booleans, numbers, strings, etc.
- *
- * TODO: one of the highest leverage optimizations for SolScript is to use NaN boxing instead of tagged union.
- */
+// All objects in SolScript are Values. We create forward declarations here but define
+// the actual code/logic in object.c/h
+typedef struct Obj Obj;
+typedef struct ObjStruct ObjStruct;
+
 typedef enum {
     TYPE_DOUBLE,
     TYPE_STRING,
     TYPE_BOOLEAN,
     TYPE_NULL,
-    TYPE_LAMBDA
+    TYPE_LAMBDA,
+    TYPE_STRUCT
 } ValueType;
+
+/**
+ * The VM stack holds Values. A Value represents any SolScript type like booleans, numbers,
+ * strings, structs, etc.
+ *
+ * Because the VM's stack is an array of Values, Values themselves don't need to be garbage-
+ * collected. Only heap-allocated objects (pointed to by Values) need to be gc'ed.
+ *
+ * TODO: one of the highest leverage optimizations for SolScript is to use NaN boxing instead of tagged union.
+ */
 typedef struct {
     ValueType type;
 
@@ -26,7 +37,8 @@ typedef struct {
         double doubleVal;
         const char* stringVal;  // This string should live in the constant pool, which persists through the VM's lifetime.
         bool booleanVal;
-        void* lambdaVal;  // Runtime function objects in SolScript are just a pointer to the code object.
+        void* lambdaVal;       // Runtime function objects in SolScript are just a pointer to the code object.
+        ObjStruct* structVal;  // All objects in SolScript are Values.
     } as;
 } Value;
 
@@ -54,11 +66,16 @@ typedef struct {
     (Value) {                                                  \
         .type = TYPE_LAMBDA, .as = {.lambdaVal = functionPtr } \
     }
+#define STRUCT_VAL(structPtr)                                \
+    (Value) {                                                \
+        .type = TYPE_STRUCT, .as = {.structVal = structPtr } \
+    }
 
 #define IS_DOUBLE(value) ((value).type == TYPE_DOUBLE)
 #define IS_NULL(value) ((value).type == TYPE_NULL)
 #define IS_BOOLEAN(value) ((value).type == TYPE_BOOLEAN)
 #define IS_STRING(value) ((value).type == TYPE_STRING)
 #define IS_LAMBDA(value) ((value).type == TYPE_LAMBDA)
+#define IS_STRUCT(value) ((value).type == TYPE_STRUCT)
 
 #endif

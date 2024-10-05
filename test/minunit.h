@@ -37,6 +37,22 @@ static int assertionsFailed = 0;
     } while (0)
 
 /**
+ * Assert two strings are equal. If not, print both.
+ */
+#define ASSERT_STRINGS_EQUAL(expectedStr, actualStr)       \
+    do {                                                   \
+        assertionsRun++;                                   \
+        if (!(strcmp(expectedStr, actualStr "\n") == 0)) { \
+            assertionsFailed++;                            \
+            printf(KRED                                    \
+                   "Failed: \"%s\""                        \
+                   " not equal to " #actualStr "\n" RESET, \
+                   expectedStr);                           \
+            return FAILURE_RETURN_CODE;                    \
+        }                                                  \
+    } while (0)
+
+/**
  * Assert `test` expression is true. If not, execute a print statement `printStatement`.
  *
  * @param test an expression that evaluates to a truthy or falsy value.

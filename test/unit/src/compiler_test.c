@@ -14,7 +14,7 @@
     (Token) { .type = typeArg, .start = "_", .length = 1 }
 
 #define IDENTIFIER_TOKEN(identifier) \
-    (Token) { .type = TOKEN_IDENTIFIER, .start = identifier, .length = 1 }
+    (Token) { .type = TOKEN_IDENTIFIER, .start = identifier, .length = strlen(identifier) }
 
 #define NUMBER_LITERAL(numberAsString)                                                                           \
     &(Literal) {                                                                                                 \
@@ -302,6 +302,34 @@
         .values = (Expression*[]){__VA_ARGS__},                             \
         .used = sizeof((Expression*[]){__VA_ARGS__}) / sizeof(Expression*), \
         .size = sizeof((Expression*[]){__VA_ARGS__}) / sizeof(Expression*)  \
+    }
+
+#define STRUCT_EXPRESSION(...)                                                                    \
+    &(Expression) {                                                                               \
+        .type = STRUCT_EXPRESSION,                                                                \
+        .as.structExpression = &(StructExpression) {                                              \
+            .declarationArray = (StructDeclarationArray) {                                        \
+                .values = (StructDeclaration*[]){__VA_ARGS__},                                    \
+                .used = sizeof((StructDeclaration*[]){__VA_ARGS__}) / sizeof(StructDeclaration*), \
+                .size = sizeof((StructDeclaration*[]){__VA_ARGS__}) / sizeof(StructDeclaration*)  \
+            }                                                                                     \
+        }                                                                                         \
+    }
+
+#define STRUCT_DECLARATION(id, expr)                                       \
+    &(StructDeclaration) {                                                 \
+        .isPrototype = false,                                              \
+        .identifier = &(IdentifierLiteral){.token = IDENTIFIER_TOKEN(id)}, \
+        .maybeExpression = expr                                            \
+    }
+
+#define MEMBER_EXPRESSION(left, right)               \
+    &(Expression) {                                  \
+        .type = MEMBER_EXPRESSION,                   \
+        .as.memberExpression = &(MemberExpression) { \
+            .leftHandSide = left,                    \
+            .rightHandSide = right                   \
+        }                                            \
     }
 
 // ------------------------------------------------------------------------
@@ -1682,5 +1710,131 @@ int test_compiler_lambda_with_conditional_returns() {
 
     FREE_COMPILER
 
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_simple_struct() {
+    Source testSource = {
+        .rootStatements = {
+            EXPRESSION_STATEMENT(
+                STRUCT_EXPRESSION(
+                    STRUCT_DECLARATION("x", PRIMARY_EXPRESSION(NUMBER_LITERAL("42"))),
+                    STRUCT_DECLARATION("y", PRIMARY_EXPRESSION(STRING_LITERAL("\"hello\"")))))},
+        .numberOfStatements = 1,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    // Verify bytecode
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[0].type == OP_NEW_STRUCT);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[1].type == OP_LOAD_CONSTANT);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[2].type == OP_SET_FIELD);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[3].type == OP_LOAD_CONSTANT);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[4].type == OP_SET_FIELD);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[5].type == OP_POPN);
+
+    // Verify constant pool
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.used == 4);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].type == CONST_TYPE_DOUBLE);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].as.number == 42);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[1].type == CONST_TYPE_STRING);
+    ASSERT(strcmp(compiledCode.topLevelCodeObject.constantPool.values[1].as.string, "x") == 0);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[2].type == CONST_TYPE_STRING);
+    ASSERT(strcmp(compiledCode.topLevelCodeObject.constantPool.values[2].as.string, "hello") == 0);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[3].type == CONST_TYPE_STRING);
+    ASSERT(strcmp(compiledCode.topLevelCodeObject.constantPool.values[3].as.string, "y") == 0);
+
+    FREE_COMPILER
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_struct_field_access() {
+    Source testSource = {
+        .rootStatements = {
+            VAR_DECLARATION_STATEMENT("myStruct",
+                                      STRUCT_EXPRESSION(
+                                          STRUCT_DECLARATION("field", PRIMARY_EXPRESSION(NUMBER_LITERAL("123"))))),
+            PRINT_STATEMENT(
+                MEMBER_EXPRESSION(
+                    PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("myStruct")),
+                    PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("field"))))},
+        .numberOfStatements = 2,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    // Verify bytecode for struct creation and field access
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[0].type == OP_NEW_STRUCT);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[1].type == OP_LOAD_CONSTANT);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[2].type == OP_SET_FIELD);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[3].type == OP_DEFINE_GLOBAL_VAR);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[4].type == OP_GET_GLOBAL_VAR);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[5].type == OP_GET_FIELD);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[6].type == OP_PRINT);
+
+    FREE_COMPILER
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_nested_struct() {
+    Source testSource = {
+        .rootStatements = {
+            EXPRESSION_STATEMENT(
+                STRUCT_EXPRESSION(
+                    STRUCT_DECLARATION("outer",
+                                       STRUCT_EXPRESSION(
+                                           STRUCT_DECLARATION("inner", PRIMARY_EXPRESSION(NUMBER_LITERAL("42")))))))},
+        .numberOfStatements = 1,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    // Verify bytecode for nested struct creation
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[0].type == OP_NEW_STRUCT);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[1].type == OP_NEW_STRUCT);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[2].type == OP_LOAD_CONSTANT);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[3].type == OP_SET_FIELD);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[4].type == OP_SET_FIELD);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[5].type == OP_POPN);
+
+    // Verify constant pool
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.used == 3);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].type == CONST_TYPE_DOUBLE);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[0].as.number == 42);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[1].type == CONST_TYPE_STRING);
+    ASSERT(strcmp(compiledCode.topLevelCodeObject.constantPool.values[1].as.string, "inner") == 0);
+    ASSERT(compiledCode.topLevelCodeObject.constantPool.values[2].type == CONST_TYPE_STRING);
+    ASSERT(strcmp(compiledCode.topLevelCodeObject.constantPool.values[2].as.string, "outer") == 0);
+
+    FREE_COMPILER
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_compiler_struct_assignment() {
+    Source testSource = {
+        .rootStatements = {
+            VAR_DECLARATION_STATEMENT("myStruct",
+                                      STRUCT_EXPRESSION(
+                                          STRUCT_DECLARATION("field", PRIMARY_EXPRESSION(NUMBER_LITERAL("123"))))),
+            ASSIGNMENT_STATEMENT(
+                MEMBER_EXPRESSION(
+                    PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("myStruct")),
+                    PRIMARY_EXPRESSION(IDENTIFIER_LITERAL("field"))),
+                PRIMARY_EXPRESSION(NUMBER_LITERAL("456")))},
+        .numberOfStatements = 2,
+    };
+
+    COMPILE_TEST_SOURCE
+
+    // Verify bytecode for struct creation and field assignment
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[0].type == OP_NEW_STRUCT);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[1].type == OP_LOAD_CONSTANT);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[2].type == OP_SET_FIELD);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[3].type == OP_DEFINE_GLOBAL_VAR);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[4].type == OP_GET_GLOBAL_VAR);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[5].type == OP_LOAD_CONSTANT);
+    ASSERT(compiledCode.topLevelCodeObject.bytecodeArray.values[6].type == OP_SET_FIELD);
+
+    FREE_COMPILER
     return SUCCESS_RETURN_CODE;
 }

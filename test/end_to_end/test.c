@@ -71,6 +71,14 @@ void all_end_to_end_tests() {
     RUN_TEST(test_var_declaration_simple_var_declaration);
     RUN_TEST(test_var_declaration_global_declaration_local_assignment);
     RUN_TEST(test_var_declaration_nested_var_declaration);
+
+    /* Structs */
+    RUN_TEST(test_struct_simple_declaration);
+    RUN_TEST(test_struct_nested);
+    RUN_TEST(test_struct_modification);
+    RUN_TEST(test_struct_in_function);
+    RUN_TEST(test_struct_array_simulation);
+    RUN_TEST(test_struct_chained_access);
 }
 
 int run_all_end_to_end_tests() {

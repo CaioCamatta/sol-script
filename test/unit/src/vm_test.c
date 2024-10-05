@@ -1201,3 +1201,148 @@ int test_vm_lambda_nested_calls() {
     freeCompiledCode(&code);
     return SUCCESS_RETURN_CODE;
 }
+
+int test_vm_simple_struct() {
+    CompiledCode code = newCompiledCode();
+
+    // Create a simple struct with two fields
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, STRING_CONST("x"), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, DOUBLE_CONST(10), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, STRING_CONST("y"), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, STRING_CONST("hello"), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, STRING_CONST("myStruct"), Constant);
+
+    ADD_BYTECODES(&code.topLevelCodeObject.bytecodeArray,
+                  BYTECODE(OP_NEW_STRUCT),
+                  BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 1),      // 10
+                  BYTECODE_OPERAND_1(OP_SET_FIELD, 0),          // "x"
+                  BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 3),      // "hello"
+                  BYTECODE_OPERAND_1(OP_SET_FIELD, 2),          // "y"
+                  BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, 4),  // Store struct in global "myStruct"
+                  BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 4),     // Get "myStruct"
+                  BYTECODE_OPERAND_1(OP_GET_FIELD, 0),          // Get "x"
+                  BYTECODE(OP_PRINT),
+                  BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 4),  // Get "myStruct" again
+                  BYTECODE_OPERAND_1(OP_GET_FIELD, 2),       // Get "y"
+                  BYTECODE(OP_PRINT));
+
+    VM vm;
+    initVM(&vm, code);
+
+    CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "10.000000\nhello\n") == 0); });
+
+    freeVM(&vm);
+    freeCompiledCode(&code);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_vm_nested_structs() {
+    CompiledCode code = newCompiledCode();
+
+    // Create a nested struct
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, STRING_CONST("outer"), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, STRING_CONST("inner"), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, STRING_CONST("value"), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, DOUBLE_CONST(42), Constant);
+
+    ADD_BYTECODES(&code.topLevelCodeObject.bytecodeArray,
+                  BYTECODE(OP_NEW_STRUCT),                      // Outer struct
+                  BYTECODE(OP_NEW_STRUCT),                      // Inner struct
+                  BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 3),      // 42
+                  BYTECODE_OPERAND_1(OP_SET_FIELD, 2),          // "value" in inner struct
+                  BYTECODE_OPERAND_1(OP_SET_FIELD, 1),          // "inner" in outer struct
+                  BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, 0),  // Store outer struct in global "outer"
+                  BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 0),     // Get "outer"
+                  BYTECODE_OPERAND_1(OP_GET_FIELD, 1),          // Get "inner"
+                  BYTECODE_OPERAND_1(OP_GET_FIELD, 2),          // Get "value" from inner
+                  BYTECODE(OP_PRINT));
+
+    VM vm;
+    initVM(&vm, code);
+
+    CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "42.000000\n") == 0); });
+
+    freeVM(&vm);
+    freeCompiledCode(&code);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_vm_struct_field_assignment() {
+    CompiledCode code = newCompiledCode();
+
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, STRING_CONST("myStruct"), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, STRING_CONST("field"), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, DOUBLE_CONST(10), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, DOUBLE_CONST(20), Constant);
+
+    ADD_BYTECODES(&code.topLevelCodeObject.bytecodeArray,
+                  BYTECODE(OP_NEW_STRUCT),
+                  BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 2),      // 10
+                  BYTECODE_OPERAND_1(OP_SET_FIELD, 1),          // "field"
+                  BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, 0),  // "myStruct"
+                  BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 0),     // Get "myStruct"
+                  BYTECODE_OPERAND_1(OP_GET_FIELD, 1),          // Get "field"
+                  BYTECODE(OP_PRINT),
+                  BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 0),  // Get "myStruct"
+                  BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 3),   // 20
+                  BYTECODE_OPERAND_1(OP_SET_FIELD, 1),       // Set "field" to 20
+                  BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 0),  // Get "myStruct"
+                  BYTECODE_OPERAND_1(OP_GET_FIELD, 1),       // Get "field"
+                  BYTECODE(OP_PRINT));
+
+    VM vm;
+    initVM(&vm, code);
+
+    CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "10.000000\n20.000000\n") == 0); });
+
+    freeVM(&vm);
+    freeCompiledCode(&code);
+    return SUCCESS_RETURN_CODE;
+}
+
+int test_vm_struct_in_function_call() {
+    CompiledCode code = newCompiledCode();
+
+    // Create a function that takes a struct and returns its "x" field
+    Function* getX = malloc(sizeof(Function));
+    getX->parameterCount = 1;
+    getX->code = malloc(sizeof(CompiledCodeObject));
+    INIT_ARRAY(getX->code->bytecodeArray, Bytecode);
+    INIT_ARRAY(getX->code->constantPool, Constant);
+
+    INSERT_ARRAY(getX->code->constantPool, STRING_CONST("x"), Constant);
+
+    ADD_BYTECODES(&getX->code->bytecodeArray,
+                  BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, 0),  // Get the struct parameter
+                  BYTECODE_OPERAND_1(OP_GET_FIELD, 0),           // Get "x" field
+                  BYTECODE(OP_RETURN));
+
+    // Main code
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, LAMBDA_CONST(getX), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, STRING_CONST("getX"), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, STRING_CONST("x"), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, DOUBLE_CONST(42), Constant);
+    INSERT_ARRAY(code.topLevelCodeObject.constantPool, STRING_CONST("myStruct"), Constant);
+
+    ADD_BYTECODES(&code.topLevelCodeObject.bytecodeArray,
+                  BYTECODE_OPERAND_1(OP_LAMBDA, 0),             // Create getX function
+                  BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, 1),  // Define "getX"
+                  BYTECODE(OP_NEW_STRUCT),                      // Create struct
+                  BYTECODE_OPERAND_1(OP_LOAD_CONSTANT, 3),      // 42
+                  BYTECODE_OPERAND_1(OP_SET_FIELD, 2),          // Set "x" to 42
+                  BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, 4),  // Store struct in global "myStruct"
+                  BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 4),     // Get "myStruct" for function call
+                  BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, 1),     // Get "getX" function
+                  BYTECODE(OP_CALL),                            // Call getX(struct)
+                  BYTECODE(OP_PRINT)                            // Print result
+    );
+
+    VM vm;
+    initVM(&vm, code);
+
+    CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "42.000000\n") == 0); });
+
+    freeVM(&vm);
+    freeCompiledCode(&code);
+    return SUCCESS_RETURN_CODE;
+}

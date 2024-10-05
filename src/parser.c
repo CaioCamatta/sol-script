@@ -58,14 +58,14 @@ static void advance(ASTParser* parser) {
 
 // Consume provided type & advance, or error
 static Token* consume(ASTParser* parser, TokenType type, const char* message) {
+    Token* currToken = parser->current;
     if (parser->current->type == type) {
-        Token* currToken = parser->current;
         advance(parser);
         return currToken;
     }
 
     reportParserErrorAndSynchronize(parser, message);
-    return NULL;
+    return currToken;
 }
 
 /* Check if current token is of a given type. */
@@ -659,7 +659,7 @@ static StructDeclarationArray structDeclarationArray(ASTParser* parser) {
     StructDeclarationArray array;
     INIT_ARRAY(array, StructDeclaration*);
 
-    while (!check(parser, TOKEN_RIGHT_CURLY)) {
+    while (!check(parser, TOKEN_RIGHT_CURLY) && !check(parser, TOKEN_EOF)) {
         StructDeclaration* declaration = structDeclaration(parser);
         INSERT_ARRAY(array, declaration, StructDeclaration*);
     }

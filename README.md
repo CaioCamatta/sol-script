@@ -347,8 +347,9 @@ To-do before v1.0 is released:
  - [X] Add end-to-end tests
  - [x] Make debug logs optional for REPL or program execution
  - [X] Add Panic Mode error recovery to parser; stop crashing on every error.
- - [ ] Implement objects / structs
+ - [X] Implement objects / structs
  - [ ] Implement closures
+ - [ ] Audit all dynamic memory allocation and correctly free scanner, parser, and compiler objects.
  - [ ] Add garbage collector
 
 ### v1.1 Tasks
@@ -356,10 +357,12 @@ These tasks are outside the scope of v1:
 
  - [ ] Add native functions
  - [ ] Add benchmark tests
+ - [ ] Add prototypal inheritance
  - [ ] Profile execution and find opportunities for optimization
  - [ ] Add Panic Mode error recovery to compiler
  - [ ] Improve compiler error logging; print line and column
  - [ ] Implement [NaN boxing](https://piotrduperas.com/posts/nan-boxing)
+ - [ ] Add arrays
 
 ### Small Fixes To implement
 These are smaller-ish items to do at any time:

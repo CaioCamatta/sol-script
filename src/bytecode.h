@@ -56,7 +56,12 @@ typedef enum {
     // Functions
     OP_LAMBDA,  // put lambda Value on the stack.
     OP_CALL,    // Invoke identifier if its in scope
-    OP_RETURN   // Exit current frame and return the value at the top of the current frame.
+    OP_RETURN,  // Exit current frame and return the value at the top of the current frame.
+
+    // Structs
+    OP_NEW_STRUCT,  // Create new struct
+    OP_SET_FIELD,   // Set struct field
+    OP_GET_FIELD    // Get struct field
 } Opcode;
 
 // Create simple bytecode with no operands or constants
