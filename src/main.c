@@ -14,18 +14,21 @@
 #include "vm.h"
 
 static void repl() {
-    // Use the same Compiler throughout the REPL session so we can add to the same constant pool
+    // Initialize a shared constant pool
+    ConstantPool sharedConstantPool;
+    INIT_ARRAY(sharedConstantPool, Constant);
+
+    // Initialize the compiler with the shared constant pool
     CompilerState compiler;
     initCompilerState(&compiler, NULL);
+    compiler.currentCompilerUnit.compiledCodeObject.constantPool = sharedConstantPool;
 
-    // Use the same VM throughout the REPL session so we can maintain runtime values
+    // Initialize VM with empty bytecode but shared constant pool
     VM vm;
-    BytecodeArray bytecodeArray;
-    INIT_ARRAY(bytecodeArray, Bytecode);
-    CompiledCode compiledCode = (CompiledCode){
-        .topLevelCodeObject = compiler.currentCompilerUnit.compiledCodeObject};
-
-    initVM(&vm, compiledCode);
+    CompiledCode initialCompiledCode = {0};
+    INIT_ARRAY(initialCompiledCode.topLevelCodeObject.bytecodeArray, Bytecode);
+    initialCompiledCode.topLevelCodeObject.constantPool = sharedConstantPool;
+    initVM(&vm, initialCompiledCode);
 
     char input[1024];
     while (1) {
@@ -39,11 +42,9 @@ static void repl() {
         ASTParser treeParser;
 
         TokenArray tokens = scanTokensFromString(&scanner, input);
-
         Source* source = parseASTFromTokens(&treeParser, &tokens);
 
-        // Reset compiled bytecode and feed new AST, but maintain same constant pool
-        INIT_ARRAY(compiler.currentCompilerUnit.compiledCodeObject.bytecodeArray, Bytecode);
+        // Compile the new input
         compiler.ASTSource = source;
         CompiledCode newCode = compile(&compiler);
 
@@ -52,12 +53,18 @@ static void repl() {
             vm.frames[0].codeObject->bytecodeArray.values[vm.frames[0].codeObject->bytecodeArray.used] = newCode.topLevelCodeObject.bytecodeArray.values[i];
             vm.frames[0].codeObject->bytecodeArray.used++;
         }
+
         run(&vm);
         printf("\n");
 
         FREE_ARRAY(tokens);
         freeSource(source);
     }
+
+    // Clean up
+    FREE_ARRAY(sharedConstantPool);
+    freeVM(&vm);
+    freeCompilerState(&compiler);
 }
 
 static void executeFile(const char* path) {
