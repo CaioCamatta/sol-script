@@ -370,3 +370,4 @@ These are smaller-ish items to do at any time:
 - [X] Fix chained function calls
 - [ ] If-expressions at the end of function blocks should be used as function return.
 - [ ] Get recursive functions working
+- [ ] Returning null from functions doesnt work in structs
