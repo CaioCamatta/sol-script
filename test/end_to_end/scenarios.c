@@ -275,18 +275,18 @@ static int test_functions_single_parameter() {
     EXPECT("5.000000\nhello");
 }
 
-// static int test_functions_recursive() {
-//     SCENARIO(
-//         "val factorial = lambda (n) {"
-//         "    if (n <= 1) {"
-//         "        1;"
-//         "    } else {"
-//         "        n * factorial(n - 1);"
-//         "    };"
-//         "};"
-//         "print factorial(5);");
-//     EXPECT("120.000000");
-// }
+static int test_functions_recursive() {
+    SCENARIO(
+        "val factorial = lambda (n) {"
+        "    if (n <= 1) {"
+        "        return 1;"
+        "    } else {"
+        "        return n * factorial(n - 1);"
+        "    };"
+        "};"
+        "print factorial(5);");
+    EXPECT("120.000000");
+}
 
 static int test_functions_modify_global() {
     SCENARIO(

@@ -1,8 +1,8 @@
-val a = { 
-    val c = { 
-        val f = 1; 
-        f + 2; 
-    }; 
-    c + 3;
+val factorial = lambda (n) {
+    if (n <= 1) {
+        return 1;
+    } else {
+        return n * factorial(n - 1);
+    };
 };
-print a;
+print factorial(5);
