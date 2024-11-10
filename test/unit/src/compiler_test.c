@@ -1640,13 +1640,11 @@ int test_compiler_lambda_with_return() {
     Bytecode expectedLambdaBytecode[] = {
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_RETURN},
-        {.type = OP_NULL},
-        {.type = OP_SWAP},
         {.type = OP_POPN},
         {.type = OP_POPN},
         {.type = OP_RETURN},
     };
-    BytecodeArray expectedLambdaBytecodeArray = {.values = expectedLambdaBytecode, .used = 7};
+    BytecodeArray expectedLambdaBytecodeArray = {.values = expectedLambdaBytecode, .used = 5};
 
     ASSERT(compareTypesInBytecodeArrays(expectedLambdaBytecodeArray, lambda->code->bytecodeArray));
     ASSERT(lambda->code->constantPool.values[0].as.number == 10);

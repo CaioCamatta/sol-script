@@ -653,6 +653,10 @@ static void freeStackSnapshot(StackSnapshot* snapshot) {
     }
 }
 
+static bool isLastStatementInBlockAReturn(BlockExpression* blockExpression) {
+    return blockExpression->statementArray.values[blockExpression->statementArray.used - 1]->type == RETURN_STATEMENT;
+}
+
 /**
  * Compiles a block expression, which introduces a new scope.
  * A block contains a series of statements followed by an optional
@@ -700,7 +704,7 @@ static void visitBlockExpression(CompilerUnit* compiler, BlockExpression* blockE
     // Compile the final expression (or use null if none provided)
     if (blockExpression->lastExpression) {
         visitExpression(compiler, blockExpression->lastExpression);
-    } else {
+    } else if (!isLastStatementInBlockAReturn(blockExpression)) {
         emitBytecode(compiler, BYTECODE(OP_NULL));
         increaseStackHeight(compiler);
     }
@@ -829,7 +833,7 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
 
     // Emit OP_RETURN if not already present
     if (functionCompiler.compiledCodeObject.bytecodeArray.values[functionCompiler.compiledCodeObject.bytecodeArray.used - 1].type != OP_RETURN) {
-        emitBytecode(&functionCompiler, (Bytecode){.type = OP_RETURN});
+        emitBytecode(&functionCompiler, BYTECODE(OP_RETURN));
     }
 
     // Allocate the compiled code object on the heap and create a function object
