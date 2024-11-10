@@ -863,3 +863,71 @@ static int test_struct_chained_access() {
         "print complex.a().b.c();");
     EXPECT("42.000000");
 }
+
+// Test blocks with multiple levels of nesting and shadowing
+static int test_blocks_deep_nesting() {
+    SCENARIO(
+        "var x = 1;"
+        "{"
+        "    var x = 2;"
+        "    print x;"
+        "    {"
+        "        var x = 3;"
+        "        print x;"
+        "        {"
+        "            var x = 4;"
+        "            print x;"
+        "        }"
+        "        print x;"
+        "    }"
+        "    print x;"
+        "}"
+        "print x;");
+    EXPECT("2.000000\n3.000000\n4.000000\n3.000000\n2.000000\n1.000000");
+}
+
+// Test complex nested block expressions with return values
+// static int test_blocks_nested_expressions() {
+//     SCENARIO(
+//         "val result = {"
+//         "    val a = {"
+//         "        val x = 5;"
+//         "        x * 2;"
+//         "    };"
+//         "    val b = {"
+//         "        val y = {"
+//         "            val z = 3;"
+//         "            z + 1;"
+//         "        };"
+//         "        y * 2;"
+//         "    };"
+//         "    a + b;"
+//         "};"
+//         "print result;");
+//     EXPECT("18.000000");
+// }
+
+// Test struct creation and manipulation in complex scenarios
+static int test_structs_complex() {
+    SCENARIO(
+        "var makePoint = lambda(x, y) {"
+        "    struct {"
+        "        x: x;"
+        "        y: y;"
+        "        length: lambda() {"
+        "            val l = this.x * this.x + this.y * this.y;"
+        "            return l;"
+        "        };"
+        "        scale: lambda(factor) {"
+        "            this.x = this.x * factor;"
+        "            this.y = this.y * factor;"
+        "            return this;"
+        "        };"
+        "    };"
+        "};"
+        "val point = makePoint(3, 4);"
+        "print point.length();"    // 3^2 + 4^2 = 25
+        "point.scale(2);"          // x=6, y=8
+        "print point.length();");  // 6^2 + 8^2 = 100
+    EXPECT("25.000000\n100.000000");
+}
