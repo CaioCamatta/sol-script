@@ -715,6 +715,11 @@ static int test_scope_global_vs_local() {
     EXPECT("7.000000");
 }
 
+static int test_scope_nested_declarations() {
+    SCENARIO("val a = { val c = { val f = 1; f + 2; }; c + 3; }; print a;")
+    EXPECT("6.000000");
+}
+
 static int test_var_declaration_multiple_declarations() {
     SCENARIO(
         "var a = 1;"

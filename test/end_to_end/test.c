@@ -64,6 +64,7 @@ void all_end_to_end_tests() {
     RUN_TEST(test_scope_consecutive_blocks);
     RUN_TEST(test_scope_nested_blocks);
     RUN_TEST(test_scope_global_vs_local);
+    RUN_TEST(test_scope_nested_declarations);
 
     /* Variable declaration */
     RUN_TEST(test_var_declaration_multiple_declarations);
