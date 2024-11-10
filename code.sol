@@ -5,6 +5,6 @@ val factorial = lambda (n) {
     } else {
         result = n * factorial(n - 1);
     };
-    return result;
+    result;
 };
-print factorial(5);
+print factorial(3);

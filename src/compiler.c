@@ -688,8 +688,10 @@ static bool isLastStatementInBlockAReturn(BlockExpression* blockExpression) {
  * - Inner block would leave 'f' on stack: [c, f, result]
  * - Outer block's 'c + 3' would try to access wrong stack positions
  * - Subsequent code would see phantom variables
+ *
+ * @param isCompilingFunctionBlock whether this block statement is a function block.
  */
-static void visitBlockExpression(CompilerUnit* compiler, BlockExpression* blockExpression) {
+static void visitBlockExpression(CompilerUnit* compiler, BlockExpression* blockExpression, bool isCompilingFunctionBlock) {
     bool wasCompilerInGlobalScopeBeforeThisBlock = compiler->isInGlobalScope;
     compiler->isInGlobalScope = false;
 
@@ -712,17 +714,36 @@ static void visitBlockExpression(CompilerUnit* compiler, BlockExpression* blockE
     // Calculate how many new values were added to stack during block compilation
     uint8_t stackEffect = compiler->predictedStack.currentStackHeight - snapshot.currentStackHeight;
 
-    // Swap the value at the top of the stack (the Value produced by the expression) with the first value
-    // produced in the block. Example:
-    // Before: [ X X X BlockValue_0 BlockValue_1 BlockValue_2]
-    // Apply: SWAP(2)
-    // After:  [ X X X BlockValue_2 BlockValue_1 BlockValue_0]
-    if (stackEffect > 1)
-        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SWAP, stackEffect - 1));
+    /*
+     * Block expressions need different stack handling depending on context:
+     *
+     * 1. For regular blocks (if !isCompilingFunctionBlock):
+     *    We need to clean up the stack but preserve the block's final value.
+     *    This requires:
+     *    - SWAP to move the final value to the right position
+     *    - POPN to remove temporaries while keeping the final value
+     *    Example of regular block cleanup:
+     *      Before: [ x y z blockTemp1 blockTemp2 finalValue ]
+     *      After:  [ x y z finalValue ]
+     *
+     * 2. For function blocks (if isCompilingFunctionBlock):
+     *    We skip cleanup because RETURN will handle it by:
+     *    - Capturing the top value as the return value
+     *    - Discarding the entire frame
+     *    - Pushing return value onto caller's frame
+     */
+    if (!isCompilingFunctionBlock) {
+        // First, move the final value into position
+        if (stackEffect > 1) {
+            // Example: for stack [x y z a b c], stackEffect=3, SWAP(2) produces [x y z c b a]
+            // where 'c' is the final value we want to keep
+            emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SWAP, stackEffect - 1));
+        }
 
-    // Pop all the Values that were put in the VM stack in the block, except the Value produced by the expression
-    // TODO: optimization; stop emitting POP when stackEffect = 0.
-    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_POPN, stackEffect - 1));
+        // Then remove all temporaries, leaving only the final value
+        // stackEffect - 1 because we're keeping the final value
+        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_POPN, stackEffect - 1));
+    }
 
     // Restore stack to its state before block, but add one slot for block's result
     restoreStackFromSnapshot(&compiler->predictedStack, &snapshot);
@@ -827,7 +848,7 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
     }
 
     // Compile the function body
-    visitBlockExpression(&functionCompiler, lambdaExpression->bodyBlock);
+    visitBlockExpression(&functionCompiler, lambdaExpression->bodyBlock, true);
     // TODO (optimization): visitBlockExpression will always emit a POP_N. For function compilation, we can skip the
     // POP_N as it is redudant. The VM will pop the entire CallFrame, which is effectively the same as POP_N.
 
@@ -1088,7 +1109,7 @@ static void visitExpression(CompilerUnit* compiler, Expression* expression) {
             visitComparisonExpression(compiler, expression->as.comparisonExpression);
             break;
         case BLOCK_EXPRESSION:
-            visitBlockExpression(compiler, expression->as.blockExpression);
+            visitBlockExpression(compiler, expression->as.blockExpression, false);
             break;
         case LAMBDA_EXPRESSION:
             visitLambdaExpression(compiler, expression->as.lambdaExpression);
