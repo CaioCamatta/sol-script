@@ -36,14 +36,20 @@ typedef struct {
 /**
  * During Compiler execution, we use this struct to predict what the VM stack will look like.
  *
- * This is necessary for various reasons. For example, local variables are references via
- * their position on the stack. So, to compile a variable access we need to predict what the VM
- * stack will look like during execution.
+ * Note: stack prediction is necessary for so the compiler can tell the VM what stack slots to access.
+ * For example, local variables are references via their position on the stack. So, to compile
+ * a variable access we need to predict what the VM stack will look like during execution.
  */
 typedef struct {
     u_int8_t currentStackHeight;  // The next empty spot on the stack
     Local tempStack[STACK_MAX];
 } PredictedStack;
+
+/**
+ * Represents a saved state of the predicted stack at a point in time.
+ * Used to restore stack state when exiting block scopes.
+ */
+typedef PredictedStack StackSnapshot;
 
 typedef struct CompilerUnit CompilerUnit;
 /**

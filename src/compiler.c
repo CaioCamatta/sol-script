@@ -615,19 +615,98 @@ static void visitPrintStatement(CompilerUnit* compiler, PrintStatement* printSta
     decreaseStackHeight(compiler);
 }
 
+/**
+ * Creates a copy of the current predicted stack state.
+ * Used when entering a block to remember outer scope state.
+ */
+static StackSnapshot takeStackSnapshot(PredictedStack* stack) {
+    StackSnapshot snapshot;
+    snapshot.currentStackHeight = stack->currentStackHeight;
+
+    // Initialize all slots to NULL first
+    for (int i = 0; i < STACK_MAX; i++) {
+        snapshot.tempStack[i].name = NULL;
+        snapshot.tempStack[i].isModifiable = false;
+    }
+
+    // Deep copy only the active slots
+    for (int i = 0; i <= stack->currentStackHeight; i++) {
+        if (stack->tempStack[i].name != NULL) {
+            // Allocate and copy the name string
+            snapshot.tempStack[i].name = strdup(stack->tempStack[i].name);
+            snapshot.tempStack[i].isModifiable = stack->tempStack[i].isModifiable;
+        }
+    }
+    return snapshot;
+}
+/**
+ * Restores a predicted stack to a previously saved state.
+ * Used when exiting a block to restore outer scope state.
+ */
+static void restoreStackFromSnapshot(PredictedStack* stack, StackSnapshot* snapshot) {
+    // Restore original stack from snapshot
+    stack->currentStackHeight = snapshot->currentStackHeight;
+    memcpy(stack->tempStack, snapshot->tempStack, sizeof(Local) * STACK_MAX);
+}
+
+/**
+ * Frees all memory associated with a stack snapshot.
+ * Must be called when snapshot is no longer needed to avoid memory leaks.
+ */
+static void freeStackSnapshot(StackSnapshot* snapshot) {
+    for (int i = 0; i < snapshot->currentStackHeight; i++) {
+        if (snapshot->tempStack[i].name != NULL) {
+            free(snapshot->tempStack[i].name);
+            snapshot->tempStack[i].name = NULL;
+        }
+    }
+}
+
+/**
+ * Compiles a block expression, which introduces a new scope.
+ * A block contains a series of statements followed by an optional
+ * final expression that becomes the block's value.
+ *
+ * Block compilation process:
+ * 1. Save current stack state
+ * 2. Compile block contents (statements + expression)
+ * 3. If multiple values on stack, keep only final expression value
+ * 4. Restore original stack state (plus one slot for block result)
+ *
+ * --- Side node: Why restore the stack? --
+ * Consider this code:
+ *   val a = {                // Snapshot: []
+ *     val c = {              // Snapshot: [c]
+ *       val f = 1;          // Stack: [f]  -> without restoring, c would be lost
+ *       f + 2;              // Stack: [f, result]
+ *     };                    // Restore: [c] (+ result)
+ *     c + 3;                // Stack: [c, result2]
+ *   };                      // Restore: [] (+ result2)
+ *
+ * The VM will handle clearing the stack at runtime via OP_POPN, but the compiler
+ * needs to "forget" about block-local variables after each block so subsequent
+ * code compiles with the correct stack positions. After the inner block finishes,
+ * 'f' should no longer be accessible, and after the outer block, 'c' should no
+ * longer be accessible. This is achieved by saving/restoring the stack state.
+ *
+ * Without stack restoration:
+ * - Inner block would leave 'f' on stack: [c, f, result]
+ * - Outer block's 'c + 3' would try to access wrong stack positions
+ * - Subsequent code would see phantom variables
+ */
 static void visitBlockExpression(CompilerUnit* compiler, BlockExpression* blockExpression) {
     bool wasCompilerInGlobalScopeBeforeThisBlock = compiler->isInGlobalScope;
     compiler->isInGlobalScope = false;
 
-    // Keep track of the stack height so we can later pop all the variables etc defined in it.
-    uint8_t stackHeightBeforeBlockStmt = compiler->predictedStack.currentStackHeight;
+    // Save stack state before block compilation
+    StackSnapshot snapshot = takeStackSnapshot(&compiler->predictedStack);
 
     for (size_t i = 0; i < blockExpression->statementArray.used; i++) {
         Statement* statement = blockExpression->statementArray.values[i];
         visitStatement(compiler, statement);
     }
 
-    // If there's a final expression, visit it. Otherwise emit a NULL.
+    // Compile the final expression (or use null if none provided)
     if (blockExpression->lastExpression) {
         visitExpression(compiler, blockExpression->lastExpression);
     } else {
@@ -635,27 +714,26 @@ static void visitBlockExpression(CompilerUnit* compiler, BlockExpression* blockE
         increaseStackHeight(compiler);
     }
 
-    // Calculate the stack effect of this entire block so we can clean up at the end of the block.
-    uint8_t stackHeightAfterBlockStmt = compiler->predictedStack.currentStackHeight;
-    uint8_t blockStmtStackEffect = stackHeightAfterBlockStmt - stackHeightBeforeBlockStmt;
+    // Calculate how many new values were added to stack during block compilation
+    uint8_t stackEffect = compiler->predictedStack.currentStackHeight - snapshot.currentStackHeight;
 
     // Swap the value at the top of the stack (the Value produced by the expression) with the first value
     // produced in the block. Example:
     // Before: [ X X X BlockValue_0 BlockValue_1 BlockValue_2]
     // Apply: SWAP(2)
     // After:  [ X X X BlockValue_2 BlockValue_1 BlockValue_0]
-    if (blockStmtStackEffect > 1)
-        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SWAP, blockStmtStackEffect - 1));
+    if (stackEffect > 1)
+        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SWAP, stackEffect - 1));
 
     // Pop all the Values that were put in the VM stack in the block, except the Value produced by the expression
-    // TODO: optimization; stop emitting POP when blockStmtStackEffect = 0.
-    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_POPN, blockStmtStackEffect - 1));
+    // TODO: optimization; stop emitting POP when stackEffect = 0.
+    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_POPN, stackEffect - 1));
 
-    // Pop all the Locals that were put in the Compiler stack in the block, except for the final expression.
-    removeLocalsFromTempStack(compiler, blockStmtStackEffect - 1);
+    // Restore stack to its state before block, but add one slot for block's result
+    restoreStackFromSnapshot(&compiler->predictedStack, &snapshot);
+    freeStackSnapshot(&snapshot);
 
-    // Undo stack height, except for final expression
-    compiler->predictedStack.currentStackHeight = stackHeightBeforeBlockStmt + 1;
+    compiler->predictedStack.currentStackHeight++;
 
     compiler->isInGlobalScope = wasCompilerInGlobalScopeBeforeThisBlock;
 }

@@ -5,3 +5,4 @@ val a = {
     }; 
     c + 3;
 };
+print a;
