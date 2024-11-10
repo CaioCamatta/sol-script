@@ -1393,8 +1393,7 @@ int test_compiler_lambda_expression_simple() {
     ASSERT(function->code->bytecodeArray.values[0].type == OP_GET_LOCAL_VAL_FAST);
     ASSERT(function->code->bytecodeArray.values[1].type == OP_GET_LOCAL_VAL_FAST);
     ASSERT(function->code->bytecodeArray.values[2].type == OP_BINARY_ADD);
-    ASSERT(function->code->bytecodeArray.values[3].type == OP_POPN);
-    ASSERT(function->code->bytecodeArray.values[4].type == OP_RETURN);
+    ASSERT(function->code->bytecodeArray.values[3].type == OP_RETURN);
 
     FREE_COMPILER
 
@@ -1433,8 +1432,7 @@ int test_compiler_lambda_expression_nested() {
     Function* outerFunction = compiledCode.topLevelCodeObject.constantPool.values[0].as.lambda;
     ASSERT(outerFunction->parameterCount == 1);
     ASSERT(outerFunction->code->bytecodeArray.values[0].type == OP_LAMBDA);
-    ASSERT(outerFunction->code->bytecodeArray.values[1].type == OP_POPN);
-    ASSERT(outerFunction->code->bytecodeArray.values[2].type == OP_RETURN);
+    ASSERT(outerFunction->code->bytecodeArray.values[1].type == OP_RETURN);
 
     // Verify the inner function's bytecode
     Function* innerFunction = outerFunction->code->constantPool.values[0].as.lambda;
@@ -1442,8 +1440,7 @@ int test_compiler_lambda_expression_nested() {
     ASSERT(innerFunction->code->bytecodeArray.values[0].type == OP_GET_LOCAL_VAL_FAST);  // y
     ASSERT(innerFunction->code->bytecodeArray.values[1].type == OP_LOAD_CONSTANT);       // 1
     ASSERT(innerFunction->code->bytecodeArray.values[2].type == OP_BINARY_ADD);
-    ASSERT(innerFunction->code->bytecodeArray.values[3].type == OP_POPN);
-    ASSERT(innerFunction->code->bytecodeArray.values[4].type == OP_RETURN);
+    ASSERT(innerFunction->code->bytecodeArray.values[3].type == OP_RETURN);
 
     FREE_COMPILER
 
@@ -1641,10 +1638,9 @@ int test_compiler_lambda_with_return() {
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_RETURN},
         {.type = OP_POPN},
-        {.type = OP_POPN},
         {.type = OP_RETURN},
     };
-    BytecodeArray expectedLambdaBytecodeArray = {.values = expectedLambdaBytecode, .used = 5};
+    BytecodeArray expectedLambdaBytecodeArray = {.values = expectedLambdaBytecode, .used = 4};
 
     ASSERT(compareTypesInBytecodeArrays(expectedLambdaBytecodeArray, lambda->code->bytecodeArray));
     ASSERT(lambda->code->constantPool.values[0].as.number == 10);
@@ -1697,10 +1693,9 @@ int test_compiler_lambda_with_conditional_returns() {
         {.type = OP_POPN},
         {.type = OP_NULL},
         {.type = OP_POPN},
-        {.type = OP_POPN},
         {.type = OP_RETURN},
     };
-    BytecodeArray expectedLambdaBytecodeArray = {.values = expectedLambdaBytecode, .used = 16};
+    BytecodeArray expectedLambdaBytecodeArray = {.values = expectedLambdaBytecode, .used = 15};
 
     ASSERT(compareTypesInBytecodeArrays(expectedLambdaBytecodeArray, lambda->code->bytecodeArray));
     ASSERT(lambda->code->constantPool.values[0].as.number == 0);
