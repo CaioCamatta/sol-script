@@ -1,3 +1,7 @@
-var car = struct { year: 2020; };
-car.year;
-car.year;
+val a = { 
+    val c = { 
+        val f = 1; 
+        f + 2; 
+    }; 
+    c + 3;
+};

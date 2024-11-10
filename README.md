@@ -348,7 +348,7 @@ To-do before v1.0 is released:
  - [x] Make debug logs optional for REPL or program execution
  - [X] Add Panic Mode error recovery to parser; stop crashing on every error.
  - [X] Implement objects / structs
- - [ ] Implement closures
+ - [ ] Support recursion
  - [ ] Audit all dynamic memory allocation and correctly free scanner, parser, and compiler objects.
  - [ ] Add garbage collector
 
@@ -363,11 +363,11 @@ These tasks are outside the scope of v1:
  - [ ] Improve compiler error logging; print line and column
  - [ ] Implement [NaN boxing](https://piotrduperas.com/posts/nan-boxing)
  - [ ] Add arrays
+ - [ ] Implement closures
 
-### Small Fixes To implement
-These are smaller-ish items to do at any time:
+### Small Fixes Needed
 
 - [X] Fix chained function calls
 - [ ] If-expressions at the end of function blocks should be used as function return.
-- [ ] Get recursive functions working
 - [ ] Returning null from functions doesnt work in structs
+- [ ] Explicitly fail when closing over variables
