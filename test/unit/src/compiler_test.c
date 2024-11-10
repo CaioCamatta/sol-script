@@ -1390,8 +1390,8 @@ int test_compiler_lambda_expression_simple() {
     // Verify the function's bytecode
     Function* function = compiledCode.topLevelCodeObject.constantPool.values[0].as.lambda;
     ASSERT(function->parameterCount == 2);
-    ASSERT(function->code->bytecodeArray.values[0].type == OP_GET_LOCAL_VAR_FAST);
-    ASSERT(function->code->bytecodeArray.values[1].type == OP_GET_LOCAL_VAR_FAST);
+    ASSERT(function->code->bytecodeArray.values[0].type == OP_GET_LOCAL_VAL_FAST);
+    ASSERT(function->code->bytecodeArray.values[1].type == OP_GET_LOCAL_VAL_FAST);
     ASSERT(function->code->bytecodeArray.values[2].type == OP_BINARY_ADD);
     ASSERT(function->code->bytecodeArray.values[3].type == OP_POPN);
     ASSERT(function->code->bytecodeArray.values[4].type == OP_RETURN);
@@ -1439,7 +1439,7 @@ int test_compiler_lambda_expression_nested() {
     // Verify the inner function's bytecode
     Function* innerFunction = outerFunction->code->constantPool.values[0].as.lambda;
     ASSERT(innerFunction->parameterCount == 1);
-    ASSERT(innerFunction->code->bytecodeArray.values[0].type == OP_GET_LOCAL_VAR_FAST);  // y
+    ASSERT(innerFunction->code->bytecodeArray.values[0].type == OP_GET_LOCAL_VAL_FAST);  // y
     ASSERT(innerFunction->code->bytecodeArray.values[1].type == OP_LOAD_CONSTANT);       // 1
     ASSERT(innerFunction->code->bytecodeArray.values[2].type == OP_BINARY_ADD);
     ASSERT(innerFunction->code->bytecodeArray.values[3].type == OP_POPN);
@@ -1685,7 +1685,7 @@ int test_compiler_lambda_with_conditional_returns() {
     ASSERT(lambda->parameterCount == 1);
 
     Bytecode expectedLambdaBytecode[] = {
-        {.type = OP_GET_LOCAL_VAR_FAST},
+        {.type = OP_GET_LOCAL_VAL_FAST},
         {.type = OP_LOAD_CONSTANT},
         {.type = OP_BINARY_GT},
         {.type = OP_JUMP_IF_FALSE},

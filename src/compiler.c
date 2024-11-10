@@ -241,7 +241,7 @@ static bool isGlobalInTable(CompilerUnit* compiler, char* name) {
  * Check if a global variable in the compiler's table of globals is constant (i.e. `val`).
  * Throws an error if the global doesn't exist.
  */
-static bool isGlobalConstant(CompilerUnit* compiler, char* name) {
+static bool isGlobalModifiable(CompilerUnit* compiler, char* name) {
     HashTableEntry* entry = hashTableGet(compiler->globals, name);
     if (entry) {
         return entry->value.as.booleanVal;
@@ -272,14 +272,14 @@ static int findLocalByName(CompilerUnit* compiler, char* name) {
 }
 
 /**
- * Check if a local variable in the compiler's table of locals is constant (i.e. `val`).
+ * Check if a local variable in the compiler's table of locals is modifiable (i.e. `val`).
  * Throws an error if the local doesn't exist.
  */
-static int isLocalConstant(CompilerUnit* compiler, char* name) {
+static int isLocalModifiable(CompilerUnit* compiler, char* name) {
     int index = findLocalByName(compiler, name);
     if (index == -1) {
         errorAndExit(compiler,
-                     "InvalidStateException: Attempted to check if a local variable is constant, but the "
+                     "InvalidStateException: Attempted to check if a local variable is modifiable, but the "
                      "local doesn't exist.");
         return 0;
     } else {
@@ -287,13 +287,13 @@ static int isLocalConstant(CompilerUnit* compiler, char* name) {
     }
 }
 /**
- * Check if a local variable in the compiler's table of locals is constant (i.e. `val`).
+ * Check if a local variable in the compiler's table of locals is modifiable (i.e. `val`).
  * Throws an error if the local doesn't exist.
  */
-static int isLocalConstantByIndex(CompilerUnit* compiler, int indexInTempStack) {
+static int isLocalModifiableByIndex(CompilerUnit* compiler, int indexInTempStack) {
     if (indexInTempStack == -1) {
         errorAndExit(compiler,
-                     "InvalidStateException: Attempted to check if a local variable is constant, but the "
+                     "InvalidStateException: Attempted to check if a local variable is modifiable, but the "
                      "local doesn't exist.");
         return 0;
     } else {
@@ -302,12 +302,13 @@ static int isLocalConstantByIndex(CompilerUnit* compiler, int indexInTempStack) 
 }
 
 /**
- * Add a local variable to the Compiler's temporary stack.
+ * Add a local variable to the Compiler's temporary stack. It will be placed at the current
+ * stack height. It does NOT automatically increase the stack height.
  */
-static void addLocalToTempStack(CompilerUnit* compiler, char* name, bool isModifiable) {
+static void placeLocalAtTopOfTempStack(CompilerUnit* compiler, char* name, bool isModifiable) {
     // The local will be right below the current stack height.
     // It's assumed that, at this point, the stack height has already been incremented.
-    compiler->predictedStack.tempStack[compiler->predictedStack.currentStackHeight - 1] = (Local){.name = name, .isModifiable = isModifiable};
+    compiler->predictedStack.tempStack[compiler->predictedStack.currentStackHeight] = (Local){.name = name, .isModifiable = isModifiable};
 }
 
 /**
@@ -452,7 +453,7 @@ static void visitAssignmentStatement(CompilerUnit* compiler, AssignmentStatement
 
             if (stackIndex == -1) {  // Not a local variable
                 if (isGlobalInTable(compiler, identifierName)) {
-                    if (isGlobalConstant(compiler, identifierName)) {
+                    if (!isGlobalModifiable(compiler, identifierName)) {
                         errorAndExit(compiler, "Cannot modify global constant '%s'.", identifierName);
                     }
 
@@ -464,7 +465,7 @@ static void visitAssignmentStatement(CompilerUnit* compiler, AssignmentStatement
                     errorAndExit(compiler, "Identifier '%s' not declared.", identifierName);
                 }
             } else {
-                if (isLocalConstantByIndex(compiler, stackIndex)) {
+                if (!isLocalModifiableByIndex(compiler, stackIndex)) {
                     errorAndExit(compiler, "Cannot modify local constant '%s'.", identifierName);
                 }
 
@@ -512,49 +513,46 @@ static void visitAssignmentStatement(CompilerUnit* compiler, AssignmentStatement
 }
 
 /**
- * Make a variable name available in scope.
+ * Registers a variable in the current scope before initialization.
+ * Used by both var and val declarations.
+ *
  * (This is a compiler-only thing. The VM doesn't know about this.)
  */
-static void declareVal(CompilerUnit* compiler, const char* name, size_t length) {
+static void declareVariable(CompilerUnit* compiler, const char* name, size_t length, bool isModifiable) {
     char* identifierName = copyStringToHeap(name, length);
     if (compiler->isInGlobalScope) {
         if (isGlobalInTable(compiler, identifierName)) {
             free(identifierName);
-            errorAndExit(compiler, "Val \"%s\" is already declared. Redeclaration is not permitted.", identifierName);
+            errorAndExit(compiler, "%s \"%s\" is already declared. Redeclaration is not permitted.",
+                         isModifiable ? "Var" : "Val", identifierName);
         }
-        // Just declare it in globals table - don't emit any bytecode yet
-        // Note: the `identifierName` heap object is now owned by the hash table
-        addGlobalToTable(compiler, identifierName, true);
+        addGlobalToTable(compiler, identifierName, isModifiable);
     } else {
         if (findLocalByName(compiler, identifierName) != -1) {
             free(identifierName);
-            errorAndExit(compiler, "Val \"%s\" is already declared locally. Redeclaration is not permitted.", identifierName);
+            errorAndExit(compiler, "%s \"%s\" is already declared locally. Redeclaration is not permitted.",
+                         isModifiable ? "Var" : "Val", identifierName);
         }
-        // Just add to local stack ("reserves a slot" for the val). Don't emit any bytecode yet
-        // increaseStackHeight(compiler);
-        // Note: the `identifierName` heap object is now owned by the temp stack
-        // addLocalToTempStack(compiler, identifierName, true);
-        compiler->predictedStack.tempStack[compiler->predictedStack.currentStackHeight] = (Local){.name = identifierName, .isModifiable = true};
+        placeLocalAtTopOfTempStack(compiler, identifierName, isModifiable);
     }
 }
 
 /**
  * Emit bytecode to assign the value at the top of the stack to a variable.
+ * Used by both var and val declarations.
  */
-static void defineVal(CompilerUnit* compiler, const char* name, size_t length) {
-    char* identifierName = copyStringToHeap(name, length);
-    Constant constant = IDENTIFIER_CONST(identifierName);
-
+static void defineVariable(CompilerUnit* compiler, const char* name, size_t length, bool isModifiable) {
     if (compiler->isInGlobalScope) {
+        Constant constant = IDENTIFIER_CONST(copyStringToHeap(name, length));
         size_t constantIndex = upsertConstantToPool(compiler, constant);
-        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, constantIndex));
-        decreaseStackHeight(compiler);  // The VM will pop the global from the stack after it's stored.
+        emitBytecode(compiler, BYTECODE_OPERAND_1(
+                                   isModifiable ? OP_DEFINE_GLOBAL_VAR : OP_DEFINE_GLOBAL_VAL,
+                                   constantIndex));
+        // The VM will pop the global from the stack after it's stored so we do the same here.
+        decreaseStackHeight(compiler);
     } else {
-        emitBytecode(compiler, BYTECODE(OP_DEFINE_LOCAL_VAL_FAST));
-        // When defining a local val, we increase the stack height once when declaring the val,
-        // and once when putting its value on the stack. However, the stack effect of a val is
-        // 1, not 2. So we need to decrease the stack height here.
-        // decreaseStackHeight(compiler);
+        emitBytecode(compiler, BYTECODE(
+                                   isModifiable ? OP_DEFINE_LOCAL_VAR_FAST : OP_DEFINE_LOCAL_VAL_FAST));
     }
 }
 
@@ -564,48 +562,41 @@ static void defineVal(CompilerUnit* compiler, const char* name, size_t length) {
  */
 static void visitValDeclarationStatement(CompilerUnit* compiler, ValDeclarationStatement* valDeclarationStatement) {
     // First declare the variable (makes the name available)
-    declareVal(compiler, valDeclarationStatement->identifier->token.start,
-               valDeclarationStatement->identifier->token.length);
+    declareVariable(compiler,
+                    valDeclarationStatement->identifier->token.start,
+                    valDeclarationStatement->identifier->token.length,
+                    false);
 
     // Then compile the expression
     visitExpression(compiler, valDeclarationStatement->expression);
 
     // Finally, define the variable (assigns the value to the val)
-    defineVal(compiler, valDeclarationStatement->identifier->token.start,
-              valDeclarationStatement->identifier->token.length);
+    defineVariable(compiler,
+                   valDeclarationStatement->identifier->token.start,
+                   valDeclarationStatement->identifier->token.length,
+                   false);
 }
 
 static void visitVarDeclarationStatement(CompilerUnit* compiler, VarDeclarationStatement* varDeclarationStatement) {
-    bool isValueNull = varDeclarationStatement->maybeExpression == NULL;
-    if (!isValueNull)
+    // First declare the variable (makes the name available)
+    declareVariable(compiler,
+                    varDeclarationStatement->identifier->token.start,
+                    varDeclarationStatement->identifier->token.length,
+                    true);
+
+    // Then compile the expression
+    if (varDeclarationStatement->maybeExpression) {
         visitExpression(compiler, varDeclarationStatement->maybeExpression);
-    else {
+    } else {
         emitBytecode(compiler, BYTECODE(OP_NULL));
         increaseStackHeight(compiler);
     }
 
-    Constant constant = IDENTIFIER_CONST(copyStringToHeap(varDeclarationStatement->identifier->token.start,
-                                                          varDeclarationStatement->identifier->token.length));
-
-    bool isVariableModifiable = false;  // Vars can be modified
-
-    if (compiler->isInGlobalScope) {
-        // Preventing global redeclaration is an arbitrary choice.
-        if (isGlobalInTable(compiler, constant.as.string)) errorAndExit(compiler, "Var \"%s\" is already declared. Redeclaration is not permitted as it often leads to confusion.", constant.as.string);
-
-        size_t constantIndex = upsertConstantToPool(compiler, constant);
-        addGlobalToTable(compiler, constant.as.string, isVariableModifiable);  // We also keep track that this global exists so we can prevent redeclaration later.
-
-        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAR, constantIndex));
-
-        decreaseStackHeight(compiler);  // The value assigned to the Global is popped from the stack after we set the Global.
-    } else {
-        if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit(compiler, "Var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
-
-        addLocalToTempStack(compiler, constant.as.string, isVariableModifiable);
-
-        emitBytecode(compiler, BYTECODE(OP_DEFINE_LOCAL_VAR_FAST));
-    }
+    // Finally, define the variable (assigns the value to the val)
+    defineVariable(compiler,
+                   varDeclarationStatement->identifier->token.start,
+                   varDeclarationStatement->identifier->token.length,
+                   true);
 }
 
 // Visit expression following print, then emit bytecode to print that expression
@@ -827,8 +818,8 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
                                                               lambdaExpression->parameters->values[i].token.length));
         if (findLocalByName(&functionCompiler, constant.as.string) != -1)
             errorAndExit(compiler, "Var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
+        placeLocalAtTopOfTempStack(&functionCompiler, constant.as.string, false);
         increaseStackHeight(&functionCompiler);
-        addLocalToTempStack(&functionCompiler, constant.as.string, false);
     }
 
     // Compile the function body
@@ -1017,14 +1008,14 @@ static void visitIdentifierLiteral(CompilerUnit* compiler, IdentifierLiteral* id
             .as = {identifierNameNullTerminated}};
         int index = upsertConstantToPool(compiler, constant);
 
-        Bytecode bytecodeToGetVariable = isGlobalConstant(compiler, identifierNameNullTerminated)
-                                             ? BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index)
-                                             : BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, index);
+        Bytecode bytecodeToGetVariable = isGlobalModifiable(compiler, identifierNameNullTerminated)
+                                             ? BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, index)
+                                             : BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index);
         emitBytecode(compiler, bytecodeToGetVariable);
     } else {
-        Bytecode bytecodeToGetVariable = isLocalConstant(compiler, identifierNameNullTerminated)
-                                             ? BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, stackIndex)
-                                             : BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, stackIndex);
+        Bytecode bytecodeToGetVariable = isLocalModifiable(compiler, identifierNameNullTerminated)
+                                             ? BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, stackIndex)
+                                             : BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, stackIndex);
         emitBytecode(compiler, bytecodeToGetVariable);
     }
 
