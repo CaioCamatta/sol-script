@@ -42,6 +42,7 @@ void all_end_to_end_tests() {
     RUN_TEST(test_functions_nested_calls);
     // RUN_TEST(test_functions_if_statement_in_lambda); -- Needs to be fixed
     RUN_TEST(test_functions_recursive);
+    RUN_TEST(test_functions_recursive_implicit_return);
     RUN_TEST(test_functions_chained_calls);
 
     /* If statements */

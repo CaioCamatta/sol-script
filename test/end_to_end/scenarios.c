@@ -288,6 +288,21 @@ static int test_functions_recursive() {
     EXPECT("120.000000");
 }
 
+static int test_functions_recursive_implicit_return() {
+    SCENARIO(
+        "val factorial = lambda (n) {"
+        "    var result;"
+        "    if (n <= 1) {"
+        "        result = 1;"
+        "    } else {"
+        "        result = n * factorial(n - 1);"
+        "    };"
+        "    result;"
+        "};"
+        "print factorial(5);");
+    EXPECT("120.000000");
+}
+
 static int test_functions_modify_global() {
     SCENARIO(
         "var x = 10;"
