@@ -348,7 +348,7 @@ To-do before v1.0 is released:
  - [x] Make debug logs optional for REPL or program execution
  - [X] Add Panic Mode error recovery to parser; stop crashing on every error.
  - [X] Implement objects / structs
- - [ ] Support recursion
+ - [X] Support recursion
  - [ ] Audit all dynamic memory allocation and correctly free scanner, parser, and compiler objects.
  - [ ] Add garbage collector
 
