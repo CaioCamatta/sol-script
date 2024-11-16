@@ -18,6 +18,7 @@ void all_end_to_end_tests() {
     RUN_TEST(test_block_expressions_simple_example);
     RUN_TEST(test_block_expressions_only_expression);
     RUN_TEST(test_block_expressions_block_in_if_condition);
+    RUN_TEST(test_blocks_nested_expressions);
 
     /* Call expressions */
     RUN_TEST(test_call_expressions_call_in_binary_expression);
@@ -41,7 +42,8 @@ void all_end_to_end_tests() {
     RUN_TEST(test_functions_return_in_nested_lambda);
     RUN_TEST(test_functions_nested_calls);
     // RUN_TEST(test_functions_if_statement_in_lambda); -- Needs to be fixed
-    // RUN_TEST(test_functions_recursive); -- Needs to be fixed
+    RUN_TEST(test_functions_recursive);
+    RUN_TEST(test_functions_recursive_implicit_return);
     RUN_TEST(test_functions_chained_calls);
 
     /* If statements */
@@ -64,6 +66,7 @@ void all_end_to_end_tests() {
     RUN_TEST(test_scope_consecutive_blocks);
     RUN_TEST(test_scope_nested_blocks);
     RUN_TEST(test_scope_global_vs_local);
+    RUN_TEST(test_scope_nested_declarations);
 
     /* Variable declaration */
     RUN_TEST(test_var_declaration_multiple_declarations);

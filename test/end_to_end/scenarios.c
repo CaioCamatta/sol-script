@@ -275,18 +275,33 @@ static int test_functions_single_parameter() {
     EXPECT("5.000000\nhello");
 }
 
-// static int test_functions_recursive() {
-//     SCENARIO(
-//         "val factorial = lambda (n) {"
-//         "    if (n <= 1) {"
-//         "        1;"
-//         "    } else {"
-//         "        n * factorial(n - 1);"
-//         "    };"
-//         "};"
-//         "print factorial(5);");
-//     EXPECT("120.000000");
-// }
+static int test_functions_recursive() {
+    SCENARIO(
+        "val factorial = lambda (n) {"
+        "    if (n <= 1) {"
+        "        return 1;"
+        "    } else {"
+        "        return n * factorial(n - 1);"
+        "    };"
+        "};"
+        "print factorial(5);");
+    EXPECT("120.000000");
+}
+
+static int test_functions_recursive_implicit_return() {
+    SCENARIO(
+        "val factorial = lambda (n) {"
+        "    var result;"
+        "    if (n <= 1) {"
+        "        result = 1;"
+        "    } else {"
+        "        result = n * factorial(n - 1);"
+        "    };"
+        "    result;"
+        "};"
+        "print factorial(5);");
+    EXPECT("120.000000");
+}
 
 static int test_functions_modify_global() {
     SCENARIO(
@@ -715,6 +730,11 @@ static int test_scope_global_vs_local() {
     EXPECT("7.000000");
 }
 
+static int test_scope_nested_declarations() {
+    SCENARIO("val a = { val c = { val f = 1; f + 2; }; c + 3; }; print a;")
+    EXPECT("6.000000");
+}
+
 static int test_var_declaration_multiple_declarations() {
     SCENARIO(
         "var a = 1;"
@@ -842,4 +862,25 @@ static int test_struct_chained_access() {
         "};"
         "print complex.a().b.c();");
     EXPECT("42.000000");
+}
+
+// Test complex nested block expressions with return values
+static int test_blocks_nested_expressions() {
+    SCENARIO(
+        "val result = {"
+        "    val a = {"
+        "        val x = 5;"
+        "        x * 2;"
+        "    };"
+        "    val b = {"
+        "        val y = {"
+        "            val z = 3;"
+        "            z + 1;"
+        "        };"
+        "        y * 2;"
+        "    };"
+        "    a + b;"
+        "};"
+        "print result;");
+    EXPECT("18.000000");
 }

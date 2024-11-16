@@ -53,6 +53,13 @@ void initCompilerState(CompilerState* compilerState, Source* ASTSource) {
 }
 
 void freeCompilerUnit(CompilerUnit compilerUnit) {
+    // Free strings in temp stack
+    for (int i = 0; i < compilerUnit.predictedStack.currentStackHeight; i++) {
+        if (compilerUnit.predictedStack.tempStack[i].name != NULL) {
+            free(compilerUnit.predictedStack.tempStack[i].name);
+        }
+    }
+
     // First we free the constants
     for (size_t i = 0; i < compilerUnit.compiledCodeObject.constantPool.used; i++) {
         Constant* constant = &compilerUnit.compiledCodeObject.constantPool.values[i];
@@ -234,7 +241,7 @@ static bool isGlobalInTable(CompilerUnit* compiler, char* name) {
  * Check if a global variable in the compiler's table of globals is constant (i.e. `val`).
  * Throws an error if the global doesn't exist.
  */
-static bool isGlobalConstant(CompilerUnit* compiler, char* name) {
+static bool isGlobalModifiable(CompilerUnit* compiler, char* name) {
     HashTableEntry* entry = hashTableGet(compiler->globals, name);
     if (entry) {
         return entry->value.as.booleanVal;
@@ -265,14 +272,14 @@ static int findLocalByName(CompilerUnit* compiler, char* name) {
 }
 
 /**
- * Check if a local variable in the compiler's table of locals is constant (i.e. `val`).
+ * Check if a local variable in the compiler's table of locals is modifiable (i.e. `val`).
  * Throws an error if the local doesn't exist.
  */
-static int isLocalConstant(CompilerUnit* compiler, char* name) {
+static int isLocalModifiable(CompilerUnit* compiler, char* name) {
     int index = findLocalByName(compiler, name);
     if (index == -1) {
         errorAndExit(compiler,
-                     "InvalidStateException: Attempted to check if a local variable is constant, but the "
+                     "InvalidStateException: Attempted to check if a local variable is modifiable, but the "
                      "local doesn't exist.");
         return 0;
     } else {
@@ -280,13 +287,13 @@ static int isLocalConstant(CompilerUnit* compiler, char* name) {
     }
 }
 /**
- * Check if a local variable in the compiler's table of locals is constant (i.e. `val`).
+ * Check if a local variable in the compiler's table of locals is modifiable (i.e. `val`).
  * Throws an error if the local doesn't exist.
  */
-static int isLocalConstantByIndex(CompilerUnit* compiler, int indexInTempStack) {
+static int isLocalModifiableByIndex(CompilerUnit* compiler, int indexInTempStack) {
     if (indexInTempStack == -1) {
         errorAndExit(compiler,
-                     "InvalidStateException: Attempted to check if a local variable is constant, but the "
+                     "InvalidStateException: Attempted to check if a local variable is modifiable, but the "
                      "local doesn't exist.");
         return 0;
     } else {
@@ -295,12 +302,13 @@ static int isLocalConstantByIndex(CompilerUnit* compiler, int indexInTempStack) 
 }
 
 /**
- * Add a local variable to the Compiler's temporary stack..
+ * Add a local variable to the Compiler's temporary stack. It will be placed at the current
+ * stack height. It does NOT automatically increase the stack height.
  */
-static void addLocalToTempStack(CompilerUnit* compiler, char* name, bool isModifiable) {
+static void placeLocalAtTopOfTempStack(CompilerUnit* compiler, char* name, bool isModifiable) {
     // The local will be right below the current stack height.
     // It's assumed that, at this point, the stack height has already been incremented.
-    compiler->predictedStack.tempStack[compiler->predictedStack.currentStackHeight - 1] = (Local){.name = name, .isModifiable = isModifiable};
+    compiler->predictedStack.tempStack[compiler->predictedStack.currentStackHeight] = (Local){.name = name, .isModifiable = isModifiable};
 }
 
 /**
@@ -445,7 +453,7 @@ static void visitAssignmentStatement(CompilerUnit* compiler, AssignmentStatement
 
             if (stackIndex == -1) {  // Not a local variable
                 if (isGlobalInTable(compiler, identifierName)) {
-                    if (isGlobalConstant(compiler, identifierName)) {
+                    if (!isGlobalModifiable(compiler, identifierName)) {
                         errorAndExit(compiler, "Cannot modify global constant '%s'.", identifierName);
                     }
 
@@ -457,7 +465,7 @@ static void visitAssignmentStatement(CompilerUnit* compiler, AssignmentStatement
                     errorAndExit(compiler, "Identifier '%s' not declared.", identifierName);
                 }
             } else {
-                if (isLocalConstantByIndex(compiler, stackIndex)) {
+                if (!isLocalModifiableByIndex(compiler, stackIndex)) {
                     errorAndExit(compiler, "Cannot modify local constant '%s'.", identifierName);
                 }
 
@@ -505,66 +513,90 @@ static void visitAssignmentStatement(CompilerUnit* compiler, AssignmentStatement
 }
 
 /**
+ * Registers a variable in the current scope before initialization.
+ * Used by both var and val declarations.
+ *
+ * (This is a compiler-only thing. The VM doesn't know about this.)
+ */
+static void declareVariable(CompilerUnit* compiler, const char* name, size_t length, bool isModifiable) {
+    char* identifierName = copyStringToHeap(name, length);
+    if (compiler->isInGlobalScope) {
+        if (isGlobalInTable(compiler, identifierName)) {
+            errorAndExit(compiler, "%s \"%s\" is already declared. Redeclaration is not permitted.",
+                         isModifiable ? "Var" : "Val", identifierName);
+            free(identifierName);
+        }
+        addGlobalToTable(compiler, identifierName, isModifiable);
+    } else {
+        if (findLocalByName(compiler, identifierName) != -1) {
+            errorAndExit(compiler, "%s \"%s\" is already declared locally. Redeclaration is not permitted.",
+                         isModifiable ? "Var" : "Val", identifierName);
+            free(identifierName);
+        }
+        placeLocalAtTopOfTempStack(compiler, identifierName, isModifiable);
+    }
+}
+
+/**
+ * Emit bytecode to assign the value at the top of the stack to a variable.
+ * Used by both var and val declarations.
+ */
+static void defineVariable(CompilerUnit* compiler, const char* name, size_t length, bool isModifiable) {
+    if (compiler->isInGlobalScope) {
+        Constant constant = IDENTIFIER_CONST(copyStringToHeap(name, length));
+        size_t constantIndex = upsertConstantToPool(compiler, constant);
+        emitBytecode(compiler, BYTECODE_OPERAND_1(
+                                   isModifiable ? OP_DEFINE_GLOBAL_VAR : OP_DEFINE_GLOBAL_VAL,
+                                   constantIndex));
+        // The VM will pop the global from the stack after it's stored so we do the same here.
+        decreaseStackHeight(compiler);
+    } else {
+        emitBytecode(compiler, BYTECODE(
+                                   isModifiable ? OP_DEFINE_LOCAL_VAR_FAST : OP_DEFINE_LOCAL_VAL_FAST));
+    }
+}
+
+/**
  * Visit the expression after the val declaration, save the variable identifier to constant pool,
  * emit instruction to set identifier = val
  */
 static void visitValDeclarationStatement(CompilerUnit* compiler, ValDeclarationStatement* valDeclarationStatement) {
+    // First declare the variable (makes the name available)
+    declareVariable(compiler,
+                    valDeclarationStatement->identifier->token.start,
+                    valDeclarationStatement->identifier->token.length,
+                    false);
+
+    // Then compile the expression
     visitExpression(compiler, valDeclarationStatement->expression);
-    // The expression will add 1 to the stack height. We leave the value on the stack - that's the variable.
 
-    Constant constant = IDENTIFIER_CONST(copyStringToHeap(valDeclarationStatement->identifier->token.start,
-                                                          valDeclarationStatement->identifier->token.length));
-
-    bool isVariableModifiable = true;  // Vals cannot be modified
-
-    if (compiler->isInGlobalScope) {
-        if (isGlobalInTable(compiler, constant.as.string)) errorAndExit(compiler, "Val \"%s\" is already declared. Redeclaration is not permitted.", constant.as.string);
-
-        size_t constantIndex = upsertConstantToPool(compiler, constant);
-        addGlobalToTable(compiler, constant.as.string, isVariableModifiable);  // We also keep track that this global exists so we can prevent redeclaration later.
-
-        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAL, constantIndex));
-
-        decreaseStackHeight(compiler);  // Globals are popped from the stack.
-    } else {
-        if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit(compiler, "Val \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
-
-        addLocalToTempStack(compiler, constant.as.string, isVariableModifiable);
-        emitBytecode(compiler, BYTECODE(OP_DEFINE_LOCAL_VAL_FAST));
-    }
+    // Finally, define the variable (assigns the value to the val)
+    defineVariable(compiler,
+                   valDeclarationStatement->identifier->token.start,
+                   valDeclarationStatement->identifier->token.length,
+                   false);
 }
 
 static void visitVarDeclarationStatement(CompilerUnit* compiler, VarDeclarationStatement* varDeclarationStatement) {
-    bool isValueNull = varDeclarationStatement->maybeExpression == NULL;
-    if (!isValueNull)
+    // First declare the variable (makes the name available)
+    declareVariable(compiler,
+                    varDeclarationStatement->identifier->token.start,
+                    varDeclarationStatement->identifier->token.length,
+                    true);
+
+    // Then compile the expression
+    if (varDeclarationStatement->maybeExpression) {
         visitExpression(compiler, varDeclarationStatement->maybeExpression);
-    else {
+    } else {
         emitBytecode(compiler, BYTECODE(OP_NULL));
         increaseStackHeight(compiler);
     }
 
-    Constant constant = IDENTIFIER_CONST(copyStringToHeap(varDeclarationStatement->identifier->token.start,
-                                                          varDeclarationStatement->identifier->token.length));
-
-    bool isVariableModifiable = false;  // Vars can be modified
-
-    if (compiler->isInGlobalScope) {
-        // Preventing global redeclaration is an arbitrary choice.
-        if (isGlobalInTable(compiler, constant.as.string)) errorAndExit(compiler, "Var \"%s\" is already declared. Redeclaration is not permitted as it often leads to confusion.", constant.as.string);
-
-        size_t constantIndex = upsertConstantToPool(compiler, constant);
-        addGlobalToTable(compiler, constant.as.string, isVariableModifiable);  // We also keep track that this global exists so we can prevent redeclaration later.
-
-        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_DEFINE_GLOBAL_VAR, constantIndex));
-
-        decreaseStackHeight(compiler);  // The value assigned to the Global is popped from the stack after we set the Global.
-    } else {
-        if (findLocalByName(compiler, constant.as.string) != -1) errorAndExit(compiler, "Var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
-
-        addLocalToTempStack(compiler, constant.as.string, isVariableModifiable);
-
-        emitBytecode(compiler, BYTECODE(OP_DEFINE_LOCAL_VAR_FAST));
-    }
+    // Finally, define the variable (assigns the value to the val)
+    defineVariable(compiler,
+                   varDeclarationStatement->identifier->token.start,
+                   varDeclarationStatement->identifier->token.length,
+                   true);
 }
 
 // Visit expression following print, then emit bytecode to print that expression
@@ -574,47 +606,150 @@ static void visitPrintStatement(CompilerUnit* compiler, PrintStatement* printSta
     decreaseStackHeight(compiler);
 }
 
-static void visitBlockExpression(CompilerUnit* compiler, BlockExpression* blockExpression) {
+/**
+ * Creates a copy of the current predicted stack state.
+ * Used when entering a block to remember outer scope state.
+ */
+static StackSnapshot takeStackSnapshot(PredictedStack* stack) {
+    StackSnapshot snapshot;
+    snapshot.currentStackHeight = stack->currentStackHeight;
+
+    // Initialize all slots to NULL first
+    for (int i = 0; i < STACK_MAX; i++) {
+        snapshot.tempStack[i].name = NULL;
+        snapshot.tempStack[i].isModifiable = false;
+    }
+
+    // Deep copy only the active slots
+    for (int i = 0; i <= stack->currentStackHeight; i++) {
+        if (stack->tempStack[i].name != NULL) {
+            // Allocate and copy the name string
+            snapshot.tempStack[i].name = strdup(stack->tempStack[i].name);
+            snapshot.tempStack[i].isModifiable = stack->tempStack[i].isModifiable;
+        }
+    }
+    return snapshot;
+}
+/**
+ * Restores a predicted stack to a previously saved state.
+ * Used when exiting a block to restore outer scope state.
+ */
+static void restoreStackFromSnapshot(PredictedStack* stack, StackSnapshot* snapshot) {
+    // Restore original stack from snapshot
+    stack->currentStackHeight = snapshot->currentStackHeight;
+    memcpy(stack->tempStack, snapshot->tempStack, sizeof(Local) * STACK_MAX);
+}
+
+/**
+ * Frees all memory associated with a stack snapshot.
+ * Must be called when snapshot is no longer needed to avoid memory leaks.
+ */
+static void freeStackSnapshot(StackSnapshot* snapshot) {
+    for (int i = 0; i < snapshot->currentStackHeight; i++) {
+        if (snapshot->tempStack[i].name != NULL) {
+            free(snapshot->tempStack[i].name);
+            snapshot->tempStack[i].name = NULL;
+        }
+    }
+}
+
+static bool isLastStatementInBlockAReturn(BlockExpression* blockExpression) {
+    return blockExpression->statementArray.values[blockExpression->statementArray.used - 1]->type == RETURN_STATEMENT;
+}
+
+/**
+ * Compiles a block expression, which introduces a new scope.
+ * A block contains a series of statements followed by an optional
+ * final expression that becomes the block's value.
+ *
+ * Block compilation process:
+ * 1. Save current stack state
+ * 2. Compile block contents (statements + expression)
+ * 3. If multiple values on stack, keep only final expression value
+ * 4. Restore original stack state (plus one slot for block result)
+ *
+ * --- Side node: Why restore the stack? --
+ * Consider this code:
+ *   val a = {                // Snapshot: []
+ *     val c = {              // Snapshot: [c]
+ *       val f = 1;          // Stack: [f]  -> without restoring, c would be lost
+ *       f + 2;              // Stack: [f, result]
+ *     };                    // Restore: [c] (+ result)
+ *     c + 3;                // Stack: [c, result2]
+ *   };                      // Restore: [] (+ result2)
+ *
+ * The VM will handle clearing the stack at runtime via OP_POPN, but the compiler
+ * needs to "forget" about block-local variables after each block so subsequent
+ * code compiles with the correct stack positions. After the inner block finishes,
+ * 'f' should no longer be accessible, and after the outer block, 'c' should no
+ * longer be accessible. This is achieved by saving/restoring the stack state.
+ *
+ * Without stack restoration:
+ * - Inner block would leave 'f' on stack: [c, f, result]
+ * - Outer block's 'c + 3' would try to access wrong stack positions
+ * - Subsequent code would see phantom variables
+ *
+ * @param isCompilingFunctionBlock whether this block statement is a function block.
+ */
+static void visitBlockExpression(CompilerUnit* compiler, BlockExpression* blockExpression, bool isCompilingFunctionBlock) {
     bool wasCompilerInGlobalScopeBeforeThisBlock = compiler->isInGlobalScope;
     compiler->isInGlobalScope = false;
 
-    // Keep track of the stack height so we can later pop all the variables etc defined in it.
-    uint8_t stackHeightBeforeBlockStmt = compiler->predictedStack.currentStackHeight;
+    // Save stack state before block compilation
+    StackSnapshot snapshot = takeStackSnapshot(&compiler->predictedStack);
 
     for (size_t i = 0; i < blockExpression->statementArray.used; i++) {
         Statement* statement = blockExpression->statementArray.values[i];
         visitStatement(compiler, statement);
     }
 
-    // If there's a final expression, visit it. Otherwise emit a NULL.
+    // Compile the final expression (or use null if none provided)
     if (blockExpression->lastExpression) {
         visitExpression(compiler, blockExpression->lastExpression);
-    } else {
+    } else if (!isLastStatementInBlockAReturn(blockExpression)) {
         emitBytecode(compiler, BYTECODE(OP_NULL));
         increaseStackHeight(compiler);
     }
 
-    // Calculate the stack effect of this entire block so we can clean up at the end of the block.
-    uint8_t stackHeightAfterBlockStmt = compiler->predictedStack.currentStackHeight;
-    uint8_t blockStmtStackEffect = stackHeightAfterBlockStmt - stackHeightBeforeBlockStmt;
+    // Calculate how many new values were added to stack during block compilation
+    uint8_t stackEffect = compiler->predictedStack.currentStackHeight - snapshot.currentStackHeight;
 
-    // Swap the value at the top of the stack (the Value produced by the expression) with the first value
-    // produced in the block. Example:
-    // Before: [ X X X BlockValue_0 BlockValue_1 BlockValue_2]
-    // Apply: SWAP(2)
-    // After:  [ X X X BlockValue_2 BlockValue_1 BlockValue_0]
-    if (blockStmtStackEffect > 1)
-        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SWAP, blockStmtStackEffect - 1));
+    /*
+     * Block expressions need different stack handling depending on context:
+     *
+     * 1. For regular blocks (if !isCompilingFunctionBlock):
+     *    We need to clean up the stack but preserve the block's final value.
+     *    This requires:
+     *    - SWAP to move the final value to the right position
+     *    - POPN to remove temporaries while keeping the final value
+     *    Example of regular block cleanup:
+     *      Before: [ x y z blockTemp1 blockTemp2 finalValue ]
+     *      After:  [ x y z finalValue ]
+     *
+     * 2. For function blocks (if isCompilingFunctionBlock):
+     *    We skip cleanup because RETURN will handle it by:
+     *    - Capturing the top value as the return value
+     *    - Discarding the entire frame
+     *    - Pushing return value onto caller's frame
+     */
+    if (!isCompilingFunctionBlock) {
+        // First, move the final value into position
+        if (stackEffect > 1) {
+            // Example: for stack [x y z a b c], stackEffect=3, SWAP(2) produces [x y z c b a]
+            // where 'c' is the final value we want to keep
+            emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SWAP, stackEffect - 1));
+        }
 
-    // Pop all the Values that were put in the VM stack in the block, except the Value produced by the expression
-    // TODO: optimization; stop emitting POP when blockStmtStackEffect = 0.
-    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_POPN, blockStmtStackEffect - 1));
+        // Then remove all temporaries, leaving only the final value
+        // stackEffect - 1 because we're keeping the final value
+        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_POPN, stackEffect - 1));
+    }
 
-    // Pop all the Locals that were put in the Compiler stack in the block, except for the final expression.
-    removeLocalsFromTempStack(compiler, blockStmtStackEffect - 1);
+    // Restore stack to its state before block, but add one slot for block's result
+    restoreStackFromSnapshot(&compiler->predictedStack, &snapshot);
+    freeStackSnapshot(&snapshot);
 
-    // Undo stack height, except for final expression
-    compiler->predictedStack.currentStackHeight = stackHeightBeforeBlockStmt + 1;
+    compiler->predictedStack.currentStackHeight++;
 
     compiler->isInGlobalScope = wasCompilerInGlobalScopeBeforeThisBlock;
 }
@@ -708,18 +843,18 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
                                                               lambdaExpression->parameters->values[i].token.length));
         if (findLocalByName(&functionCompiler, constant.as.string) != -1)
             errorAndExit(compiler, "Var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
+        placeLocalAtTopOfTempStack(&functionCompiler, constant.as.string, false);
         increaseStackHeight(&functionCompiler);
-        addLocalToTempStack(&functionCompiler, constant.as.string, false);
     }
 
     // Compile the function body
-    visitBlockExpression(&functionCompiler, lambdaExpression->bodyBlock);
+    visitBlockExpression(&functionCompiler, lambdaExpression->bodyBlock, true);
     // TODO (optimization): visitBlockExpression will always emit a POP_N. For function compilation, we can skip the
     // POP_N as it is redudant. The VM will pop the entire CallFrame, which is effectively the same as POP_N.
 
     // Emit OP_RETURN if not already present
     if (functionCompiler.compiledCodeObject.bytecodeArray.values[functionCompiler.compiledCodeObject.bytecodeArray.used - 1].type != OP_RETURN) {
-        emitBytecode(&functionCompiler, (Bytecode){.type = OP_RETURN});
+        emitBytecode(&functionCompiler, BYTECODE(OP_RETURN));
     }
 
     // Allocate the compiled code object on the heap and create a function object
@@ -898,14 +1033,14 @@ static void visitIdentifierLiteral(CompilerUnit* compiler, IdentifierLiteral* id
             .as = {identifierNameNullTerminated}};
         int index = upsertConstantToPool(compiler, constant);
 
-        Bytecode bytecodeToGetVariable = isGlobalConstant(compiler, identifierNameNullTerminated)
-                                             ? BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index)
-                                             : BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, index);
+        Bytecode bytecodeToGetVariable = isGlobalModifiable(compiler, identifierNameNullTerminated)
+                                             ? BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAR, index)
+                                             : BYTECODE_OPERAND_1(OP_GET_GLOBAL_VAL, index);
         emitBytecode(compiler, bytecodeToGetVariable);
     } else {
-        Bytecode bytecodeToGetVariable = isLocalConstant(compiler, identifierNameNullTerminated)
-                                             ? BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, stackIndex)
-                                             : BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, stackIndex);
+        Bytecode bytecodeToGetVariable = isLocalModifiable(compiler, identifierNameNullTerminated)
+                                             ? BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, stackIndex)
+                                             : BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, stackIndex);
         emitBytecode(compiler, bytecodeToGetVariable);
     }
 
@@ -974,7 +1109,7 @@ static void visitExpression(CompilerUnit* compiler, Expression* expression) {
             visitComparisonExpression(compiler, expression->as.comparisonExpression);
             break;
         case BLOCK_EXPRESSION:
-            visitBlockExpression(compiler, expression->as.blockExpression);
+            visitBlockExpression(compiler, expression->as.blockExpression, false);
             break;
         case LAMBDA_EXPRESSION:
             visitLambdaExpression(compiler, expression->as.lambdaExpression);
