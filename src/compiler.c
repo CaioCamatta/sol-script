@@ -522,16 +522,16 @@ static void declareVariable(CompilerUnit* compiler, const char* name, size_t len
     char* identifierName = copyStringToHeap(name, length);
     if (compiler->isInGlobalScope) {
         if (isGlobalInTable(compiler, identifierName)) {
-            free(identifierName);
             errorAndExit(compiler, "%s \"%s\" is already declared. Redeclaration is not permitted.",
                          isModifiable ? "Var" : "Val", identifierName);
+            free(identifierName);
         }
         addGlobalToTable(compiler, identifierName, isModifiable);
     } else {
         if (findLocalByName(compiler, identifierName) != -1) {
-            free(identifierName);
             errorAndExit(compiler, "%s \"%s\" is already declared locally. Redeclaration is not permitted.",
                          isModifiable ? "Var" : "Val", identifierName);
+            free(identifierName);
         }
         placeLocalAtTopOfTempStack(compiler, identifierName, isModifiable);
     }

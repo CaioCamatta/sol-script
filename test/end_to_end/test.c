@@ -18,8 +18,7 @@ void all_end_to_end_tests() {
     RUN_TEST(test_block_expressions_simple_example);
     RUN_TEST(test_block_expressions_only_expression);
     RUN_TEST(test_block_expressions_block_in_if_condition);
-    RUN_TEST(test_blocks_deep_nesting);
-    // RUN_TEST(test_blocks_nested_expressions); -- needs to be fixed
+    RUN_TEST(test_blocks_nested_expressions);
 
     /* Call expressions */
     RUN_TEST(test_call_expressions_call_in_binary_expression);
