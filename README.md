@@ -383,7 +383,7 @@ SolScript is currently in beta. It's feature-complete enough to play with.
 ### Completed Work
 
 - ✅ Lexical grammar design
-- ✅ sSntax grammar design
+- ✅ Syntax grammar design
 - ✅ Build configuration using Make
 - ✅ Unit testing framework ([MinUnit](https://jera.com/techinfo/jtns/jtn002))
 - ✅ REPL / interactive shell
