@@ -198,9 +198,17 @@ void freeSource(Source* source) {
     free(source);
 }
 
+// Free parser and AST, but not the Token array or the original code string.
 void freeParser(ASTParser* parser) {
-    // TODO: complete this function
     FREE_ARRAY(parser->errors);
+
+    if (parser->source) {
+        freeSource(parser->source);
+        parser->source = NULL;
+    }
+
+    parser->current = NULL;
+    parser->previous = NULL;
 }
 
 // Peek token to be immediately parsed.
@@ -1181,8 +1189,6 @@ Source* parseAST(ASTParser* parser) {
     printf("AST\n");
     printAST(parser->source);
 #endif
-
-    freeParser(parser);
 
     return parser->source;
 }

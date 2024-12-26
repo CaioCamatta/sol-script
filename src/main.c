@@ -59,7 +59,7 @@ static void repl() {
         printf("\n");
 
         FREE_ARRAY(tokens);
-        freeSource(source);
+        freeParser(&treeParser);
     }
 
     // Clean up

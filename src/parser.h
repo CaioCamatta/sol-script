@@ -55,8 +55,8 @@ Source* parseASTFromTokens(ASTParser* treeParser, TokenArray* tokenArray);
 void freeSource(Source* source);
 
 /**
- * Free memory allocated to the AST parser, but NOT its compiled AST.
- * Use freeSource to free the AST.
+ * Free memory allocated to the AST parser AND its compiled AST.
+ * Does NOT free the the Token array or the original code string.
  */
 void freeParser(ASTParser* parser);
 
