@@ -9,9 +9,7 @@ SolScript is an interpreted programming language. Its syntax draws from Scala an
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
 - [Usage](#usage)
-- [Language Overview](#language-overview)
   - [Basic Syntax](#basic-syntax)
-  - [Key Concepts](#key-concepts)
 - [Language Design and Implementation](#language-design-and-implementation)
 - [Development Status](#development-status)
 - [Development](#development)
@@ -62,8 +60,6 @@ Run a SolScript file:
 ```bash
 ./sol program.sol
 ```
-
-## Language Overview
 
 ### Basic Syntax
 
