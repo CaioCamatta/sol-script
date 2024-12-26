@@ -450,12 +450,12 @@ SolScript should be simple and well-documented. Runtime performance should be fa
 ### Project structure
 
 ```python
-src/ # .c and .h source files
-src/util/ # .c and .h utility files
-test/unit/src/ # unit tests for the main modules
-test/unit/src/util/ # unit tests for the utilities
-test/end_to_end/ # end-to-end tests written in SolScript
-test/manual/ # SolScript code/scenarios that can be ran manually
+src/            # Core source files (.c and .h)
+├── util/       # Utility code
+test/
+├── unit/       # Unit tests for core and utils
+├── end_to_end/ # Integration tests written in SolScript
+└── manual/     # Manual test scenarios
 ```
 
 ### Testing
