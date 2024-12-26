@@ -9,10 +9,10 @@ SolScript is an interpreted programming language. Its syntax draws from Scala an
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
 - [Usage](#usage)
-- [Language Design and Implementation](#language-design-and-implementation)
+- [Language Overview](#language-overview)
   - [Basic Syntax](#basic-syntax)
   - [Key Concepts](#key-concepts)
-- [Technical Details](#technical-details)
+- [Language Design and Implementation](#language-design-and-implementation)
 - [Development Status](#development-status)
 - [Contributing](#contributing)
 - [License](#license)
@@ -337,9 +337,9 @@ Source(numberOfStatements=1)
 |   |   |   (right)
 |   |   |   |   PrimaryExpression
 |   |   |   |   |   NumberLiteral(token="4")
+```
 
 </details>
-
 
 <details>
 <summary><strong>Compiled Code</strong></summary>
@@ -370,7 +370,7 @@ Bytecode
 [ LOAD_CONSTANT #2 ]
 [ PRINT ]
 
-````
+```
 
 </details>
 
@@ -391,37 +391,35 @@ SolScript is currently in beta. It's feature-complete enough to play with.
 
 ### Completed work
 
-
-
- - ✅ Lexical grammar design
- - ✅ sSntax grammar design
- - ✅ Build configuration using Make
- - ✅ Unit testing framework ([MinUnit](https://jera.com/techinfo/jtns/jtn002))
- - ✅ REPL / interactive shell
- - ✅ Hash table utility
- - ✅ Array utility
- - ✅ Robust debugging module for all parts of the system
- - ✅ Completed scanner for the lexical grammar
- - ✅ Implement minimal parser, compiler, and VM for end-to-end test.
- - ✅ Constant pool (similar to [Java's](https://blogs.oracle.com/javamagazine/post/java-class-file-constant-pool))
- - ✅ Variable declaration and access
- - ✅ Print statements
- - ✅ Additive expression and other "simple" expressions
- - ✅ String literals
- - ✅ Block statements
- - ✅ [_FAST](https://stackoverflow.com/questions/74998947/whats-pythons-load-fast-bytecode-instruction-fast-at) local variables similar to Python's
- - ✅ Selection statement (`if`s)
- - ✅ Conditional debugging/logging for tests that fail
- - ✅ Block expressions
- - ✅ Assignment statements
- - ✅ Non-constant variables
- - ✅ Iteration statement (loops)
- - ✅ Functions and returns
- - ✅ End-to-end tests
- - ✅ Separate build with debug logs
- - ✅ Panic Mode error recovery in the Parser (prevent crashing on every error).
- - ✅ Objects / structs
- - ✅ Recursion support
+- ✅ Lexical grammar design
+- ✅ sSntax grammar design
+- ✅ Build configuration using Make
+- ✅ Unit testing framework ([MinUnit](https://jera.com/techinfo/jtns/jtn002))
+- ✅ REPL / interactive shell
+- ✅ Hash table utility
+- ✅ Array utility
+- ✅ Robust debugging module for all parts of the system
+- ✅ Completed scanner for the lexical grammar
+- ✅ Implement minimal parser, compiler, and VM for end-to-end test.
+- ✅ Constant pool (similar to [Java's](https://blogs.oracle.com/javamagazine/post/java-class-file-constant-pool))
+- ✅ Variable declaration and access
+- ✅ Print statements
+- ✅ Additive expression and other "simple" expressions
+- ✅ String literals
+- ✅ Block statements
+- ✅ [\_FAST](https://stackoverflow.com/questions/74998947/whats-pythons-load-fast-bytecode-instruction-fast-at) local variables similar to Python's
+- ✅ Selection statement (`if`s)
+- ✅ Conditional debugging/logging for tests that fail
+- ✅ Block expressions
+- ✅ Assignment statements
+- ✅ Non-constant variables
+- ✅ Iteration statement (loops)
+- ✅ Functions and returns
+- ✅ End-to-end tests
+- ✅ Separate build with debug logs
+- ✅ Panic Mode error recovery in the Parser (prevent crashing on every error).
+- ✅ Objects / structs
+- ✅ Recursion support
 
 ### Roadmap to v1.0
 
@@ -431,7 +429,7 @@ Features
 
 Small items and fixes:
 
-- [X] Fix chained function calls
+- [x] Fix chained function calls
 - [ ] Audit all dynamic memory allocation
 - [ ] If-expressions at the end of function blocks should be used as function return.
 - [ ] Returning null from functions doesnt work in structs
@@ -441,15 +439,15 @@ Small items and fixes:
 
 These will be great to have but left out of scope for v1:
 
- - [ ] Native functions
- - [ ] Prototypal inheritance
- - [ ] Benchmarking utility
- - [ ] Performance profiling and optimization
- - [ ] Panic Mode error recovery for the Compiler
- - [ ] Better compiler error logging with line and column printing
- - [ ] [NaN boxing](https://piotrduperas.com/posts/nan-boxing) for smaller bytecode
- - [ ] Array data structure
- - [ ] Closures
+- [ ] Native functions
+- [ ] Prototypal inheritance
+- [ ] Benchmarking utility
+- [ ] Performance profiling and optimization
+- [ ] Panic Mode error recovery for the Compiler
+- [ ] Better compiler error logging with line and column printing
+- [ ] [NaN boxing](https://piotrduperas.com/posts/nan-boxing) for smaller bytecode
+- [ ] Array data structure
+- [ ] Closures
 
 ## Development
 
@@ -459,21 +457,18 @@ SolScript should be simple and well-documented. Runtime performance should be fa
 
 ### Project structure
 
-`src/` - `.c` and `.h` source files
-
-`src/util/` - `.c` and `.h` utility files
-
-`test/unit/src/` - unit tests for the main modules
-
-`test/unit/src/util/` - unit tests for the utilities
-
-`test/end_to_end/` - end-to-end tests written in SolScript
-
-`test/manual/` - SolScript code/scenarios that can be ran manually
+```python
+src/ # .c and .h source files
+src/util/ # .c and .h utility files
+test/unit/src/ # unit tests for the main modules
+test/unit/src/util/ # unit tests for the utilities
+test/end_to_end/ # end-to-end tests written in SolScript
+test/manual/ # SolScript code/scenarios that can be ran manually
+```
 
 ### Testing
 
 ```bash
 # Run all tests
 make test
-````
+```
