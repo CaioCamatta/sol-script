@@ -32,5 +32,6 @@ void execute_solscript(const char* sourceCode) {
     // Clean up
     freeCompilerStateButNotCompiledCode(&compiler);
     freeParserButNotAST(&parser);
+    freeSource(source);
     FREE_ARRAY(tokens);
 }

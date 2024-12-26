@@ -60,6 +60,7 @@ static void repl() {
 
         FREE_ARRAY(tokens);
         freeParserButNotAST(&treeParser);
+        freeSource(source);
     }
 
     // Clean up
@@ -92,6 +93,7 @@ static void executeFile(const char* path) {
     free(sourceCode);
     FREE_ARRAY(tokens);
     freeParserButNotAST(&treeParser);                // Parser can be freed now
+    freeSource(source);                              // Source can be freed now
     freeCompilerStateButNotCompiledCode(&compiler);  // Compiler can be freed now (compiled code will remain)
 
     // Then, execute the compiledCode.

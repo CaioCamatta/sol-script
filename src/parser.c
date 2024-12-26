@@ -202,11 +202,6 @@ void freeSource(Source* source) {
 void freeParserButNotAST(ASTParser* parser) {
     FREE_ARRAY(parser->errors);
 
-    if (parser->source) {
-        freeSource(parser->source);
-        parser->source = NULL;
-    }
-
     parser->current = NULL;
     parser->previous = NULL;
 }
