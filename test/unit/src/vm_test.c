@@ -64,6 +64,13 @@ static Value popVmStack(VM* vm) {
     return *(vm->currFrame->SP);
 }
 
+void freeLambdaFunction(Function* function) {
+    FREE_ARRAY(function->code->bytecodeArray);
+    FREE_ARRAY(function->code->constantPool);
+    free(function->code);
+    free(function);
+}
+
 int test_vm_addition() {
     CompiledCode compiledCode = newCompiledCode();
 
@@ -1058,6 +1065,8 @@ int test_vm_lambda_no_params() {
 
     freeVM(&vm);
     freeCompiledCode(&code);
+    freeLambdaFunction(lambda);
+
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1094,6 +1103,7 @@ int test_vm_lambda_one_param() {
 
     freeVM(&vm);
     freeCompiledCode(&code);
+    freeLambdaFunction(lambda);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1134,6 +1144,7 @@ int test_vm_lambda_two_params() {
 
     freeVM(&vm);
     freeCompiledCode(&code);
+    freeLambdaFunction(lambda);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1199,6 +1210,8 @@ int test_vm_lambda_nested_calls() {
 
     freeVM(&vm);
     freeCompiledCode(&code);
+    freeLambdaFunction(multiplyLambda);
+    freeLambdaFunction(addLambda);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1344,5 +1357,6 @@ int test_vm_struct_in_function_call() {
 
     freeVM(&vm);
     freeCompiledCode(&code);
+    freeLambdaFunction(getX);
     return SUCCESS_RETURN_CODE;
 }
