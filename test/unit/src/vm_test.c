@@ -1042,7 +1042,7 @@ int test_vm_lambda_no_params() {
 
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "42.000000\n") == 0); });
 
-    freeVM(&vm);
+    freeVMButNotCompiledCode(&vm);
     _freeCompiledCode(&code);
     freeLambdaFunction(lambda);
 
@@ -1080,7 +1080,7 @@ int test_vm_lambda_one_param() {
 
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "5.000000\n") == 0); });
 
-    freeVM(&vm);
+    freeVMButNotCompiledCode(&vm);
     _freeCompiledCode(&code);
     freeLambdaFunction(lambda);
     return SUCCESS_RETURN_CODE;
@@ -1121,7 +1121,7 @@ int test_vm_lambda_two_params() {
 
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "7.000000\n") == 0); });
 
-    freeVM(&vm);
+    freeVMButNotCompiledCode(&vm);
     _freeCompiledCode(&code);
     freeLambdaFunction(lambda);
     return SUCCESS_RETURN_CODE;
@@ -1187,7 +1187,7 @@ int test_vm_lambda_nested_calls() {
 
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "26.000000\n") == 0); });
 
-    freeVM(&vm);
+    freeVMButNotCompiledCode(&vm);
     _freeCompiledCode(&code);
     freeLambdaFunction(multiplyLambda);
     freeLambdaFunction(addLambda);
@@ -1223,7 +1223,7 @@ int test_vm_simple_struct() {
 
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "10.000000\nhello\n") == 0); });
 
-    freeVM(&vm);
+    freeVMButNotCompiledCode(&vm);
     _freeCompiledCode(&code);
     return SUCCESS_RETURN_CODE;
 }
@@ -1254,7 +1254,7 @@ int test_vm_nested_structs() {
 
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "42.000000\n") == 0); });
 
-    freeVM(&vm);
+    freeVMButNotCompiledCode(&vm);
     _freeCompiledCode(&code);
     return SUCCESS_RETURN_CODE;
 }
@@ -1287,7 +1287,7 @@ int test_vm_struct_field_assignment() {
 
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "10.000000\n20.000000\n") == 0); });
 
-    freeVM(&vm);
+    freeVMButNotCompiledCode(&vm);
     _freeCompiledCode(&code);
     return SUCCESS_RETURN_CODE;
 }
@@ -1334,7 +1334,7 @@ int test_vm_struct_in_function_call() {
 
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "42.000000\n") == 0); });
 
-    freeVM(&vm);
+    freeVMButNotCompiledCode(&vm);
     _freeCompiledCode(&code);
     freeLambdaFunction(getX);
     return SUCCESS_RETURN_CODE;

@@ -64,7 +64,7 @@ static void repl() {
 
     // Clean up
     FREE_ARRAY(sharedConstantPool);
-    freeVM(&vm);
+    freeVMButNotCompiledCode(&vm);
     freeCompilerStateButNotCompiledCode(&compiler);
     freeCompiledCode(&initialCompiledCode);
 }

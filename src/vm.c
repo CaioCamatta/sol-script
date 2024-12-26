@@ -32,9 +32,10 @@ void initVM(VM* vm, CompiledCode compiledCode) {
     vm->currFrame = frame;
 }
 
-void freeVM(VM* vm) {
+void freeVMButNotCompiledCode(VM* vm) {
     // Free the top level object we manually initialized in initVM;
     free(vm->frames[0].codeObject);
+    freeHashTable(&vm->globals);
 }
 
 /* Print a runtime error and exit. */
