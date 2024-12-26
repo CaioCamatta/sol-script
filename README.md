@@ -14,17 +14,16 @@ SolScript is an interpreted programming language. Its syntax draws from Scala an
   - [Key Concepts](#key-concepts)
 - [Language Design and Implementation](#language-design-and-implementation)
 - [Development Status](#development-status)
-- [Contributing](#contributing)
-- [License](#license)
+- [Development](#development)
 
 ## Features
 
-- **Simple yet Powerful Syntax**: Combines Scala's expressiveness with C's clarity
-- **Stack-Based VM**: Efficient bytecode execution inspired by the JVM
-- **First-Class Functions**: Support for lambdas and higher-order functions
-- **Object System**: Flexible struct-based object system with prototypal capabilities
-- **Static Analysis**: Built-in compiler optimizations and error detection
-- **REPL Environment**: Interactive development environment for rapid prototyping
+- **Virtual Machine**: Stack-based VM with fast local variable access and constant pool for string/number operands
+- **First-Class Functions**: with lambda expressions
+- **Expression-based design**: almost everything is an expression and yields a value
+- **Object System**: basic struct-based object system with field access and mutation
+- **Interactive Shell**: Built-in REPL
+- **Debugging tools**: Robust debugging module for all components (scanner/parser/compiler/VM)
 
 ## Getting Started
 
@@ -92,14 +91,6 @@ var circle = struct {
 print circle.area();    // Output: 314.159
 print circle.scale(2);  // Output: 1256.636
 ```
-
-### Key Concepts
-
-- **Values and Variables**: `val` for constants, `var` for mutable variables
-- **First-Class Functions**: Lambda expressions with closure support
-- **Objects**: Struct-based system with method definitions
-- **Block Expressions**: Last expression in a block becomes its value
-- **Type System**: Dynamic typing with runtime type checking
 
 ## Language Design and Implementation
 
@@ -389,7 +380,7 @@ Sol's VM is inspired by the [Lox VM](https://craftinginterpreters.com/a-virtual-
 
 SolScript is currently in beta. It's feature-complete enough to play with.
 
-### Completed work
+### Completed Work
 
 - ✅ Lexical grammar design
 - ✅ sSntax grammar design
@@ -436,7 +427,7 @@ Small items and fixes:
 - [ ] Returning null from functions doesnt work in structs
 - [ ] Explicitly fail when closing over variables
 
-### Future Enhancements (v1.1+)
+### Future Work (v1.1+)
 
 These will be great to have but left out of scope for v1:
 
