@@ -24,5 +24,8 @@ int test_scanner() {
                             printf("ERROR - %s is not equal to %s.\n", tokenTypeToString(actualToken), tokenTypeToString(expectedToken)));
     }
 
+    free(sourceCode);
+    FREE_ARRAY(tokens);
+
     return SUCCESS_RETURN_CODE;
 }
