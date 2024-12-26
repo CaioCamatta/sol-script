@@ -418,7 +418,7 @@ Features
 Small items and fixes:
 
 - [x] Fix chained function calls
-- [ ] Audit all dynamic memory allocation
+- [x] Audit all dynamic memory allocation and fix leaks
 - [ ] If-expressions at the end of function blocks should be used as function return.
 - [ ] Returning null from functions doesnt work in structs
 - [ ] Explicitly fail when closing over variables
