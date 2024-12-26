@@ -59,6 +59,6 @@ void step(VM* vm);
 void initVM(VM* vm, CompiledCode compiledCode);
 
 /* Free a VM and its structs. */
-void freeVM(VM* vm);
+void freeVMButNotCompiledCode(VM* vm);
 
 #endif

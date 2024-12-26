@@ -40,8 +40,8 @@ CompiledCode newCompiledCode() {
     return compiledCode;
 }
 
-// Create new empty compiled code
-void freeCompiledCode(CompiledCode* compiledCode) {
+// Free compiled code. Used only in the context of these tests
+static void _freeCompiledCode(CompiledCode* compiledCode) {
     FREE_ARRAY(compiledCode->topLevelCodeObject.bytecodeArray);
     FREE_ARRAY(compiledCode->topLevelCodeObject.constantPool);
 }
@@ -62,6 +62,13 @@ void addBytecodes(BytecodeArray* array, Bytecode* bytecodes, size_t count) {
 static Value popVmStack(VM* vm) {
     vm->currFrame->SP--;
     return *(vm->currFrame->SP);
+}
+
+void freeLambdaFunction(Function* function) {
+    FREE_ARRAY(function->code->bytecodeArray);
+    FREE_ARRAY(function->code->constantPool);
+    free(function->code);
+    free(function);
 }
 
 int test_vm_addition() {
@@ -96,8 +103,7 @@ int test_vm_addition() {
     ASSERT(compareValues(actual_result, expected_result));
 
     // Clean up
-    FREE_ARRAY(compiledCode.topLevelCodeObject.bytecodeArray);
-    FREE_ARRAY(compiledCode.topLevelCodeObject.constantPool);
+    _freeCompiledCode(&compiledCode);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -142,8 +148,7 @@ int test_vm_print() {
     ASSERT(strcmp(buffer, expectedOutput) == 0);
 
     // Clean up
-    FREE_ARRAY(compiledCode.topLevelCodeObject.bytecodeArray);
-    FREE_ARRAY(compiledCode.topLevelCodeObject.constantPool);
+    _freeCompiledCode(&compiledCode);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -176,8 +181,7 @@ int test_vm_set_and_get_global() {
     ASSERT(compareValues(actual_result, expected_result));
 
     // Clean up
-    FREE_ARRAY(compiledCode.topLevelCodeObject.bytecodeArray);
-    FREE_ARRAY(compiledCode.topLevelCodeObject.constantPool);
+    _freeCompiledCode(&compiledCode);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -208,8 +212,7 @@ int test_vm_binary_equal() {
     ASSERT(result_not_equal.type == TYPE_BOOLEAN && result_not_equal.as.booleanVal == false);
 
     // Clean up
-    FREE_ARRAY(compiledCode.topLevelCodeObject.bytecodeArray);
-    FREE_ARRAY(compiledCode.topLevelCodeObject.constantPool);
+    _freeCompiledCode(&compiledCode);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -257,8 +260,7 @@ int test_vm_comparison_operations() {
     ASSERT(result_gte.type == TYPE_BOOLEAN && result_gte.as.booleanVal == true);
 
     // Clean up
-    FREE_ARRAY(compiledCode.topLevelCodeObject.bytecodeArray);
-    FREE_ARRAY(compiledCode.topLevelCodeObject.constantPool);
+    _freeCompiledCode(&compiledCode);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -292,8 +294,7 @@ int test_vm_logical_operations() {
     ASSERT(result_or.type == TYPE_BOOLEAN && result_or.as.booleanVal == true);
 
     // Clean up
-    FREE_ARRAY(compiledCode.topLevelCodeObject.bytecodeArray);
-    FREE_ARRAY(compiledCode.topLevelCodeObject.constantPool);
+    _freeCompiledCode(&compiledCode);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -318,8 +319,7 @@ int test_vm_boolean_truthiness() {
     ASSERT(result.type == TYPE_BOOLEAN && result.as.booleanVal == false);
 
     // Clean up
-    FREE_ARRAY(compiledCode.topLevelCodeObject.bytecodeArray);
-    FREE_ARRAY(compiledCode.topLevelCodeObject.constantPool);
+    _freeCompiledCode(&compiledCode);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -346,8 +346,7 @@ int test_vm_unary_negation() {
     ASSERT(result.type == TYPE_DOUBLE && result.as.doubleVal == -5.0);
 
     // Clean up
-    FREE_ARRAY(compiledCode.topLevelCodeObject.bytecodeArray);
-    FREE_ARRAY(compiledCode.topLevelCodeObject.constantPool);
+    _freeCompiledCode(&compiledCode);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -382,8 +381,8 @@ int test_vm_unary_not() {
     ASSERT(resultFalse.type == TYPE_BOOLEAN && resultFalse.as.booleanVal == true);
 
     // Clean up
-    freeCompiledCode(&codeTrue);
-    freeCompiledCode(&codeFalse);
+    _freeCompiledCode(&codeTrue);
+    _freeCompiledCode(&codeFalse);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -406,8 +405,7 @@ int test_vm_print_string_literal() {
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "Hello, World!\n") == 0); });
 
     // Cleanup
-    FREE_ARRAY(compiledCode.topLevelCodeObject.bytecodeArray);
-    FREE_ARRAY(compiledCode.topLevelCodeObject.constantPool);
+    _freeCompiledCode(&compiledCode);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -436,8 +434,7 @@ int test_vm_simple_block_statement_and_cleanup() {
     ASSERT(vm.currFrame->SP == vm.stack);
 
     // Cleanup
-    FREE_ARRAY(compiledCode.topLevelCodeObject.bytecodeArray);
-    FREE_ARRAY(compiledCode.topLevelCodeObject.constantPool);
+    _freeCompiledCode(&compiledCode);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -510,8 +507,7 @@ int test_vm_nested_blocks_with_global_and_local_vars() {
         ASSERT(strcmp(buffer, expectedOutput) == 0); });
 
     // Clean up
-    FREE_ARRAY(compiledCode.topLevelCodeObject.bytecodeArray);
-    FREE_ARRAY(compiledCode.topLevelCodeObject.constantPool);
+    _freeCompiledCode(&compiledCode);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -557,8 +553,7 @@ int test_vm_nested_if_statements() {
         ASSERT(strcmp(buffer, "true-outer\nfalse-inner\n") == 0); });
 
     // Clean up
-    FREE_ARRAY(compiledCode.topLevelCodeObject.bytecodeArray);
-    FREE_ARRAY(compiledCode.topLevelCodeObject.constantPool);
+    _freeCompiledCode(&compiledCode);
 
     return SUCCESS_RETURN_CODE;  // Assuming SUCCESS_RETURN_CODE is defined as part of your testing framework
 }
@@ -584,8 +579,7 @@ int test_vm_simple_block_expression() {
 
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "10.000000\n") == 0); });
 
-    FREE_ARRAY(compiledCode.topLevelCodeObject.bytecodeArray);
-    FREE_ARRAY(compiledCode.topLevelCodeObject.constantPool);
+    _freeCompiledCode(&compiledCode);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -616,8 +610,7 @@ int test_vm_block_expression_with_statements() {
 
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "8.000000\n") == 0); });
 
-    FREE_ARRAY(compiledCode.topLevelCodeObject.bytecodeArray);
-    FREE_ARRAY(compiledCode.topLevelCodeObject.constantPool);
+    _freeCompiledCode(&compiledCode);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -650,8 +643,7 @@ int test_vm_block_expression_as_if_condition() {
 
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "Passed\n") == 0); });
 
-    FREE_ARRAY(compiledCode.topLevelCodeObject.bytecodeArray);
-    FREE_ARRAY(compiledCode.topLevelCodeObject.constantPool);
+    _freeCompiledCode(&compiledCode);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -678,8 +670,7 @@ int test_vm_var_declaration_and_assignment_global() {
     initVM(&vm, compiledCode);
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "10.000000\n") == 0); });
 
-    FREE_ARRAY(compiledCode.topLevelCodeObject.bytecodeArray);
-    FREE_ARRAY(compiledCode.topLevelCodeObject.constantPool);
+    _freeCompiledCode(&compiledCode);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -708,8 +699,7 @@ int test_vm_var_declaration_and_assignment_local() {
     initVM(&vm, compiledCode);
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "10.000000\n") == 0); });
 
-    FREE_ARRAY(compiledCode.topLevelCodeObject.bytecodeArray);
-    FREE_ARRAY(compiledCode.topLevelCodeObject.constantPool);
+    _freeCompiledCode(&compiledCode);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -759,8 +749,7 @@ int test_vm_block_expression_with_val_declarations() {
     initVM(&vm, compiledCode);
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "3.000000\n12.000000\n") == 0); });
 
-    FREE_ARRAY(compiledCode.topLevelCodeObject.bytecodeArray);
-    FREE_ARRAY(compiledCode.topLevelCodeObject.constantPool);
+    _freeCompiledCode(&compiledCode);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -803,8 +792,7 @@ int test_vm_var_val_declarations_in_nested_blocks() {
     initVM(&vm, compiledCode);
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "1.000000\n2.000000\n1.000000\n") == 0); });
 
-    FREE_ARRAY(compiledCode.topLevelCodeObject.bytecodeArray);
-    FREE_ARRAY(compiledCode.topLevelCodeObject.constantPool);
+    _freeCompiledCode(&compiledCode);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -850,8 +838,7 @@ int test_vm_var_assignment_global_and_local() {
     initVM(&vm, compiledCode);
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "1.000000\n2.000000\n1.000000\n") == 0); });
 
-    FREE_ARRAY(compiledCode.topLevelCodeObject.bytecodeArray);
-    FREE_ARRAY(compiledCode.topLevelCodeObject.constantPool);
+    _freeCompiledCode(&compiledCode);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -886,8 +873,7 @@ int test_vm_global_declaration_and_local_assignment() {
     initVM(&vm, compiledCode);
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "1.000000\n1.000000\n") == 0); });
 
-    FREE_ARRAY(compiledCode.topLevelCodeObject.bytecodeArray);
-    FREE_ARRAY(compiledCode.topLevelCodeObject.constantPool);
+    _freeCompiledCode(&compiledCode);
 
     return SUCCESS_RETURN_CODE;
 }
@@ -1056,8 +1042,10 @@ int test_vm_lambda_no_params() {
 
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "42.000000\n") == 0); });
 
-    freeVM(&vm);
-    freeCompiledCode(&code);
+    freeVMButNotCompiledCode(&vm);
+    _freeCompiledCode(&code);
+    freeLambdaFunction(lambda);
+
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1092,8 +1080,9 @@ int test_vm_lambda_one_param() {
 
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "5.000000\n") == 0); });
 
-    freeVM(&vm);
-    freeCompiledCode(&code);
+    freeVMButNotCompiledCode(&vm);
+    _freeCompiledCode(&code);
+    freeLambdaFunction(lambda);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1132,8 +1121,9 @@ int test_vm_lambda_two_params() {
 
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "7.000000\n") == 0); });
 
-    freeVM(&vm);
-    freeCompiledCode(&code);
+    freeVMButNotCompiledCode(&vm);
+    _freeCompiledCode(&code);
+    freeLambdaFunction(lambda);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1197,8 +1187,10 @@ int test_vm_lambda_nested_calls() {
 
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "26.000000\n") == 0); });
 
-    freeVM(&vm);
-    freeCompiledCode(&code);
+    freeVMButNotCompiledCode(&vm);
+    _freeCompiledCode(&code);
+    freeLambdaFunction(multiplyLambda);
+    freeLambdaFunction(addLambda);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1231,8 +1223,8 @@ int test_vm_simple_struct() {
 
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "10.000000\nhello\n") == 0); });
 
-    freeVM(&vm);
-    freeCompiledCode(&code);
+    freeVMButNotCompiledCode(&vm);
+    _freeCompiledCode(&code);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1262,8 +1254,8 @@ int test_vm_nested_structs() {
 
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "42.000000\n") == 0); });
 
-    freeVM(&vm);
-    freeCompiledCode(&code);
+    freeVMButNotCompiledCode(&vm);
+    _freeCompiledCode(&code);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1295,8 +1287,8 @@ int test_vm_struct_field_assignment() {
 
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "10.000000\n20.000000\n") == 0); });
 
-    freeVM(&vm);
-    freeCompiledCode(&code);
+    freeVMButNotCompiledCode(&vm);
+    _freeCompiledCode(&code);
     return SUCCESS_RETURN_CODE;
 }
 
@@ -1342,7 +1334,8 @@ int test_vm_struct_in_function_call() {
 
     CAPTURE_PRINT_OUTPUT({ run(&vm); }, { ASSERT(strcmp(buffer, "42.000000\n") == 0); });
 
-    freeVM(&vm);
-    freeCompiledCode(&code);
+    freeVMButNotCompiledCode(&vm);
+    _freeCompiledCode(&code);
+    freeLambdaFunction(getX);
     return SUCCESS_RETURN_CODE;
 }

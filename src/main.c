@@ -59,13 +59,15 @@ static void repl() {
         printf("\n");
 
         FREE_ARRAY(tokens);
+        freeParserButNotAST(&treeParser);
         freeSource(source);
     }
 
     // Clean up
     FREE_ARRAY(sharedConstantPool);
-    freeVM(&vm);
-    freeCompilerState(&compiler);
+    freeVMButNotCompiledCode(&vm);
+    freeCompilerStateButNotCompiledCode(&compiler);
+    freeCompiledCode(&initialCompiledCode);
 }
 
 static void executeFile(const char* path) {
@@ -86,6 +88,13 @@ static void executeFile(const char* path) {
     CompilerState compiler;
     initCompilerState(&compiler, source);
     CompiledCode compiledCode = compile(&compiler);
+
+    // Free everything except the compiled code
+    free(sourceCode);
+    FREE_ARRAY(tokens);
+    freeParserButNotAST(&treeParser);                // Parser can be freed now
+    freeSource(source);                              // Source can be freed now
+    freeCompilerStateButNotCompiledCode(&compiler);  // Compiler can be freed now (compiled code will remain)
 
     // Then, execute the compiledCode.
     VM vm;

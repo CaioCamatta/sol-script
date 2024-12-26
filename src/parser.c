@@ -29,18 +29,181 @@ void initASTParser(ASTParser* parser, const TokenArray tokens) {
 // Allocate an AST node (literal, expression, statement) on the heap and return a pointer to the allocated node.
 #define allocateASTNode(type) (type*)malloc(sizeof(type));
 
-// Free an AST node (literal, expression, statement) on the heap.
-#define freeASTNode(node) free(node);
+void freeStatement(Statement* stmt);  // Forward declaration
 
-// Free memory allocated for the Source of an AST.
+void freeLiteral(Literal* literal) {
+    if (!literal) return;
+    switch (literal->type) {
+        case BOOLEAN_LITERAL:
+            free(literal->as.booleanLiteral);
+            break;
+        case NUMBER_LITERAL:
+            free(literal->as.numberLiteral);
+            break;
+        case IDENTIFIER_LITERAL:
+            free(literal->as.identifierLiteral);
+            break;
+        case STRING_LITERAL:
+            free(literal->as.stringLiteral);
+            break;
+    }
+    free(literal);
+}
+
+void freeExpression(Expression* expr) {
+    if (!expr) return;
+
+    switch (expr->type) {
+        case LOGICAL_OR_EXPRESSION:
+            freeExpression(expr->as.logicalOrExpression->leftExpression);
+            freeExpression(expr->as.logicalOrExpression->rightExpression);
+            free(expr->as.logicalOrExpression);
+            break;
+        case LOGICAL_AND_EXPRESSION:
+            freeExpression(expr->as.logicalAndExpression->leftExpression);
+            freeExpression(expr->as.logicalAndExpression->rightExpression);
+            free(expr->as.logicalAndExpression);
+            break;
+        case EQUALITY_EXPRESSION:
+            freeExpression(expr->as.equalityExpression->leftExpression);
+            freeExpression(expr->as.equalityExpression->rightExpression);
+            free(expr->as.equalityExpression);
+            break;
+        case COMPARISON_EXPRESSION:
+            freeExpression(expr->as.comparisonExpression->leftExpression);
+            freeExpression(expr->as.comparisonExpression->rightExpression);
+            free(expr->as.comparisonExpression);
+            break;
+        case ADDITIVE_EXPRESSION:
+            freeExpression(expr->as.additiveExpression->leftExpression);
+            freeExpression(expr->as.additiveExpression->rightExpression);
+            free(expr->as.additiveExpression);
+            break;
+        case MULTIPLICATIVE_EXPRESSION:
+            freeExpression(expr->as.multiplicativeExpression->leftExpression);
+            freeExpression(expr->as.multiplicativeExpression->rightExpression);
+            free(expr->as.multiplicativeExpression);
+            break;
+        case BLOCK_EXPRESSION:
+            for (size_t i = 0; i < expr->as.blockExpression->statementArray.used; i++) {
+                freeStatement(expr->as.blockExpression->statementArray.values[i]);
+            }
+            FREE_ARRAY(expr->as.blockExpression->statementArray);
+            freeExpression(expr->as.blockExpression->lastExpression);
+            free(expr->as.blockExpression);
+            break;
+        case UNARY_EXPRESSION:
+            freeExpression(expr->as.unaryExpression->rightExpression);
+            free(expr->as.unaryExpression);
+            break;
+        case PRIMARY_EXPRESSION:
+            freeLiteral(expr->as.primaryExpression->literal);
+            free(expr->as.primaryExpression);
+            break;
+        case LAMBDA_EXPRESSION:
+            FREE_ARRAY((*(expr->as.lambdaExpression->parameters)));
+            free(expr->as.lambdaExpression->parameters);
+            freeExpression((Expression*)expr->as.lambdaExpression->bodyBlock);
+            free(expr->as.lambdaExpression);
+            break;
+        case CALL_EXPRESSION:
+            freeExpression(expr->as.callExpression->leftHandSide);
+            for (size_t i = 0; i < expr->as.callExpression->arguments->used; i++) {
+                freeExpression(expr->as.callExpression->arguments->values[i]);
+            }
+            FREE_ARRAY((*(expr->as.callExpression->arguments)));
+            free(expr->as.callExpression->arguments);
+            free(expr->as.callExpression);
+            break;
+        case MEMBER_EXPRESSION:
+            freeExpression(expr->as.memberExpression->leftHandSide);
+            freeExpression(expr->as.memberExpression->rightHandSide);
+            free(expr->as.memberExpression);
+            break;
+        case STRUCT_EXPRESSION:
+            for (size_t i = 0; i < expr->as.structExpression->declarationArray.used; i++) {
+                StructDeclaration* decl = expr->as.structExpression->declarationArray.values[i];
+                freeLiteral((Literal*)decl->identifier);
+                freeExpression(decl->maybeExpression);
+                free(decl);
+            }
+            FREE_ARRAY(expr->as.structExpression->declarationArray);
+            free(expr->as.structExpression);
+            break;
+    }
+    free(expr);
+}
+
+void freeStatement(Statement* stmt) {
+    if (!stmt) return;
+
+    switch (stmt->type) {
+        case EXPRESSION_STATEMENT:
+            freeExpression(stmt->as.expressionStatement->expression);
+            free(stmt->as.expressionStatement);
+            break;
+        case VAL_DECLARATION_STATEMENT:
+            freeLiteral((Literal*)stmt->as.valDeclarationStatement->identifier);
+            freeExpression(stmt->as.valDeclarationStatement->expression);
+            free(stmt->as.valDeclarationStatement);
+            break;
+        case VAR_DECLARATION_STATEMENT:
+            freeLiteral((Literal*)stmt->as.varDeclarationStatement->identifier);
+            freeExpression(stmt->as.varDeclarationStatement->maybeExpression);
+            free(stmt->as.varDeclarationStatement);
+            break;
+        case PRINT_STATEMENT:
+            freeExpression(stmt->as.printStatement->expression);
+            free(stmt->as.printStatement);
+            break;
+        case BLOCK_STATEMENT:
+            for (size_t i = 0; i < stmt->as.blockStatement->statementArray.used; i++) {
+                freeStatement(stmt->as.blockStatement->statementArray.values[i]);
+            }
+            FREE_ARRAY(stmt->as.blockStatement->statementArray);
+            free(stmt->as.blockStatement);
+            break;
+        case SELECTION_STATEMENT:
+            freeExpression(stmt->as.selectionStatement->conditionExpression);
+            freeStatement(stmt->as.selectionStatement->trueStatement);
+            if (stmt->as.selectionStatement->falseStatement) {
+                freeStatement(stmt->as.selectionStatement->falseStatement);
+            }
+            free(stmt->as.selectionStatement);
+            break;
+        case ASSIGNMENT_STATEMENT:
+            freeExpression(stmt->as.assignmentStatement->target);
+            freeExpression(stmt->as.assignmentStatement->value);
+            free(stmt->as.assignmentStatement);
+            break;
+        case ITERATION_STATEMENT:
+            freeExpression(stmt->as.iterationStatement->conditionExpression);
+            freeStatement(stmt->as.iterationStatement->bodyStatement);
+            free(stmt->as.iterationStatement);
+            break;
+        case RETURN_STATEMENT:
+            freeExpression(stmt->as.returnStatement->expression);
+            free(stmt->as.returnStatement);
+            break;
+    }
+    free(stmt);
+}
+
+// Free the memory allocated for the Source of an AST.
 void freeSource(Source* source) {
-    // TODO: add logic to make freeing recursive
+    if (!source) return;
+    for (int i = 0; i < source->numberOfStatements; i++) {
+        freeStatement(source->rootStatements[i]);
+    }
     free(source);
 }
 
-void freeParser(ASTParser* parser) {
-    // TODO: complete this function
+// Free parser and AST, but not the Token array or the original code string.
+void freeParserButNotAST(ASTParser* parser) {
     FREE_ARRAY(parser->errors);
+
+    parser->current = NULL;
+    parser->previous = NULL;
 }
 
 // Peek token to be immediately parsed.
@@ -1021,8 +1184,6 @@ Source* parseAST(ASTParser* parser) {
     printf("AST\n");
     printAST(parser->source);
 #endif
-
-    freeParser(parser);
 
     return parser->source;
 }

@@ -50,31 +50,57 @@ void initCompilerState(CompilerState* compilerState, Source* ASTSource) {
     compilerState->ASTSource = ASTSource;
     initHashTable(&compilerState->globals);
     compilerState->currentCompilerUnit = initCompilerUnit(NULL, &compilerState->globals);
+    INIT_ARRAY(compilerState->errors, Error);
 }
 
-void freeCompilerUnit(CompilerUnit compilerUnit) {
-    // Free strings in temp stack
-    for (int i = 0; i < compilerUnit.predictedStack.currentStackHeight; i++) {
-        if (compilerUnit.predictedStack.tempStack[i].name != NULL) {
-            free(compilerUnit.predictedStack.tempStack[i].name);
+// In bytecode.h
+void freeCompiledCodeObject(CompiledCodeObject* codeObject) {
+    if (!codeObject) return;
+
+    // Free constants
+    for (size_t i = 0; i < codeObject->constantPool.used; i++) {
+        Constant* constant = &codeObject->constantPool.values[i];
+        switch (constant->type) {
+            case CONST_TYPE_STRING:
+            case CONST_TYPE_IDENTIFIER:
+                free(constant->as.string);
+                break;
+            case CONST_TYPE_LAMBDA:
+                if (constant->as.lambda) {
+                    if (constant->as.lambda->code) {
+                        // Recursively free nested code objects
+                        freeCompiledCodeObject(constant->as.lambda->code);
+                        free(constant->as.lambda->code);
+                    }
+                    free(constant->as.lambda);
+                }
+                break;
+            default:
+                break;
         }
     }
-
-    // First we free the constants
-    for (size_t i = 0; i < compilerUnit.compiledCodeObject.constantPool.used; i++) {
-        Constant* constant = &compilerUnit.compiledCodeObject.constantPool.values[i];
-        if (constant->type == CONST_TYPE_LAMBDA) {
-            free(constant->as.lambda->code);
-            free(constant->as.lambda);
-        }
-    }
-    FREE_ARRAY(compilerUnit.compiledCodeObject.constantPool);
-
-    FREE_ARRAY(compilerUnit.compiledCodeObject.bytecodeArray);
+    FREE_ARRAY(codeObject->constantPool);
+    FREE_ARRAY(codeObject->bytecodeArray);
 }
 
-void freeCompilerState(CompilerState* compilerState) {
-    freeCompilerUnit(compilerState->currentCompilerUnit);
+void freeCompiledCode(CompiledCode* code) {
+    freeCompiledCodeObject(&code->topLevelCodeObject);
+}
+
+static void freeCompilerUnitButNotCompiledCode(CompilerUnit compilerUnit) {
+    // We actuall don't need to free the predicted stack as it's a stack-allocated array (fixed-size array)
+    // for (int i = 0; i < compilerUnit.predictedStack.currentStackHeight; i++) {
+    //     if (compilerUnit.predictedStack.tempStack[i].name != NULL) {
+    //         free(compilerUnit.predictedStack.tempStack[i].name);
+    //     }
+    // }
+    // Note: we don't free the globals hash table as it's shared
+}
+
+void freeCompilerStateButNotCompiledCode(CompilerState* compilerState) {
+    freeHashTable(&compilerState->globals);
+    freeCompilerUnitButNotCompiledCode(compilerState->currentCompilerUnit);
+    FREE_ARRAY(compilerState->errors);
 }
 
 /* FORWARD DECLARATIONS */
@@ -841,8 +867,10 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
     for (size_t i = 0; i < lambdaExpression->parameters->used; i++) {
         Constant constant = IDENTIFIER_CONST(copyStringToHeap(lambdaExpression->parameters->values[i].token.start,
                                                               lambdaExpression->parameters->values[i].token.length));
-        if (findLocalByName(&functionCompiler, constant.as.string) != -1)
+        if (findLocalByName(&functionCompiler, constant.as.string) != -1) {
+            // (Technically we should free the compiler here, but it's fine because the program will exit)
             errorAndExit(compiler, "Var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
+        }
         placeLocalAtTopOfTempStack(&functionCompiler, constant.as.string, false);
         increaseStackHeight(&functionCompiler);
     }
@@ -868,6 +896,9 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
 
     // Emit bytecode to define the function
     emitBytecode(compiler, (Bytecode){.type = OP_LAMBDA, .maybeOperand1 = constantIndex});
+
+    // The function compiler can be freed now
+    freeCompilerUnitButNotCompiledCode(functionCompiler);
 
     // The VM will be putting an ObjFunction in the stack, so we have to increase the height
     increaseStackHeight(compiler);
@@ -1023,7 +1054,11 @@ static void visitIdentifierLiteral(CompilerUnit* compiler, IdentifierLiteral* id
 
     if (stackIndex == -1) {  // Its not a local variable
         // First confirm it's a global
-        if (!isGlobalInTable(compiler, identifierNameNullTerminated)) errorAndExit(compiler, "Identifier '%s' referenced before declaration.", identifierNameNullTerminated);
+        if (!isGlobalInTable(compiler, identifierNameNullTerminated)) {
+            // (technically also free the identifierNameNullTerminated string here
+            // but skipping since the program exits)
+            errorAndExit(compiler, "Identifier '%s' referenced before declaration.", identifierNameNullTerminated);
+        }
 
         // Then check whether the name is in the current constant pool.
         // If we didn't find the constant in the current pool, we add it. This can happen when compiling a
@@ -1041,6 +1076,7 @@ static void visitIdentifierLiteral(CompilerUnit* compiler, IdentifierLiteral* id
         Bytecode bytecodeToGetVariable = isLocalModifiable(compiler, identifierNameNullTerminated)
                                              ? BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, stackIndex)
                                              : BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, stackIndex);
+        free(identifierNameNullTerminated);
         emitBytecode(compiler, bytecodeToGetVariable);
     }
 

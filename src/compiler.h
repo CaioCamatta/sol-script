@@ -78,8 +78,8 @@ typedef struct {
 /* Initialize a Compiler with an AST to be parsed */
 void initCompilerState(CompilerState* compilerState, Source* ASTSource);
 
-/* Free a Compiler state and all of its fields, including the ASTSource*/
-void freeCompilerState(CompilerState* compilerState);
+/* Free a Compiler state and all of its fields, except the ASTSource and the compiled code */
+void freeCompilerStateButNotCompiledCode(CompilerState* compilerState);
 
 /**
  * Compile an AST into bytecode.
