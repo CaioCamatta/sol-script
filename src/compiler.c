@@ -50,9 +50,10 @@ void initCompilerState(CompilerState* compilerState, Source* ASTSource) {
     compilerState->ASTSource = ASTSource;
     initHashTable(&compilerState->globals);
     compilerState->currentCompilerUnit = initCompilerUnit(NULL, &compilerState->globals);
+    INIT_ARRAY(compilerState->errors, Error);
 }
 
-void freeCompilerUnit(CompilerUnit compilerUnit) {
+static void freeCompilerUnit(CompilerUnit compilerUnit) {
     // Free strings in temp stack
     for (int i = 0; i < compilerUnit.predictedStack.currentStackHeight; i++) {
         if (compilerUnit.predictedStack.tempStack[i].name != NULL) {
@@ -60,21 +61,38 @@ void freeCompilerUnit(CompilerUnit compilerUnit) {
         }
     }
 
-    // First we free the constants
+    // Free constants
     for (size_t i = 0; i < compilerUnit.compiledCodeObject.constantPool.used; i++) {
         Constant* constant = &compilerUnit.compiledCodeObject.constantPool.values[i];
-        if (constant->type == CONST_TYPE_LAMBDA) {
-            free(constant->as.lambda->code);
-            free(constant->as.lambda);
+        switch (constant->type) {
+            case CONST_TYPE_STRING:
+            case CONST_TYPE_IDENTIFIER:
+                free(constant->as.string);
+                break;
+            case CONST_TYPE_LAMBDA:
+                if (constant->as.lambda) {
+                    if (constant->as.lambda->code) {
+                        FREE_ARRAY(constant->as.lambda->code->bytecodeArray);
+                        FREE_ARRAY(constant->as.lambda->code->constantPool);
+                        free(constant->as.lambda->code);
+                    }
+                    free(constant->as.lambda);
+                }
+                break;
+            default:
+                break;
         }
     }
     FREE_ARRAY(compilerUnit.compiledCodeObject.constantPool);
-
     FREE_ARRAY(compilerUnit.compiledCodeObject.bytecodeArray);
 }
 
 void freeCompilerState(CompilerState* compilerState) {
+    freeHashTable(&compilerState->globals);
+
     freeCompilerUnit(compilerState->currentCompilerUnit);
+
+    FREE_ARRAY(compilerState->errors);
 }
 
 /* FORWARD DECLARATIONS */

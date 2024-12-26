@@ -78,7 +78,7 @@ typedef struct {
 /* Initialize a Compiler with an AST to be parsed */
 void initCompilerState(CompilerState* compilerState, Source* ASTSource);
 
-/* Free a Compiler state and all of its fields, including the ASTSource*/
+/* Free a Compiler state and all of its fields, excluding the ASTSource*/
 void freeCompilerState(CompilerState* compilerState);
 
 /**
