@@ -88,12 +88,13 @@ void freeCompiledCode(CompiledCode* code) {
 }
 
 static void freeCompilerUnitButNotCompiledCode(CompilerUnit compilerUnit) {
-    // Free strings in temp stack
-    for (int i = 0; i < compilerUnit.predictedStack.currentStackHeight; i++) {
-        if (compilerUnit.predictedStack.tempStack[i].name != NULL) {
-            free(compilerUnit.predictedStack.tempStack[i].name);
-        }
-    }
+    // We actuall don't need to free the predicted stack as it's a stack-allocated array (fixed-size array)
+    // for (int i = 0; i < compilerUnit.predictedStack.currentStackHeight; i++) {
+    //     if (compilerUnit.predictedStack.tempStack[i].name != NULL) {
+    //         free(compilerUnit.predictedStack.tempStack[i].name);
+    //     }
+    // }
+    // Note: we don't free the globals hash table as it's shared
 }
 
 void freeCompilerStateButNotCompiledCode(CompilerState* compilerState) {
@@ -866,8 +867,10 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
     for (size_t i = 0; i < lambdaExpression->parameters->used; i++) {
         Constant constant = IDENTIFIER_CONST(copyStringToHeap(lambdaExpression->parameters->values[i].token.start,
                                                               lambdaExpression->parameters->values[i].token.length));
-        if (findLocalByName(&functionCompiler, constant.as.string) != -1)
+        if (findLocalByName(&functionCompiler, constant.as.string) != -1) {
+            // (Technically we should free the compiler here, but it's fine because the program will exit)
             errorAndExit(compiler, "Var \"%s\" is already declared locally. Redeclaration is not permitted.", constant.as.string);
+        }
         placeLocalAtTopOfTempStack(&functionCompiler, constant.as.string, false);
         increaseStackHeight(&functionCompiler);
     }
@@ -893,6 +896,9 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
 
     // Emit bytecode to define the function
     emitBytecode(compiler, (Bytecode){.type = OP_LAMBDA, .maybeOperand1 = constantIndex});
+
+    // The function compiler can be freed now
+    freeCompilerUnitButNotCompiledCode(functionCompiler);
 
     // The VM will be putting an ObjFunction in the stack, so we have to increase the height
     increaseStackHeight(compiler);
