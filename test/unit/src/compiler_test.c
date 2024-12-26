@@ -360,7 +360,7 @@ static int compareTypesInBytecodeArrays(BytecodeArray expected, BytecodeArray ac
     printCompiledCode(compiledCode);
 
 // Macro to free the compiler state (assumed to exist in lexical scope)
-#define FREE_COMPILER freeCompilerState(&compilerState);
+#define FREE_COMPILER freeCompilerStateButNotCompiledCode(&compilerState);
 
 // -------------------------------------------------------------------------
 // --------------------------------- Tests ---------------------------------

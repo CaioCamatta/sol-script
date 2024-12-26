@@ -53,17 +53,13 @@ void initCompilerState(CompilerState* compilerState, Source* ASTSource) {
     INIT_ARRAY(compilerState->errors, Error);
 }
 
-static void freeCompilerUnit(CompilerUnit compilerUnit) {
-    // Free strings in temp stack
-    for (int i = 0; i < compilerUnit.predictedStack.currentStackHeight; i++) {
-        if (compilerUnit.predictedStack.tempStack[i].name != NULL) {
-            free(compilerUnit.predictedStack.tempStack[i].name);
-        }
-    }
+// In bytecode.h
+void freeCompiledCodeObject(CompiledCodeObject* codeObject) {
+    if (!codeObject) return;
 
     // Free constants
-    for (size_t i = 0; i < compilerUnit.compiledCodeObject.constantPool.used; i++) {
-        Constant* constant = &compilerUnit.compiledCodeObject.constantPool.values[i];
+    for (size_t i = 0; i < codeObject->constantPool.used; i++) {
+        Constant* constant = &codeObject->constantPool.values[i];
         switch (constant->type) {
             case CONST_TYPE_STRING:
             case CONST_TYPE_IDENTIFIER:
@@ -72,8 +68,8 @@ static void freeCompilerUnit(CompilerUnit compilerUnit) {
             case CONST_TYPE_LAMBDA:
                 if (constant->as.lambda) {
                     if (constant->as.lambda->code) {
-                        FREE_ARRAY(constant->as.lambda->code->bytecodeArray);
-                        FREE_ARRAY(constant->as.lambda->code->constantPool);
+                        // Recursively free nested code objects
+                        freeCompiledCodeObject(constant->as.lambda->code);
                         free(constant->as.lambda->code);
                     }
                     free(constant->as.lambda);
@@ -83,15 +79,26 @@ static void freeCompilerUnit(CompilerUnit compilerUnit) {
                 break;
         }
     }
-    FREE_ARRAY(compilerUnit.compiledCodeObject.constantPool);
-    FREE_ARRAY(compilerUnit.compiledCodeObject.bytecodeArray);
+    FREE_ARRAY(codeObject->constantPool);
+    FREE_ARRAY(codeObject->bytecodeArray);
 }
 
-void freeCompilerState(CompilerState* compilerState) {
+void freeCompiledCode(CompiledCode* code) {
+    freeCompiledCodeObject(&code->topLevelCodeObject);
+}
+
+static void freeCompilerUnitButNotCompiledCode(CompilerUnit compilerUnit) {
+    // Free strings in temp stack
+    for (int i = 0; i < compilerUnit.predictedStack.currentStackHeight; i++) {
+        if (compilerUnit.predictedStack.tempStack[i].name != NULL) {
+            free(compilerUnit.predictedStack.tempStack[i].name);
+        }
+    }
+}
+
+void freeCompilerStateButNotCompiledCode(CompilerState* compilerState) {
     freeHashTable(&compilerState->globals);
-
-    freeCompilerUnit(compilerState->currentCompilerUnit);
-
+    freeCompilerUnitButNotCompiledCode(compilerState->currentCompilerUnit);
     FREE_ARRAY(compilerState->errors);
 }
 
@@ -1041,7 +1048,11 @@ static void visitIdentifierLiteral(CompilerUnit* compiler, IdentifierLiteral* id
 
     if (stackIndex == -1) {  // Its not a local variable
         // First confirm it's a global
-        if (!isGlobalInTable(compiler, identifierNameNullTerminated)) errorAndExit(compiler, "Identifier '%s' referenced before declaration.", identifierNameNullTerminated);
+        if (!isGlobalInTable(compiler, identifierNameNullTerminated)) {
+            // (technically also free the identifierNameNullTerminated string here
+            // but skipping since the program exits)
+            errorAndExit(compiler, "Identifier '%s' referenced before declaration.", identifierNameNullTerminated);
+        }
 
         // Then check whether the name is in the current constant pool.
         // If we didn't find the constant in the current pool, we add it. This can happen when compiling a
@@ -1059,6 +1070,7 @@ static void visitIdentifierLiteral(CompilerUnit* compiler, IdentifierLiteral* id
         Bytecode bytecodeToGetVariable = isLocalModifiable(compiler, identifierNameNullTerminated)
                                              ? BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, stackIndex)
                                              : BYTECODE_OPERAND_1(OP_GET_LOCAL_VAL_FAST, stackIndex);
+        free(identifierNameNullTerminated);
         emitBytecode(compiler, bytecodeToGetVariable);
     }
 

@@ -199,7 +199,7 @@ void freeSource(Source* source) {
 }
 
 // Free parser and AST, but not the Token array or the original code string.
-void freeParser(ASTParser* parser) {
+void freeParserButNotAST(ASTParser* parser) {
     FREE_ARRAY(parser->errors);
 
     if (parser->source) {

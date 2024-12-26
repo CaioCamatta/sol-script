@@ -167,4 +167,6 @@ typedef struct {
     // Other metadata can go in here
 } CompiledCode;
 
+void freeCompiledCode(CompiledCode* code);
+
 #endif
