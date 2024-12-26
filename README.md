@@ -1,107 +1,174 @@
 # SolScript
 
-SolScript is an interpreted, stack-based programming language. Its syntax draws from Scala and C, and its internal virtual machine is inspired by Python and the JVM.
+SolScript is an interpreted programming language. Its syntax draws from Scala and C, while its internal stack-based virtual machine is inspired by Python and the JVM.
 
-To begin using SolScript, clone the repository and build the project by running `make`. For additional debugging information, use `make debug`. Once built, you can start the REPL by executing `./sol`, or run a SolScript program with `./sol program.sol`.
+## Table of Contents
 
-**Important:** Please note that SolScript is currently [a work in progress](https://github.com/CaioCamatta/sol-script?tab=readme-ov-file#v10) and has only been tested on ARM-based macOS systems.
+- [Features](#features)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+- [Usage](#usage)
+- [Language Design and Implementation](#language-design-and-implementation)
+  - [Basic Syntax](#basic-syntax)
+  - [Key Concepts](#key-concepts)
+- [Technical Details](#technical-details)
+- [Development Status](#development-status)
+- [Contributing](#contributing)
+- [License](#license)
 
-## Example program
+## Features
 
+- **Simple yet Powerful Syntax**: Combines Scala's expressiveness with C's clarity
+- **Stack-Based VM**: Efficient bytecode execution inspired by the JVM
+- **First-Class Functions**: Support for lambdas and higher-order functions
+- **Object System**: Flexible struct-based object system with prototypal capabilities
+- **Static Analysis**: Built-in compiler optimizations and error detection
+- **REPL Environment**: Interactive development environment for rapid prototyping
+
+## Getting Started
+
+Note: SolScript is a work-in-progress and has only been tested on ARM-based MacOS systems.
+
+### Prerequisites
+
+- C compiler (GCC)
+- Make build system
+- Git
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/CaioCamatta/sol-script.git
+cd solscript
+
+# Build the project
+make
+
+# For debug build
+make debug
 ```
-// Immutable constant
-val a = 1;
+
+## Usage
+
+Start the REPL:
+
+```bash
+./sol
+```
+
+Run a SolScript file:
+
+```bash
+./sol program.sol
+```
+
+## Language Overview
+
+### Basic Syntax
+
+Here's an example demonstrating a basic program:
+
+```solscript
+// Constants are immutable
+val PI = 3.14159;
 
 // Create an object with methods
-var numberGenerator = struct {
-  currentNumber: 0;
+var circle = struct {
+  radius: 10;
 
-  // Print N new unique numbers and return the last unique one.
-  printNewNumbers: lambda (var count) {
-    while (count > 0){
-      print count;
-      this.currentNumber = this.currentNumber +1;
-      count = count - 1;
-    }
-
-    this.currentNumber; // Implicit return
+  area: lambda () {
+    PI * this.radius * this.radius
   };
-}
 
-// Prints '0' and '1'.
-numberGenerator.printNewNumbers(2);
+  scale: lambda (var factor) {
+    this.radius = this.radius * factor;
+    this.area()
+  };
+};
+
+// Method invocation
+print circle.area();    // Output: 314.159
+print circle.scale(2);  // Output: 1256.636
 ```
 
-## Language Design
+### Key Concepts
 
-The following diagram gives a high-level overview of SolScript's internals.
+- **Values and Variables**: `val` for constants, `var` for mutable variables
+- **First-Class Functions**: Lambda expressions with closure support
+- **Objects**: Struct-based system with method definitions
+- **Block Expressions**: Last expression in a block becomes its value
+- **Type System**: Dynamic typing with runtime type checking
 
-SolScript has four main components: scanner, parser, compiler, and virtual machine. The scanner reads user code and outputs tokens. The parser consumes tokens and produces and abstract syntax tree (AST). The compiler traverses the AST and produces bytecode. The VM executes bytecode and keeps a stack of Values.
+## Language Design and Implementation
+
+SolScript has four main components:
+
+- Scanner: reads user code and outputs tokens.
+- Parser: consumes tokens and produces an abstract syntax tree (AST).
+- Compiler: traverses the AST and produces bytecode.
+- Virtual machine (VM): executes bytecode and maintains a stack of `Value`s.
 
 ![Architecture](./architecture.png)
 
-### Lexical Grammar
-
-The scanner is a regular language that turns characters into tokens. For example, "val" becomes a `TOKEN_VAL`.
-
-The following is SolScript's lexical grammar. It's inspired by the [C lexical grammar](https://learn.microsoft.com/en-us/cpp/c-language/lexical-grammar?view=msvc-170), and [Scala lexical expressions](https://www.scala-lang.org/files/archive/spec/2.11/06-expressions.html#blocks).
+The following sections contain details on each of the components.
 
 <details>
-  <summary>Full Lexical Grammar</summary>
-  
-  ```
-  token:
-      keyword
-      identifier
-      number-literal
-      string-literal
-      punctuator
+<summary><strong>Lexical Grammar</strong></summary>
+
+The scanner turns characters into tokens. For example, "val" becomes a `TOKEN_VAL`. It's inspired by the [C's lexical grammar](https://learn.microsoft.com/en-us/cpp/c-language/lexical-grammar?view=msvc-170) and [Scala's lexical expressions](https://www.scala-lang.org/files/archive/spec/2.11/06-expressions.html#expressions).
+
+```
+token:
+    keyword
+    identifier
+    number-literal
+    string-literal
+    punctuator
 
 keyword:
-"number"
-"if"
-"else"
-"struct"
-"return"
-"false"
-"true"
-"null"
-"val"
-"prototype"
+    "number"
+    "if"
+    "else"
+    "struct"
+    "return"
+    "false"
+    "true"
+    "null"
+    "val"
+    "prototype"
 
 number-literal:
-digit+ (. digit+)?
+    digit+ (. digit+)?
 
 string-literal:
-" s-char-sequence\* "
+    " s-char-sequence* "
 
 s-char-sequence:
-[^\"]
+    [^\"]
 
 identifier:
-non-digit (non-digit | digit)\*
+    non-digit (non-digit | digit)*
 
 non-digit: one of
- \_ a b c d e f g h i j k l m
- n o p q r s t u v w x y z
- A B C D E F G H I J K L M
- N O P Q R S T U V W X Y Z
+     _ a b c d e f g h i j k l m
+     n o p q r s t u v w x y z
+     A B C D E F G H I J K L M
+     N O P Q R S T U V W X Y Z
 
 digit: one of
-0 1 2 3 4 5 6 7 8 9
+    0 1 2 3 4 5 6 7 8 9
 
 punctuator: one of
-( ) { } . \* + - ! % < > = <= >= == != || && ; ,
-
+    ( ) { } . * + - ! % < > = <= >= == != || && ; ,
 ```
-</details>
-
-Note that comments are treated as whitespace.
 
 #### Example
-For the statement `print 2+3-4;`, the scanner would parse the following tokens:
-```
 
+When scanning `print 2+3-4;`, the following tokens would be produced:
+
+```
 TOKEN_PRINT(lexeme="print", line=1, column=6)
 TOKEN_NUMBER(lexeme="2", line=1, column=8)
 TOKEN_PLUS(lexeme="+", line=1, column=9)
@@ -110,19 +177,20 @@ TOKEN_MINUS(lexeme="-", line=1, column=11)
 TOKEN_NUMBER(lexeme="4", line=1, column=12)
 TOKEN_SEMICOLON(lexeme=";", line=1, column=13)
 TOKEN_EOF(lexeme="", line=2, column=2)
+```
 
-````
+Use `make debug` to view these tokens.
 
-### Syntactical Grammar
-
-The syntactical grammar _should_ be an LALR(1) grammar, i.e. it can be parsed by a left-to-right parser with 2 tokens of look-ahead. In SolScript, a program Source is a series of Statements. Statements use Expressions and Literals. Expressions are evaluated to a Value at run time.
-
-This grammar is primarily inspired by the [ANSI C grammar](https://slebok.github.io/zoo/c/c90/sdf/extracted/index.html#Statement), [Lox](https://craftinginterpreters.com/) and Scala.
+</details>
 
 <details>
-  <summary>Full Syntax Grammar</summary>
+<summary><strong>Syntactical Grammar</strong></summary>
 
-  ```
+The syntactical grammar _should_ be an LALR(1) grammar. It can be parsed by a left-to-right parser with 1 tokens of look-ahead. A SolScript program `Source` is a series of `Statement`s that use `Expression`s and `Literal`s.
+
+This grammar is inspired by the [ANSI C grammar](https://slebok.github.io/zoo/c/c90/sdf/extracted/index.html#Statement), [Lox](https://craftinginterpreters.com/) and Scala.
+
+```
 source:
   statement* EOF
 
@@ -248,12 +316,11 @@ primary-expression:
 number-literal      # terminal
 string-literal      # terminal
 identifier          # terminal
-  ```
-
-</details>
+```
 
 #### Example
-For the statement `print 2+3-4;`, the scanner would parse the following Abstract Syntax Tree:
+
+When parsing `print 2+3-4;`, the following Abstract Syntax Tree would be produced:
 
 ```
 Source(numberOfStatements=1)
@@ -270,41 +337,119 @@ Source(numberOfStatements=1)
 |   |   |   (right)
 |   |   |   |   PrimaryExpression
 |   |   |   |   |   NumberLiteral(token="4")
-```
 
-### Compiled code
+</details>
 
-SolScript's compiled code is heavily inspired by [java .class files](https://en.wikipedia.org/wiki/Java_class_file). SolScript. It has two parts:
-- An array of bytecode. Bytecode have optional operands.
-- A pool of constants
 
-The constant pool is necessary so the compiler can pass constants, such as strings for variable names, to the VM.
+<details>
+<summary><strong>Compiled Code</strong></summary>
+
+SolScript's code is compiled ahead of time. The compiled code object consists of:
+
+- An array of bytecode with optional operands
+- A constant pool for storing strings, numbers, and other constants
+  - Necessary for communication .
+
+Inspired by [java .class files](https://en.wikipedia.org/wiki/Java_class_file)
 
 #### Example
-For the statement `print 2+3-4;`, the compiler would produce the following constants and bytecode:
+
+When compiling `print 2+3-4;`, the following constants and bytecode would be produced:
+
 ```
+
 Constant Pool
- #0 (double) 2.000000
- #1 (double) 3.000000
- #2 (double) 4.000000
+#0 (double) 2.000000
+#1 (double) 3.000000
+#2 (double) 4.000000
 
 Bytecode
- [ LOAD_CONSTANT #0 ]
- [ LOAD_CONSTANT #1 ]
- [ ADD ]
- [ LOAD_CONSTANT #2 ]
- [ PRINT ]
-```
+[ LOAD_CONSTANT #0 ]
+[ LOAD_CONSTANT #1 ]
+[ ADD ]
+[ LOAD_CONSTANT #2 ]
+[ PRINT ]
 
-### The Virtual Machine
+````
 
-The SolScript Virtual Machine* is heavily inspired by the [Lox VM](https://craftinginterpreters.com/a-virtual-machine.html) and the [JVM](https://docs.oracle.com/javase/specs/jvms/se8/html/), and to some extent, the [CPython VM](https://leanpub.com/insidethepythonvirtualmachine/read).
+</details>
 
-*For those new to programming languages, a "virtual machine" here is not the same as a "Windows virtual machine". A programming language VM translates bytecode down to low-level code or machine code.
+<details>
+<summary><strong>Virtual Machine (VM)</strong></summary>
+
+The SolScript VM uses a stack-based architecture for executing bytecode instructions. Sol maintains a stack of `Value`s which can be numbers, strings, objects, etc. The language as a whole is optimized for fast code execution.
 
 See [bytecode.h](./src/bytecode.h) for the complete Instruction Set.
 
-A runtime `Value` could be a number, string, object, etc.
+Sol's VM is inspired by the [Lox VM](https://craftinginterpreters.com/a-virtual-machine.html) and the [JVM](https://docs.oracle.com/javase/specs/jvms/se8/html/), and to some extent, the [CPython VM](https://leanpub.com/insidethepythonvirtualmachine/read).
+
+</details>
+
+## Development Status
+
+SolScript is currently in beta. It's feature-complete enough to play with.
+
+### Completed work
+
+
+
+ - ✅ Lexical grammar design
+ - ✅ sSntax grammar design
+ - ✅ Build configuration using Make
+ - ✅ Unit testing framework ([MinUnit](https://jera.com/techinfo/jtns/jtn002))
+ - ✅ REPL / interactive shell
+ - ✅ Hash table utility
+ - ✅ Array utility
+ - ✅ Robust debugging module for all parts of the system
+ - ✅ Completed scanner for the lexical grammar
+ - ✅ Implement minimal parser, compiler, and VM for end-to-end test.
+ - ✅ Constant pool (similar to [Java's](https://blogs.oracle.com/javamagazine/post/java-class-file-constant-pool))
+ - ✅ Variable declaration and access
+ - ✅ Print statements
+ - ✅ Additive expression and other "simple" expressions
+ - ✅ String literals
+ - ✅ Block statements
+ - ✅ [_FAST](https://stackoverflow.com/questions/74998947/whats-pythons-load-fast-bytecode-instruction-fast-at) local variables similar to Python's
+ - ✅ Selection statement (`if`s)
+ - ✅ Conditional debugging/logging for tests that fail
+ - ✅ Block expressions
+ - ✅ Assignment statements
+ - ✅ Non-constant variables
+ - ✅ Iteration statement (loops)
+ - ✅ Functions and returns
+ - ✅ End-to-end tests
+ - ✅ Separate build with debug logs
+ - ✅ Panic Mode error recovery in the Parser (prevent crashing on every error).
+ - ✅ Objects / structs
+ - ✅ Recursion support
+
+### Roadmap to v1.0
+
+Features
+
+- [ ] Add garbage collector
+
+Small items and fixes:
+
+- [X] Fix chained function calls
+- [ ] Audit all dynamic memory allocation
+- [ ] If-expressions at the end of function blocks should be used as function return.
+- [ ] Returning null from functions doesnt work in structs
+- [ ] Explicitly fail when closing over variables
+
+### Future Enhancements (v1.1+)
+
+These will be great to have but left out of scope for v1:
+
+ - [ ] Native functions
+ - [ ] Prototypal inheritance
+ - [ ] Benchmarking utility
+ - [ ] Performance profiling and optimization
+ - [ ] Panic Mode error recovery for the Compiler
+ - [ ] Better compiler error logging with line and column printing
+ - [ ] [NaN boxing](https://piotrduperas.com/posts/nan-boxing) for smaller bytecode
+ - [ ] Array data structure
+ - [ ] Closures
 
 ## Development
 
@@ -326,62 +471,9 @@ SolScript should be simple and well-documented. Runtime performance should be fa
 
 `test/manual/` - SolScript code/scenarios that can be ran manually
 
+### Testing
 
-## Release Tracker
-
-## v1.0
-To-do before v1.0 is released:
-
- - [x] Design the lexical grammar
- - [x] Design the syntax grammar
- - [x] Add build configuration using make
- - [x] Add unit testing framework ([MinUnit](https://jera.com/techinfo/jtns/jtn002))
- - [x] Add REPL / interactive shell
- - [x] Implement and test hash table utility
- - [x] Implement and test array utility
- - [X] Implement robust debugging module for all parts of the system.
- - [x] Implement full scanner for the lexical grammar
- - [x] Implement minimal parser, compiler, and VM for end-to-end test.
- - [x] Add constant pool (similar to [Java's](https://blogs.oracle.com/javamagazine/post/java-class-file-constant-pool))
- - [X] Add support for variable declaration and access
- - [X] Implement print statements
- - [X] Implement additive expression
- - [X] Implement all other "simple" expressions, i.e. excluding postfix-call-expressions
- - [X] Implement string literals
- - [X] Implement block statements
- - [X] Add [_FAST](https://stackoverflow.com/questions/74998947/whats-pythons-load-fast-bytecode-instruction-fast-at) local variables
- - [X] Implement selection statement (`if`s)
- - [X] Add conditional debugging/logging for tests that fail
- - [X] Implement block expressions
- - [X] Implement assignment statements
- - [X] Implement non-constant variables
- - [X] Implement iteration statement (loops)
- - [X] Implement functions and returns
- - [X] Add end-to-end tests
- - [x] Make debug logs optional for REPL or program execution
- - [X] Add Panic Mode error recovery to parser; stop crashing on every error.
- - [X] Implement objects / structs
- - [X] Support recursion
- - [ ] Audit all dynamic memory allocation and correctly free scanner, parser, and compiler objects.
- - [ ] Add garbage collector
-
-### v1.1 Tasks
-These tasks are outside the scope of v1:
-
- - [ ] Add native functions
- - [ ] Add benchmark tests
- - [ ] Add prototypal inheritance
- - [ ] Profile execution and find opportunities for optimization
- - [ ] Add Panic Mode error recovery to compiler
- - [ ] Improve compiler error logging; print line and column
- - [ ] Implement [NaN boxing](https://piotrduperas.com/posts/nan-boxing)
- - [ ] Add arrays
- - [ ] Implement closures
-
-### Small Fixes Needed
-
-- [X] Fix chained function calls
-- [ ] If-expressions at the end of function blocks should be used as function return.
-- [ ] Returning null from functions doesnt work in structs
-- [ ] Explicitly fail when closing over variables
+```bash
+# Run all tests
+make test
 ````
