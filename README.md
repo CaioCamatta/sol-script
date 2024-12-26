@@ -425,6 +425,7 @@ SolScript is currently in beta. It's feature-complete enough to play with.
 
 Features
 
+- [ ] Support `this` reference in objects
 - [ ] Add garbage collector
 
 Small items and fixes:
