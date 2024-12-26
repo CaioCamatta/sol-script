@@ -6,29 +6,30 @@ To begin using SolScript, clone the repository and build the project by running 
 
 **Important:** Please note that SolScript is currently [a work in progress](https://github.com/CaioCamatta/sol-script?tab=readme-ov-file#v10) and has only been tested on ARM-based macOS systems.
 
-
 ## Example program
+
 ```
-// Constant declaration declaration
+// Immutable constant
 val a = 1;
 
-// Example object
-var uniqueNumberGenerator = struct {
-  currNumber: 0;
+// Create an object with methods
+var numberGenerator = struct {
+  currentNumber: 0;
 
   // Print N new unique numbers and return the last unique one.
   printNewNumbers: lambda (var count) {
     while (count > 0){
       print count;
-      this.currNumber = this.currNumber +1;
+      this.currentNumber = this.currentNumber +1;
       count = count - 1;
     }
-    this.currNumber; // In a block expression, no 'return' keyword is necessary
+
+    this.currentNumber; // Implicit return
   };
 }
 
 // Prints '0' and '1'.
-uniqueNumberGenerator.printNewNumbers(2);
+numberGenerator.printNewNumbers(2);
 ```
 
 ## Language Design
@@ -56,42 +57,43 @@ The following is SolScript's lexical grammar. It's inspired by the [C lexical gr
       string-literal
       punctuator
 
-  keyword:
-      "number" 
-      "if" 
-      "else" 
-      "struct" 
-      "return" 
-      "false" 
-      "true" 
-      "null"
-      "val"
-      "prototype"
+keyword:
+"number"
+"if"
+"else"
+"struct"
+"return"
+"false"
+"true"
+"null"
+"val"
+"prototype"
 
-  number-literal:
-      digit+ (. digit+)?
+number-literal:
+digit+ (. digit+)?
 
-  string-literal:
-      " s-char-sequence* "
+string-literal:
+" s-char-sequence\* "
 
-  s-char-sequence:
-      [^\"]
+s-char-sequence:
+[^\"]
 
-  identifier: 
-      non-digit (non-digit | digit)*
+identifier:
+non-digit (non-digit | digit)\*
 
-  non-digit: one of
-       _ a b c d e f g h i j k l m
-       n o p q r s t u v w x y z
-       A B C D E F G H I J K L M
-       N O P Q R S T U V W X Y Z
+non-digit: one of
+ \_ a b c d e f g h i j k l m
+ n o p q r s t u v w x y z
+ A B C D E F G H I J K L M
+ N O P Q R S T U V W X Y Z
 
-  digit: one of
-      0 1 2 3 4 5 6 7 8 9
+digit: one of
+0 1 2 3 4 5 6 7 8 9
 
-  punctuator: one of
-      ( ) { } . * + - ! % < > = <= >= == != || && ; ,
-  ```  
+punctuator: one of
+( ) { } . \* + - ! % < > = <= >= == != || && ; ,
+
+```
 </details>
 
 Note that comments are treated as whitespace.
@@ -99,6 +101,7 @@ Note that comments are treated as whitespace.
 #### Example
 For the statement `print 2+3-4;`, the scanner would parse the following tokens:
 ```
+
 TOKEN_PRINT(lexeme="print", line=1, column=6)
 TOKEN_NUMBER(lexeme="2", line=1, column=8)
 TOKEN_PLUS(lexeme="+", line=1, column=9)
@@ -107,7 +110,8 @@ TOKEN_MINUS(lexeme="-", line=1, column=11)
 TOKEN_NUMBER(lexeme="4", line=1, column=12)
 TOKEN_SEMICOLON(lexeme=";", line=1, column=13)
 TOKEN_EOF(lexeme="", line=2, column=2)
-``````
+
+````
 
 ### Syntactical Grammar
 
@@ -117,133 +121,133 @@ This grammar is primarily inspired by the [ANSI C grammar](https://slebok.github
 
 <details>
   <summary>Full Syntax Grammar</summary>
-  
+
   ```
-  source: 
-    statement* EOF
+source:
+  statement* EOF
 
-  statement: 
-    declaration
-    block-statement
-    iteration-statement
-    selection-statement
-    return-statement
-    print-statement
-    assignment-statement
-    expression-statement # if this is a call expresison or an identifier, check next character. If next is  a "." 
+statement:
+  declaration
+  block-statement
+  iteration-statement
+  selection-statement
+  return-statement
+  print-statement
+  assignment-statement
+  expression-statement # if this is a call expresison or an identifier, check next character. If next is  a "."
 
-  declaration:
-    var-declaration
-    val-declaration
+declaration:
+  var-declaration
+  val-declaration
 
-  var-declaration:
-    "var" identifier ";"
-    "var" identifier "=" expression  ";"
+var-declaration:
+  "var" identifier ";"
+  "var" identifier "=" expression  ";"
 
-  val-declaration:
-    "val" identifier "=" expression ";"
+val-declaration:
+  "val" identifier "=" expression ";"
 
-  block-statement:
-    "{" statement* "}"
+block-statement:
+  "{" statement* "}"
 
-  iteration-statement:
-    "while" "(" expression ")" block-statement
+iteration-statement:
+  "while" "(" expression ")" block-statement
 
-  selection-statement:
-    "if" "(" expression ")" statement 
-    "if" "(" expression ")" statement "else" statement
+selection-statement:
+  "if" "(" expression ")" statement
+  "if" "(" expression ")" statement "else" statement
 
-  return-statement:
-    "return" ";"
-    "return" expression ";"
-    
-  expression-statement:
-    expression ";"
+return-statement:
+  "return" ";"
+  "return" expression ";"
 
-  assignment-statement: 
-    expression "=" expression
+expression-statement:
+  expression ";"
 
-  print-statement:
-    "print" expression ";"
+assignment-statement:
+  expression "=" expression
 
-
-  expression:
-    struct-expression
-    function-expression
-    logical-or-expression
+print-statement:
+  "print" expression ";"
 
 
-  struct-expression:
-    "struct" "{" struct-declaration-list "}"
-
-  struct-declaration-list:
-    struct-declaration
-    struct-declaration-list "," struct-declaration
-    
-  struct-declaration:
-    identifier ":" expression
-    "prototype" ":" identifier
+expression:
+  struct-expression
+  function-expression
+  logical-or-expression
 
 
-  lambda-expression:
-    "lambda" "(" ")" "{" block-expression "}"
-    "lambda" "(" parameter-list ")" "{" block-expression "}"
-    
-  parameter-list:
-    identifier ( "," identifier )*
+struct-expression:
+  "struct" "{" struct-declaration-list "}"
 
-  argument-list:
-    expression ( "," expression )*
+struct-declaration-list:
+  struct-declaration
+  struct-declaration-list "," struct-declaration
 
-
-  block-expression:
-    "{" statement* expression "}"
+struct-declaration:
+  identifier ":" expression
+  "prototype" ":" identifier
 
 
-  logical-or-expression:
-    logical-and-expression ( "or" logical-and-expression )*
+lambda-expression:
+  "lambda" "(" ")" "{" block-expression "}"
+  "lambda" "(" parameter-list ")" "{" block-expression "}"
 
-  logical-and-expression:
-    equality-expression ( "and" equality-expression )*
+parameter-list:
+  identifier ( "," identifier )*
 
-  equality-expression: 
-    comparison-expression ( ("!=" | "==") comparison-expression )*
-
-  comparison-expression:
-    additive-expression ( ( ">" | ">=" | "<" | "<=" ) additive-expression )*
-
-  additive-expression:
-    multiplicative-expression ( ( "-" | "+" ) multiplicative-expression )* 
-    
-  multiplicative-expression:
-    unary-expression ( ( "/" | "*" ) unary-expression )* 
-
-  unary-expression:
-    postfix-expression
-    ( "!" )* postfix-expression
-    ( "-" )* postfix-expression
-
-  postfix-expression:
-    primary-expression
-    postfix-expression "(" ")"
-    postfix-expression "(" argument-list ")"
-    postfix-expression "." identifier
-
-  primary-expression:
-    number-literal
-    string-literal
-    identifier
-    block-expression
-    ( expression )
-    "true"
-    "false"
-    "null"
-    "this"
+argument-list:
+  expression ( "," expression )*
 
 
-  number-literal      # terminal
-  string-literal      # terminal
-  identifier          # terminal
+block-expression:
+  "{" statement* expression "}"
+
+
+logical-or-expression:
+  logical-and-expression ( "or" logical-and-expression )*
+
+logical-and-expression:
+  equality-expression ( "and" equality-expression )*
+
+equality-expression:
+  comparison-expression ( ("!=" | "==") comparison-expression )*
+
+comparison-expression:
+  additive-expression ( ( ">" | ">=" | "<" | "<=" ) additive-expression )*
+
+additive-expression:
+  multiplicative-expression ( ( "-" | "+" ) multiplicative-expression )*
+
+multiplicative-expression:
+  unary-expression ( ( "/" | "*" ) unary-expression )*
+
+unary-expression:
+  postfix-expression
+  ( "!" )* postfix-expression
+  ( "-" )* postfix-expression
+
+postfix-expression:
+  primary-expression
+  postfix-expression "(" ")"
+  postfix-expression "(" argument-list ")"
+  postfix-expression "." identifier
+
+primary-expression:
+  number-literal
+  string-literal
+  identifier
+  block-expression
+  ( expression )
+  "true"
+  "false"
+  "null"
+  "this"
+
+
+number-literal      # terminal
+string-literal      # terminal
+identifier          # terminal
   ```
 
 </details>
@@ -279,7 +283,7 @@ The constant pool is necessary so the compiler can pass constants, such as strin
 #### Example
 For the statement `print 2+3-4;`, the compiler would produce the following constants and bytecode:
 ```
-Constant Pool 
+Constant Pool
  #0 (double) 2.000000
  #1 (double) 3.000000
  #2 (double) 4.000000
@@ -294,9 +298,9 @@ Bytecode
 
 ### The Virtual Machine
 
-The SolScript Virtual Machine* is heavily inspired by the [Lox VM](https://craftinginterpreters.com/a-virtual-machine.html) and the [JVM](https://docs.oracle.com/javase/specs/jvms/se8/html/), and to some extent, the [CPython VM](https://leanpub.com/insidethepythonvirtualmachine/read). 
+The SolScript Virtual Machine* is heavily inspired by the [Lox VM](https://craftinginterpreters.com/a-virtual-machine.html) and the [JVM](https://docs.oracle.com/javase/specs/jvms/se8/html/), and to some extent, the [CPython VM](https://leanpub.com/insidethepythonvirtualmachine/read).
 
-*For those new to programming languages, a "virtual machine" here is not the same as a "Windows virtual machine". A programming language VM translates bytecode down to low-level code or machine code. 
+*For those new to programming languages, a "virtual machine" here is not the same as a "Windows virtual machine". A programming language VM translates bytecode down to low-level code or machine code.
 
 See [bytecode.h](./src/bytecode.h) for the complete Instruction Set.
 
@@ -306,9 +310,7 @@ A runtime `Value` could be a number, string, object, etc.
 
 ### Philosophy
 
-SolScript is a "toy" programming language. Its main advantage over "real" languages, if any, its simplicity and the ease with which one can learn its internals. Learning this codebase should be exceptionally easy. Hence, comments and documentation should be extensive.
-
-Additionally, run time performance is more critical than compilation time performance. Inefficiencies in the scanner, parser, and compiler are acceptable.
+SolScript should be simple and well-documented. Runtime performance should be favoured over compilation time; inefficiencies in the Scanner, Parser, or Compiler are acceptable.
 
 ### Project structure
 
@@ -316,16 +318,18 @@ Additionally, run time performance is more critical than compilation time perfor
 
 `src/util/` - `.c` and `.h` utility files
 
-`test/unit/src/` - unit tests for the C code
+`test/unit/src/` - unit tests for the main modules
 
-`test/unit/src/util/` - unit tests for the utilities C code
+`test/unit/src/util/` - unit tests for the utilities
 
-`test/sol/` - tests written in SolScript
+`test/end_to_end/` - end-to-end tests written in SolScript
+
+`test/manual/` - SolScript code/scenarios that can be ran manually
 
 
 ## Release Tracker
 
-## v1.0 
+## v1.0
 To-do before v1.0 is released:
 
  - [x] Design the lexical grammar
@@ -380,3 +384,4 @@ These tasks are outside the scope of v1:
 - [ ] If-expressions at the end of function blocks should be used as function return.
 - [ ] Returning null from functions doesnt work in structs
 - [ ] Explicitly fail when closing over variables
+````
