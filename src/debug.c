@@ -342,6 +342,10 @@ static void printLiteral(const Literal* literal, int depth) {
             printf("IdentifierLiteral" KGRY "(token=\"%.*s\")\n" RESET, literal->as.identifierLiteral->token.length, literal->as.identifierLiteral->token.start);
             break;
 
+        case THIS_LITERAL:
+            printf("ThisLiteral" KGRY "(token=\"%.*s\")\n" RESET, literal->as.thisLiteral->token.length, literal->as.thisLiteral->token.start);
+            break;
+
         case STRING_LITERAL:
             printf("StringLiteral" KGRY "(token=%.*s)\n" RESET, literal->as.stringLiteral->token.length, literal->as.stringLiteral->token.start);
             break;

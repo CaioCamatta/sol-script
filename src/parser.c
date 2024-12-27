@@ -43,6 +43,9 @@ void freeLiteral(Literal* literal) {
         case IDENTIFIER_LITERAL:
             free(literal->as.identifierLiteral);
             break;
+        case THIS_LITERAL:
+            free(literal->as.thisLiteral);
+            break;
         case STRING_LITERAL:
             free(literal->as.stringLiteral);
             break;
@@ -321,6 +324,23 @@ static Literal* identifierLiteral(ASTParser* parser) {
 }
 
 /**
+ * Terminal rule. Match 'this' token.
+ *
+ * (Somewhat redundant with identifierLiteral, but we keep it separate because the semantics are different.)
+ */
+static Literal* thisLiteral(ASTParser* parser) {
+    Token* identifier = consume(parser, TOKEN_THIS, "Expected 'this' keyword'.");
+    ThisLiteral* thisLiteral = allocateASTNode(ThisLiteral);
+    thisLiteral->token = *(identifier);
+
+    Literal* literal = allocateASTNode(Literal);
+    literal->type = THIS_LITERAL;
+    literal->as.thisLiteral = thisLiteral;
+
+    return literal;
+}
+
+/**
  * Terminal rule. Match a string token.
  */
 static Literal* stringLiteral(ASTParser* parser) {
@@ -385,6 +405,20 @@ static Expression* primaryExpression(ASTParser* parser) {
     switch (peek(parser)->type) {
         case TOKEN_NUMBER: {
             Literal* tempLiteral = numberLiteral(parser);
+
+            Expression* expression = allocateASTNode(Expression);
+            expression->type = PRIMARY_EXPRESSION;
+
+            PrimaryExpression* primaryExpression = allocateASTNode(PrimaryExpression);
+            primaryExpression->literal = tempLiteral;
+
+            expression->as.primaryExpression = primaryExpression;
+
+            return expression;
+            break;
+        }
+        case TOKEN_THIS: {
+            Literal* tempLiteral = thisLiteral(parser);
 
             Expression* expression = allocateASTNode(Expression);
             expression->type = PRIMARY_EXPRESSION;

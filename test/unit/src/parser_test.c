@@ -607,6 +607,46 @@ int test_parser_string_literal() {
     return SUCCESS_RETURN_CODE;
 }
 
+int test_parser_this_member_expression() {
+    // Create tokens for "this.field;"
+    Token tokensArray[] = {
+        createToken(TOKEN_THIS, "this"),
+        createToken(TOKEN_DOT, "."),
+        createToken(TOKEN_IDENTIFIER, "field"),
+        createToken(TOKEN_SEMICOLON, ";"),
+        createToken(TOKEN_EOF, "")};
+
+    TokenArray tokens = {
+        .values = tokensArray,
+        .used = sizeof(tokensArray) / sizeof(Token),
+        .size = sizeof(tokensArray) / sizeof(Token)};
+
+    PARSE_TEST_AST
+
+    // Verify the basic structure - we should have one statement
+    ASSERT(source->numberOfStatements == 1);
+    Statement* stmt = source->rootStatements[0];
+    ASSERT(stmt->type == EXPRESSION_STATEMENT);
+
+    // Get the expression and verify it's a member expression
+    Expression* expr = stmt->as.expressionStatement->expression;
+    ASSERT(expr->type == MEMBER_EXPRESSION);
+
+    // Check the left-hand side is a primary expression containing a this literal
+    ASSERT(expr->as.memberExpression->leftHandSide->type == PRIMARY_EXPRESSION);
+    ASSERT(expr->as.memberExpression->leftHandSide->as.primaryExpression->literal->type == THIS_LITERAL);
+    ASSERT(strcmp(expr->as.memberExpression->leftHandSide->as.primaryExpression->literal->as.thisLiteral->token.start, "this") == 0);
+
+    // Check the right-hand side is a primary expression containing an identifier literal
+    ASSERT(expr->as.memberExpression->rightHandSide->type == PRIMARY_EXPRESSION);
+    ASSERT(expr->as.memberExpression->rightHandSide->as.primaryExpression->literal->type == IDENTIFIER_LITERAL);
+    ASSERT(strcmp(expr->as.memberExpression->rightHandSide->as.primaryExpression->literal->as.identifierLiteral->token.start, "field") == 0);
+
+    freeSource(parser.source);
+    freeParserButNotAST(&parser);
+    return SUCCESS_RETURN_CODE;
+}
+
 int test_parser_block_statement() {
     // Define the tokens representing a block statement with a val declaration and a print statement
     TokenType types[] = {

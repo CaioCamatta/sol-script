@@ -1,10 +1,7 @@
-val factorial = lambda (n) {
-    var result;
-    if (n <= 1) {
-        result = 1;
-    } else {
-        result = n * factorial(n - 1);
+val s = struct {
+    a: 4;
+    f: lambda(){
+        print this.a;
     };
-    result;
 };
-print factorial(3);
+print s.f();

@@ -34,6 +34,7 @@ void all_unit_tests() {
     RUN_TEST(test_parser_complex_expression);
     RUN_TEST(test_parser_nested_parentheses_expression);
     RUN_TEST(test_parser_variable_declaration_and_reading);
+    RUN_TEST(test_parser_this_member_expression);
     RUN_TEST(test_parser_string_literal);
     RUN_TEST(test_parser_block_statement);
     RUN_TEST(test_parser_if_statement_true_branch_only);
