@@ -863,6 +863,11 @@ static Function* createFunction(u_int8_t parameterCount, CompiledCodeObject* cod
 static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lambdaExpression) {
     CompilerUnit functionCompiler = initCompilerUnit(compiler, compiler->globals);
 
+    // If this function is currently being compiled inside a struct, we let the function compiler know.
+    if (compiler->currentStructSlot >= 0) {
+        functionCompiler.currentStructSlot = compiler->currentStructSlot;
+    }
+
     // Define all parameters as locals
     for (size_t i = 0; i < lambdaExpression->parameters->used; i++) {
         Constant constant = IDENTIFIER_CONST(copyStringToHeap(lambdaExpression->parameters->values[i].token.start,
@@ -949,6 +954,10 @@ static void visitStructExpression(CompilerUnit* compiler, StructExpression* stru
     emitBytecode(compiler, BYTECODE(OP_NEW_STRUCT));
     increaseStackHeight(compiler);
 
+    // We need to track the fact we're compiling a struct so the "this" keyword can be used.
+    int structSlotBeforeThisStruct = compiler->currentStructSlot;
+    compiler->currentStructSlot = compiler->predictedStack.currentStackHeight - 1;
+
     // Set each field
     for (size_t i = 0; i < structExpression->declarationArray.used; i++) {
         StructDeclaration* declaration = structExpression->declarationArray.values[i];
@@ -967,6 +976,9 @@ static void visitStructExpression(CompilerUnit* compiler, StructExpression* stru
         emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_FIELD, constantIndex));
         decreaseStackHeight(compiler);
     }
+
+    // Reset the struct slot to what it was before. If we weren't compiling a struct before, this will be -1.
+    compiler->currentStructSlot = structSlotBeforeThisStruct;
 }
 
 static void visitReturnStatement(CompilerUnit* compiler, ReturnStatement* returnStatement) {
@@ -1047,6 +1059,15 @@ static void visitBooleanLiteral(CompilerUnit* compiler, BooleanLiteral* booleanL
     increaseStackHeight(compiler);
 }
 
+static void visitThisLiteral(CompilerUnit* compiler, ThisLiteral* thisLiteral) {
+    if (compiler->currentStructSlot == -1) {
+        errorAndExit(compiler, "Cannot use 'this' outside of a struct.");
+    }
+    // Load "this" from slot 0 of the current frame where the struct instance will be
+    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, compiler->currentStructSlot));
+    increaseStackHeight(compiler);
+}
+
 static void visitIdentifierLiteral(CompilerUnit* compiler, IdentifierLiteral* identifierLiteral) {
     // Check if the identifier is a local variable
     char* identifierNameNullTerminated = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
@@ -1104,6 +1125,9 @@ static void visitLiteral(CompilerUnit* compiler, Literal* literal) {
             break;
         case IDENTIFIER_LITERAL:
             visitIdentifierLiteral(compiler, literal->as.identifierLiteral);
+            break;
+        case THIS_LITERAL:
+            visitThisLiteral(compiler, literal->as.thisLiteral);
             break;
         case STRING_LITERAL:
             visitStringLiteral(compiler, literal->as.stringLiteral);

@@ -61,6 +61,10 @@ struct CompilerUnit {
                                             // local variables will be in. Holds only strings for variable names.
     bool isInGlobalScope;                   // Track whether the compiler is currently in the global scope instead of in a block.
                                             // This is used to distinguish between local variables and global variables.
+    int currentStructSlot;                  // Track whether the compiler is currently in the struct scope, and
+                                            // if so, in what slot the current struct is in.
+                                            // >=0 means in struct scope. -1 means not in struct scope.
+                                            // can be used.)
     HashTable* globals;                     // Reference to the hash table that keep track of globals to prevent redefinition and enforce constant `val`s.
     CompilerUnit* enclosingCompilerUnit;    // Once this compiler unit is done compiling, return to the enclosing one
 };
