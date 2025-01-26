@@ -18,4 +18,4 @@ var point = struct {
 };
 
 point.printCoords();
-point.move(1,2);
+//point.move(1,2);

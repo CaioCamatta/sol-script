@@ -544,7 +544,7 @@ void printCompiledCode(CompiledCode compiledCode) {
 void printCompiledCodeObject(CompiledCodeObject compiledCodeObject, const char* name, int maybeParameterCount) {
     printf(KCYN "%s" RESET, name);
     if (maybeParameterCount >= 0)
-        printf(KGRY " (Parameters: %d)" RESET, maybeParameterCount);
+        printf(KGRY " (parameters: %d)" RESET, maybeParameterCount);
     printf("\n");
     FunctionArray functionsToPrint;
     initFunctionArray(&functionsToPrint);

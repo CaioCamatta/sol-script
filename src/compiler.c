@@ -851,6 +851,11 @@ static Function* createFunction(u_int8_t parameterCount, CompiledCodeObject* cod
     return function;
 }
 
+// Returns true if the compiler is currently in the scope of a struct.
+static bool isInStructScope(CompilerUnit* compiler) {
+    return compiler->currentStructSlot >= 0;  // If set to -1, we are not in a struct scope
+}
+
 /**
  * Compile a function and emit an OP_LAMBDA, which in the just puts the function Value on the stack.
  *
@@ -864,7 +869,8 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
     CompilerUnit functionCompiler = initCompilerUnit(compiler, compiler->globals);
 
     // If this function is currently being compiled inside a struct, we let the function compiler know.
-    if (compiler->currentStructSlot >= 0) {
+    bool isInsideStruct = isInStructScope(compiler);
+    if (isInsideStruct) {
         functionCompiler.currentStructSlot = compiler->currentStructSlot;
     }
 
@@ -893,7 +899,10 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
     // Allocate the compiled code object on the heap and create a function object
     CompiledCodeObject* heapCodeObject = (CompiledCodeObject*)malloc(sizeof(CompiledCodeObject));
     *heapCodeObject = functionCompiler.compiledCodeObject;
-    Function* function = createFunction(lambdaExpression->parameters->used, heapCodeObject);
+    // If we're inside a struct, this function is actually a method, so we need to add an extra parameter
+    // which is the struct itself.
+    u_int8_t parameterCount = lambdaExpression->parameters->used + (isInsideStruct ? 1 : 0);
+    Function* function = createFunction(parameterCount, heapCodeObject);
 
     // Create a constant for the function
     Constant functionConstant = LAMBDA_CONST(function);
@@ -1083,7 +1092,7 @@ static void visitBooleanLiteral(CompilerUnit* compiler, BooleanLiteral* booleanL
 }
 
 static void visitThisLiteral(CompilerUnit* compiler, ThisLiteral* thisLiteral) {
-    if (compiler->currentStructSlot == -1) {
+    if (!(isInStructScope(compiler))) {
         errorAndExit(compiler, "Cannot use 'this' outside of a struct.");
     }
     // Load "this" from slot 0 of the current frame where the struct instance will be
