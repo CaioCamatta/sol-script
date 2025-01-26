@@ -538,11 +538,14 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
 
 void printCompiledCode(CompiledCode compiledCode) {
     printf(KBOLD KCYN "Compiled code\n" RESET KBOFF);
-    printCompiledCodeObject(compiledCode.topLevelCodeObject, "main");
+    printCompiledCodeObject(compiledCode.topLevelCodeObject, "main", -1);
 }
 
-void printCompiledCodeObject(CompiledCodeObject compiledCodeObject, const char* name) {
-    printf(KCYN "%s\n" RESET, name);
+void printCompiledCodeObject(CompiledCodeObject compiledCodeObject, const char* name, int maybeParameterCount) {
+    printf(KCYN "%s" RESET, name);
+    if (maybeParameterCount >= 0)
+        printf(KGRY " (Parameters: %d)" RESET, maybeParameterCount);
+    printf("\n");
     FunctionArray functionsToPrint;
     initFunctionArray(&functionsToPrint);
 
@@ -557,7 +560,7 @@ void printCompiledCodeObject(CompiledCodeObject compiledCodeObject, const char* 
         Function* function = functionsToPrint.functions[i];
         char functionName[32];
         snprintf(functionName, sizeof(functionName), "%p", (void*)function->code);
-        printCompiledCodeObject(*(function->code), functionName);
+        printCompiledCodeObject(*(function->code), functionName, function->parameterCount);
     }
 
     freeFunctionArray(&functionsToPrint);

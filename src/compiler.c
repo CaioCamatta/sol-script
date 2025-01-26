@@ -122,7 +122,7 @@ int errorAndExit(CompilerUnit* compiler, const char* format, ...) {
     char pointerToObject[16];
     sprintf(pointerToObject, "%p", compiler);
     printCompiledCodeObject(compiler->compiledCodeObject,
-                            compiler->enclosingCompilerUnit == NULL ? "main" : pointerToObject);
+                            compiler->enclosingCompilerUnit == NULL ? "main" : pointerToObject, -1);
 #endif
 
     fprintf(stderr, KRED "CompilerError. " RESET);
@@ -928,8 +928,12 @@ static void visitMemberExpression(CompilerUnit* compiler, MemberExpression* memb
     // TODO: Consider adding compile time member checking
 
     // Emit bytecode to get the field
-    Opcode opcode = maintainLeftHandSide ? OP_GET_FIELD_NO_POP : OP_GET_FIELD;
-    emitBytecode(compiler, BYTECODE_OPERAND_1(opcode, constantIndex));
+    if (maintainLeftHandSide) {
+        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_GET_FIELD_NO_POP, constantIndex));
+        increaseStackHeight(compiler);
+    } else {
+        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_GET_FIELD, constantIndex));
+    }
 }
 
 /**
