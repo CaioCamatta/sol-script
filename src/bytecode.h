@@ -59,9 +59,10 @@ typedef enum {
     OP_RETURN,  // Exit current frame and return the value at the top of the current frame.
 
     // Structs
-    OP_NEW_STRUCT,  // Create new struct
-    OP_SET_FIELD,   // Set struct field
-    OP_GET_FIELD    // Get struct field
+    OP_NEW_STRUCT,       // Create new struct
+    OP_SET_FIELD,        // Set struct field
+    OP_GET_FIELD,        // Get struct field
+    OP_GET_FIELD_NO_POP  // Get field but preserve LHS. Intended for method calls.
 } Opcode;
 
 // Create simple bytecode with no operands or constants

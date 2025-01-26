@@ -910,32 +910,13 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
 }
 
 /**
- * Call a lambda function.
- *  1) Put left-hand side on the stack. Usually, this is a variable.
- *  1) Put all arguments on the stack.
- *  6) Emit bytecode to execute the function object
+ * Visit a member expression (e.g. `dog.bark`).
+ *
+ * Normally, this push the LHS onto the stack, then pop it and push the field value. However, if
+ * maintainLeftHandSide is true, it will keep the LHS on the stack. (This is used for method calls
+ * where the LHS is the struct and we need to keep it on the stack for the method to access.)
  */
-static void visitCallExpression(CompilerUnit* compiler, CallExpression* callExpression) {
-    // Compile the arguments
-    for (size_t i = 0; i < callExpression->arguments->used; i++) {
-        visitExpression(compiler, callExpression->arguments->values[i]);
-    }
-
-    // Compile the left-hand side expression
-    visitExpression(compiler, callExpression->leftHandSide);
-
-    // The call will put a value on the stack (even if its null)
-    increaseStackHeight(compiler);
-
-    // Note: It would be nice to do compile-time arity and type check here. Type-checking
-    // could be done by adding a type field to the Local/Global struct, then checking here
-    // that the local/global being called is actually *callable*.
-
-    // Emit bytecode for the function call
-    emitBytecode(compiler, BYTECODE(OP_CALL));
-}
-
-static void visitMemberExpression(CompilerUnit* compiler, MemberExpression* memberExpression) {
+static void visitMemberExpression(CompilerUnit* compiler, MemberExpression* memberExpression, bool maintainLeftHandSide) {
     // Compile the left-hand side (the struct)
     visitExpression(compiler, memberExpression->leftHandSide);
 
@@ -947,7 +928,45 @@ static void visitMemberExpression(CompilerUnit* compiler, MemberExpression* memb
     // TODO: Consider adding compile time member checking
 
     // Emit bytecode to get the field
-    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_GET_FIELD, constantIndex));
+    Opcode opcode = maintainLeftHandSide ? OP_GET_FIELD_NO_POP : OP_GET_FIELD;
+    emitBytecode(compiler, BYTECODE_OPERAND_1(opcode, constantIndex));
+}
+
+/**
+ * Call a lambda function.
+ *  1) Put left-hand side on the stack. Usually, this is a variable.
+ *  2) Put all arguments on the stack.
+ *  3) Emit bytecode to execute the function object
+ */
+static void visitCallExpression(CompilerUnit* compiler, CallExpression* callExpression) {
+    // Compile the arguments
+    for (size_t i = 0; i < callExpression->arguments->used; i++) {
+        visitExpression(compiler, callExpression->arguments->values[i]);
+    }
+
+    // If the left-hand side is a member expression this is a method call.
+    bool isMethodCall = callExpression->leftHandSide->type == MEMBER_EXPRESSION;
+    if (isMethodCall) {
+        // Methods expect the first argument on the stack to be the struct (otherwise
+        // accessing "this" wouldn't be possible).
+        // (Note: Technically, we could keep visitMemberExpression unmodified and not add the OP_GET_FIELD_NO_POP
+        // instruction. We could just copy the code from visitMemberExpression here and duplicate the struct,
+        // and use GET_FIELD normally. That would be slower tho. OP_GET_FIELD_NO_POP is faster. )
+        visitMemberExpression(compiler, callExpression->leftHandSide->as.memberExpression, true);
+    } else {
+        // Compile the left-hand side expression
+        visitExpression(compiler, callExpression->leftHandSide);
+    }
+
+    // The call will put a value on the stack (even if its null)
+    increaseStackHeight(compiler);
+
+    // Note: It would be nice to do compile-time arity and type check here. Type-checking
+    // could be done by adding a type field to the Local/Global struct, then checking here
+    // that the local/global being called is actually *callable*.
+
+    // Emit bytecode for the function call
+    emitBytecode(compiler, BYTECODE(OP_CALL));
 }
 
 static void visitStructExpression(CompilerUnit* compiler, StructExpression* structExpression) {
@@ -1181,7 +1200,7 @@ static void visitExpression(CompilerUnit* compiler, Expression* expression) {
             visitStructExpression(compiler, expression->as.structExpression);
             break;
         case MEMBER_EXPRESSION:
-            visitMemberExpression(compiler, expression->as.memberExpression);
+            visitMemberExpression(compiler, expression->as.memberExpression, false);
             break;
         default:
             fprintf(stderr, "Unimplemented expression type %d.", expression->type);
