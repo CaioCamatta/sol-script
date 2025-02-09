@@ -872,6 +872,9 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
     bool isInsideStruct = isInStructScope(compiler);
     if (isInsideStruct) {
         functionCompiler.currentStructSlot = compiler->currentStructSlot;
+        // If we're inside a struct, this function is a method. Methods in Sol require the first
+        // argument to be the struct itself. So we increase the predicted stack height to compensate for that.
+        increaseStackHeight(&functionCompiler);
     }
 
     // Define all parameters as locals
@@ -921,7 +924,7 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
 /**
  * Visit a member expression (e.g. `dog.bark`).
  *
- * Normally, this push the LHS onto the stack, then pop it and push the field value. However, if
+ * Normally, this will push the LHS onto the stack, then pop it and push the field value. However, if
  * maintainLeftHandSide is true, it will keep the LHS on the stack. (This is used for method calls
  * where the LHS is the struct and we need to keep it on the stack for the method to access.)
  */
@@ -945,6 +948,55 @@ static void visitMemberExpression(CompilerUnit* compiler, MemberExpression* memb
     }
 }
 
+static void visitFunctionCallExpression(CompilerUnit* compiler, CallExpression* callExpression) {
+    // Compile the arguments
+    for (size_t i = 0; i < callExpression->arguments->used; i++) {
+        visitExpression(compiler, callExpression->arguments->values[i]);
+    }
+
+    // Compile the left-hand side expression
+    visitExpression(compiler, callExpression->leftHandSide);
+
+    // The call will put a value on the stack (even if its null)
+    increaseStackHeight(compiler);
+
+    // TODO: It would be nice to do compile-time arity and type check here. Type-checking
+    // could be done by adding a type field to the Local/Global struct, then checking here
+    // that the local/global being called is actually *callable*.
+
+    // Emit bytecode for the function call
+    emitBytecode(compiler, BYTECODE(OP_CALL));
+}
+
+static void visitMethodCallExpression(CompilerUnit* compiler, CallExpression* callExpression) {
+    MemberExpression* memberExpression = callExpression->leftHandSide->as.memberExpression;
+
+    // When calling a method, the first argument on the stack should be the object
+    // this function belongs to.
+    // TODO: `visitMemberExpression` already puts the left-hand side on the stack, so we should
+    // figure out a way to avoid doing it twice.
+    visitExpression(compiler, memberExpression->leftHandSide);
+    increaseStackHeight(compiler);
+
+    // Compile the actual arguments
+    for (size_t i = 0; i < callExpression->arguments->used; i++) {
+        visitExpression(compiler, callExpression->arguments->values[i]);
+    }
+
+    // Put the function on the stack
+    visitMemberExpression(compiler, memberExpression, false);
+
+    // The function/method call will put a value on the stack (even if its null)
+    increaseStackHeight(compiler);
+
+    // TODO: It would be nice to do compile-time arity and type check here. Type-checking
+    // could be done by adding a type field to the Local/Global struct, then checking here
+    // that the local/global being called is actually *callable*.
+
+    // Emit bytecode for the function call
+    emitBytecode(compiler, BYTECODE(OP_CALL));
+}
+
 /**
  * Call a lambda function.
  *  1) Put left-hand side on the stack. Usually, this is a variable.
@@ -952,34 +1004,14 @@ static void visitMemberExpression(CompilerUnit* compiler, MemberExpression* memb
  *  3) Emit bytecode to execute the function object
  */
 static void visitCallExpression(CompilerUnit* compiler, CallExpression* callExpression) {
-    // Compile the arguments
-    for (size_t i = 0; i < callExpression->arguments->used; i++) {
-        visitExpression(compiler, callExpression->arguments->values[i]);
-    }
-
-    // If the left-hand side is a member expression this is a method call.
     bool isMethodCall = callExpression->leftHandSide->type == MEMBER_EXPRESSION;
+    // Regular functions and methods are compiled slightly differently. Method calls need to
+    // add the struct to the stack before the arguments.
     if (isMethodCall) {
-        // Methods expect the first argument on the stack to be the struct (otherwise
-        // accessing "this" wouldn't be possible).
-        // (Note: Technically, we could keep visitMemberExpression unmodified and not add the OP_GET_FIELD_NO_POP
-        // instruction. We could just copy the code from visitMemberExpression here and duplicate the struct,
-        // and use GET_FIELD normally. That would be slower tho. OP_GET_FIELD_NO_POP is faster. )
-        visitMemberExpression(compiler, callExpression->leftHandSide->as.memberExpression, true);
+        visitMethodCallExpression(compiler, callExpression);
     } else {
-        // Compile the left-hand side expression
-        visitExpression(compiler, callExpression->leftHandSide);
+        visitFunctionCallExpression(compiler, callExpression);
     }
-
-    // The call will put a value on the stack (even if its null)
-    increaseStackHeight(compiler);
-
-    // Note: It would be nice to do compile-time arity and type check here. Type-checking
-    // could be done by adding a type field to the Local/Global struct, then checking here
-    // that the local/global being called is actually *callable*.
-
-    // Emit bytecode for the function call
-    emitBytecode(compiler, BYTECODE(OP_CALL));
 }
 
 static void visitStructExpression(CompilerUnit* compiler, StructExpression* structExpression) {
