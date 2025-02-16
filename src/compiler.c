@@ -42,6 +42,7 @@ CompilerUnit initCompilerUnit(CompilerUnit* maybeEnclosingCompilerUnit, HashTabl
     compilerUnit.isInGlobalScope = maybeEnclosingCompilerUnit == NULL;  // Only the root compiler can be in global scope.
     compilerUnit.globals = globals;
     compilerUnit.enclosingCompilerUnit = maybeEnclosingCompilerUnit;
+    compilerUnit.currentStructSlot = -1;
 
     return compilerUnit;
 }
