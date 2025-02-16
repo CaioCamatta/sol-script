@@ -179,17 +179,6 @@ void step(VM* vm) {
     CallFrame* frame = vm->currFrame;
     Bytecode* instruction = frame->IP;
 
-#if DEBUG_VM
-    if (previousFrame != frame) {
-        printf(KCYN "%-16p" RESET, frame->codeObject);
-    } else {
-        printf(KGRY "                " RESET);
-    }
-    previousFrame = frame;
-    printf(KGRY "%-4ld " RESET, frame->IP - frame->codeObject->bytecodeArray.values);
-    printStack(frame->SP, vm->stack);
-#endif
-
     // TODO: re-order switch based on frequency.
     switch (instruction->type) {
         case OP_LOAD_CONSTANT:
@@ -427,6 +416,18 @@ void step(VM* vm) {
             fprintf(stderr, "Unimplemented opcode %d\n", instruction->type);
             exit(EXIT_FAILURE);
     }
+
+#if DEBUG_VM
+    if (previousFrame != frame) {
+        printf(KCYN "%-16p" RESET, frame->codeObject);
+    } else {
+        printf(KGRY "%-16p" RESET);
+    }
+    printf(KGRY "%3ld " RESET, frame->IP - frame->codeObject->bytecodeArray.values);
+    printf("%-20s", getInstructionName(instruction->type));
+    previousFrame = frame;
+    printStack(frame->SP, vm->stack);
+#endif
 
     // Move the instruction pointer to the next instruction
     frame->IP++;

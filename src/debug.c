@@ -566,6 +566,91 @@ void printCompiledCodeObject(CompiledCodeObject compiledCodeObject) {
 // ----------------------------------- VM ------------------------------------
 // ---------------------------------------------------------------------------
 
+const char* getInstructionName(Opcode opcode) {
+    switch (opcode) {
+        case OP_LOAD_CONSTANT:
+            return "LOAD_CONSTANT";
+        case OP_DEFINE_GLOBAL_VAL:
+            return "DEFINE_GLOBAL_VAL";
+        case OP_DEFINE_GLOBAL_VAR:
+            return "DEFINE_GLOBAL_VAR";
+        case OP_GET_GLOBAL_VAL:
+            return "GET_GLOBAL_VAL";
+        case OP_GET_GLOBAL_VAR:
+            return "GET_GLOBAL_VAR";
+        case OP_SET_GLOBAL_VAR:
+            return "SET_GLOBAL_VAR";
+        case OP_GET_LOCAL_VAR_FAST:
+            return "GET_LOCAL_VAR_FAST";
+        case OP_GET_LOCAL_VAL_FAST:
+            return "GET_LOCAL_VAL_FAST";
+        case OP_DEFINE_LOCAL_VAL_FAST:
+            return "DEFINE_LOCAL_VAL_FAST";
+        case OP_DEFINE_LOCAL_VAR_FAST:
+            return "DEFINE_LOCAL_VAR_FAST";
+        case OP_SET_LOCAL_VAR_FAST:
+            return "SET_LOCAL_VAR_FAST";
+        case OP_NULL:
+            return "NULL";
+        case OP_TRUE:
+            return "TRUE";
+        case OP_FALSE:
+            return "FALSE";
+        case OP_PRINT:
+            return "PRINT";
+        case OP_POPN:
+            return "POPN";
+        case OP_JUMP_IF_FALSE:
+            return "JUMP_IF_FALSE";
+        case OP_JUMP:
+            return "JUMP";
+        case OP_SWAP:
+            return "SWAP";
+        case OP_UNARY_NEGATE:
+            return "UNARY_NEGATE";
+        case OP_UNARY_NOT:
+            return "UNARY_NOT";
+        case OP_BINARY_ADD:
+            return "BINARY_ADD";
+        case OP_BINARY_SUBTRACT:
+            return "BINARY_SUBTRACT";
+        case OP_BINARY_MULTIPLY:
+            return "BINARY_MULTIPLY";
+        case OP_BINARY_DIVIDE:
+            return "BINARY_DIVIDE";
+        case OP_BINARY_GT:
+            return "BINARY_GT";
+        case OP_BINARY_GTE:
+            return "BINARY_GTE";
+        case OP_BINARY_LT:
+            return "BINARY_LT";
+        case OP_BINARY_LTE:
+            return "BINARY_LTE";
+        case OP_BINARY_LOGICAL_AND:
+            return "BINARY_LOGICAL_AND";
+        case OP_BINARY_LOGICAL_OR:
+            return "BINARY_LOGICAL_OR";
+        case OP_BINARY_EQUAL:
+            return "BINARY_EQUAL";
+        case OP_BINARY_NOT_EQUAL:
+            return "BINARY_NOT_EQUAL";
+        case OP_LAMBDA:
+            return "LAMBDA";
+        case OP_CALL:
+            return "CALL";
+        case OP_RETURN:
+            return "RETURN";
+        case OP_NEW_STRUCT:
+            return "NEW_STRUCT";
+        case OP_SET_FIELD:
+            return "SET_FIELD";
+        case OP_GET_FIELD:
+            return "GET_FIELD";
+        default:
+            return "UNKNOWN";
+    }
+}
+
 // Print VM stack. The top of the stack will be on the left.
 void printStack(const Value* topOfStack, const Value* bottomOfStack) {
     printf(KGRY "t[ " RESET);
@@ -575,25 +660,25 @@ void printStack(const Value* topOfStack, const Value* bottomOfStack) {
         Value val = *topOfStack;
         switch (val.type) {
             case TYPE_BOOLEAN:
-                printf(" %s ", val.as.booleanVal ? "true" : "false");
+                printf("%s", val.as.booleanVal ? "true" : "false");
                 break;
             case TYPE_DOUBLE:
-                printf(" %.5f ", val.as.doubleVal);
+                printf("%.5f", val.as.doubleVal);
                 break;
             case TYPE_NULL:
-                printf(" NULL ");
+                printf("NULL");
                 break;
             case TYPE_STRING:
-                printf(" %.10s ", val.as.stringVal);
+                printf("%.10s", val.as.stringVal);
                 break;
             case TYPE_LAMBDA:
-                printf(" %p ", val.as.lambdaVal);
+                printf("l:%p", val.as.lambdaVal);
                 break;
             case TYPE_STRUCT:
-                printf(" struct:%p ", val.as.structVal);
+                printf("s:%p", val.as.structVal);
                 break;
         }
-        printf(KGRY "} " RESET);
+        printf(KGRY " } " RESET);
     }
     printf(KGRY "]b\n" RESET);
 }
