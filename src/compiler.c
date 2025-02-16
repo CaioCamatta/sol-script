@@ -974,7 +974,11 @@ static void visitMethodCallExpression(CompilerUnit* compiler, CallExpression* ca
     // When calling a method, the first argument on the stack should be the object
     // this function belongs to.
     // TODO: `visitMemberExpression` already puts the left-hand side on the stack, so we should
-    // figure out a way to avoid doing it twice.
+    // figure out a way to avoid doing it twice. This would likely require refactoring OP_CALL
+    // to be similar to Java's invokevirtual - i.e. to call a method, instead of having to put
+    // the struct on the stack, then extracting the method from it, we call the method by
+    // string name. So order would be 1) put struct on stack, 2) put args, 3) call method by
+    // name.
     visitExpression(compiler, memberExpression->leftHandSide);
     increaseStackHeight(compiler);
 
