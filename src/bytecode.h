@@ -98,6 +98,7 @@ typedef enum {
 
 typedef struct {
     CompiledCodeObject* code;
+    bool isMethod;  // If the function is a method, the first parameter is a struct
     u_int8_t parameterCount;
 } Function;
 

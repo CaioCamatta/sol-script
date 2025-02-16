@@ -400,8 +400,8 @@ static void printConstantPool(ConstantPool constantPool, FunctionArray* arrayFun
                 printf("(identifier) \"%s\"\n", value.as.string);
                 break;
             case CONST_TYPE_LAMBDA:
-                printf("(function) <%p parameterCount=%d>\n",
-                       (void*)value.as.lambda->code, value.as.lambda->parameterCount);
+                printf("(function) <" KCYN "%p " KGRY "parameterCount=" RESET "%d " KGRY "isMethod=" RESET "%s>\n",
+                       (void*)value.as.lambda->code, value.as.lambda->parameterCount, value.as.lambda->isMethod ? "true" : "false");
                 insertFunction(arrayFunctionsToPrintLater, value.as.lambda);
                 break;
         }
@@ -535,14 +535,11 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
 
 void printCompiledCode(CompiledCode compiledCode) {
     printf(KBOLD KCYN "Compiled code\n" RESET KBOFF);
-    printCompiledCodeObject(compiledCode.topLevelCodeObject, "main", -1);
+    printf(KCYN "main\n" RESET);
+    printCompiledCodeObject(compiledCode.topLevelCodeObject);
 }
 
-void printCompiledCodeObject(CompiledCodeObject compiledCodeObject, const char* name, int maybeParameterCount) {
-    printf(KCYN "%s" RESET, name);
-    if (maybeParameterCount >= 0)
-        printf(KGRY " (parameters: %d)" RESET, maybeParameterCount);
-    printf("\n");
+void printCompiledCodeObject(CompiledCodeObject compiledCodeObject) {
     FunctionArray functionsToPrint;
     initFunctionArray(&functionsToPrint);
 
@@ -557,7 +554,9 @@ void printCompiledCodeObject(CompiledCodeObject compiledCodeObject, const char* 
         Function* function = functionsToPrint.functions[i];
         char functionName[32];
         snprintf(functionName, sizeof(functionName), "%p", (void*)function->code);
-        printCompiledCodeObject(*(function->code), functionName, function->parameterCount);
+        printf(KCYN "%s" RESET, functionName);
+        printf(KGRY " (%sparameters: %d)\n" RESET, function->isMethod ? "method, " : "", function->parameterCount);
+        printCompiledCodeObject(*(function->code));
     }
 
     freeFunctionArray(&functionsToPrint);
@@ -571,28 +570,30 @@ void printCompiledCodeObject(CompiledCodeObject compiledCodeObject, const char* 
 void printStack(const Value* topOfStack, const Value* bottomOfStack) {
     printf(KGRY "t[ " RESET);
     while (topOfStack != bottomOfStack) {
+        printf(KGRY "{ " RESET);
         topOfStack--;
         Value val = *topOfStack;
         switch (val.type) {
             case TYPE_BOOLEAN:
-                printf(KGRY "{" RESET " %s " KGRY "} " RESET, val.as.booleanVal ? "true" : "false");
+                printf(" %s ", val.as.booleanVal ? "true" : "false");
                 break;
             case TYPE_DOUBLE:
-                printf(KGRY "{" RESET " %.5f " KGRY "} " RESET, val.as.doubleVal);
+                printf(" %.5f ", val.as.doubleVal);
                 break;
             case TYPE_NULL:
-                printf(KGRY "{" RESET " NULL " KGRY "} " RESET);
+                printf(" NULL ");
                 break;
             case TYPE_STRING:
-                printf(KGRY "{" RESET " %.10s " KGRY "} " RESET, val.as.stringVal);
+                printf(" %.10s ", val.as.stringVal);
                 break;
             case TYPE_LAMBDA:
-                printf(KGRY "{" RESET " %p " KGRY "} " RESET, val.as.lambdaVal);
+                printf(" %p ", val.as.lambdaVal);
                 break;
             case TYPE_STRUCT:
-                printf(KGRY "{" RESET " struct:%p " KGRY "} " RESET, val.as.structVal);
+                printf(" struct:%p ", val.as.structVal);
                 break;
         }
+        printf(KGRY "} " RESET);
     }
     printf(KGRY "]b\n" RESET);
 }

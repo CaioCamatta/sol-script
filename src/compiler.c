@@ -122,8 +122,8 @@ int errorAndExit(CompilerUnit* compiler, const char* format, ...) {
 #if DEBUG_COMPILER
     char pointerToObject[16];
     sprintf(pointerToObject, "%p", compiler);
-    printCompiledCodeObject(compiler->compiledCodeObject,
-                            compiler->enclosingCompilerUnit == NULL ? "main" : pointerToObject, -1);
+    printf(KCYN "%s" RESET, compiler->enclosingCompilerUnit == NULL ? "main" : pointerToObject);
+    printCompiledCodeObject(compiler->compiledCodeObject);
 #endif
 
     fprintf(stderr, KRED "CompilerError. " RESET);
@@ -845,10 +845,11 @@ static void visitSelectionStatement(CompilerUnit* compiler, SelectionStatement* 
     }
 }
 
-static Function* createFunction(u_int8_t parameterCount, CompiledCodeObject* code) {
+static Function* createFunction(u_int8_t parameterCount, bool isMethod, CompiledCodeObject* code) {
     Function* function = (Function*)malloc(sizeof(Function));
     function->parameterCount = parameterCount;
     function->code = code;
+    function->isMethod = isMethod;
     return function;
 }
 
@@ -906,7 +907,8 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
     // If we're inside a struct, this function is actually a method, so we need to add an extra parameter
     // which is the struct itself.
     u_int8_t parameterCount = lambdaExpression->parameters->used + (isInsideStruct ? 1 : 0);
-    Function* function = createFunction(parameterCount, heapCodeObject);
+    bool isMethod = isInsideStruct;
+    Function* function = createFunction(parameterCount, isMethod, heapCodeObject);
 
     // Create a constant for the function
     Constant functionConstant = LAMBDA_CONST(function);
