@@ -653,7 +653,7 @@ const char* getInstructionName(Opcode opcode) {
 
 // Print VM stack. The top of the stack will be on the left.
 void printStack(const Value* topOfStack, const Value* bottomOfStack) {
-    printf(KGRY "t[ " RESET);
+    // printf(KGRY "t[ " RESET);
     while (topOfStack != bottomOfStack) {
         printf(KGRY "{ " RESET);
         topOfStack--;
@@ -680,5 +680,6 @@ void printStack(const Value* topOfStack, const Value* bottomOfStack) {
         }
         printf(KGRY " } " RESET);
     }
-    printf(KGRY "]b\n" RESET);
+    printf("\n");
+    // printf(KGRY "]b\n" RESET);
 }

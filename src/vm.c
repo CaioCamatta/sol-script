@@ -421,7 +421,7 @@ void step(VM* vm) {
     if (previousFrame != frame) {
         printf(KCYN "%-16p" RESET, frame->codeObject);
     } else {
-        printf(KGRY "%-16p" RESET);
+        printf(KGRY "                " RESET);
     }
     printf(KGRY "%3ld " RESET, frame->IP - frame->codeObject->bytecodeArray.values);
     printf("%-20s", getInstructionName(instruction->type));
