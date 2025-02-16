@@ -529,9 +529,6 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
             case OP_GET_FIELD:
                 printf("GET_FIELD #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
-            case OP_GET_FIELD_NO_POP:
-                printf("OP_GET_FIELD_NO_POP #%zu\n", bytecodeArray.values[i].maybeOperand1);
-                break;
         }
     }
 }

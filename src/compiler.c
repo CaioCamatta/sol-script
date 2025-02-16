@@ -928,7 +928,7 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
  * maintainLeftHandSide is true, it will keep the LHS on the stack. (This is used for method calls
  * where the LHS is the struct and we need to keep it on the stack for the method to access.)
  */
-static void visitMemberExpression(CompilerUnit* compiler, MemberExpression* memberExpression, bool maintainLeftHandSide) {
+static void visitMemberExpression(CompilerUnit* compiler, MemberExpression* memberExpression) {
     // Compile the left-hand side (the struct)
     visitExpression(compiler, memberExpression->leftHandSide);
 
@@ -940,12 +940,7 @@ static void visitMemberExpression(CompilerUnit* compiler, MemberExpression* memb
     // TODO: Consider adding compile time member checking
 
     // Emit bytecode to get the field
-    if (maintainLeftHandSide) {
-        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_GET_FIELD_NO_POP, constantIndex));
-        increaseStackHeight(compiler);
-    } else {
-        emitBytecode(compiler, BYTECODE_OPERAND_1(OP_GET_FIELD, constantIndex));
-    }
+    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_GET_FIELD, constantIndex));
 }
 
 static void visitFunctionCallExpression(CompilerUnit* compiler, CallExpression* callExpression) {
@@ -988,7 +983,7 @@ static void visitMethodCallExpression(CompilerUnit* compiler, CallExpression* ca
     }
 
     // Put the function on the stack
-    visitMemberExpression(compiler, memberExpression, false);
+    visitMemberExpression(compiler, memberExpression);
 
     // The function/method call will put a value on the stack (even if its null)
     increaseStackHeight(compiler);
@@ -1249,7 +1244,7 @@ static void visitExpression(CompilerUnit* compiler, Expression* expression) {
             visitStructExpression(compiler, expression->as.structExpression);
             break;
         case MEMBER_EXPRESSION:
-            visitMemberExpression(compiler, expression->as.memberExpression, false);
+            visitMemberExpression(compiler, expression->as.memberExpression);
             break;
         default:
             fprintf(stderr, "Unimplemented expression type %d.", expression->type);
