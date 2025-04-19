@@ -1025,7 +1025,7 @@ static void visitStructExpression(CompilerUnit* compiler, StructExpression* stru
 
     // We need to track the fact we're compiling a struct so the "this" keyword can be used.
     int structSlotBeforeThisStruct = compiler->currentStructSlot;
-    compiler->currentStructSlot = compiler->predictedStack.currentStackHeight - 1;
+    compiler->currentStructSlot = 0;
 
     // Set each field
     for (size_t i = 0; i < structExpression->declarationArray.used; i++) {
