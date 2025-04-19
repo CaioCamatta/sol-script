@@ -16,6 +16,9 @@
 #include "util/hash_table.h"
 #include "vm.h"
 
+// The struct is always the first argument in a method call.
+#define STRUCT_SLOT_IN_METHOD_CALL 0
+
 /**
  * Get new PredictedStack with null values and stack height zero.
  */
@@ -42,6 +45,7 @@ CompilerUnit initCompilerUnit(CompilerUnit* maybeEnclosingCompilerUnit, HashTabl
     compilerUnit.isInGlobalScope = maybeEnclosingCompilerUnit == NULL;  // Only the root compiler can be in global scope.
     compilerUnit.globals = globals;
     compilerUnit.enclosingCompilerUnit = maybeEnclosingCompilerUnit;
+    compilerUnit.isInStructScope = false;
 
     return compilerUnit;
 }
@@ -121,8 +125,8 @@ int errorAndExit(CompilerUnit* compiler, const char* format, ...) {
 #if DEBUG_COMPILER
     char pointerToObject[16];
     sprintf(pointerToObject, "%p", compiler);
-    printCompiledCodeObject(compiler->compiledCodeObject,
-                            compiler->enclosingCompilerUnit == NULL ? "main" : pointerToObject);
+    printf(KCYN "%s" RESET, compiler->enclosingCompilerUnit == NULL ? "main" : pointerToObject);
+    printCompiledCodeObject(compiler->compiledCodeObject);
 #endif
 
     fprintf(stderr, KRED "CompilerError. " RESET);
@@ -844,10 +848,11 @@ static void visitSelectionStatement(CompilerUnit* compiler, SelectionStatement* 
     }
 }
 
-static Function* createFunction(u_int8_t parameterCount, CompiledCodeObject* code) {
+static Function* createFunction(u_int8_t parameterCount, bool isMethod, CompiledCodeObject* code) {
     Function* function = (Function*)malloc(sizeof(Function));
     function->parameterCount = parameterCount;
     function->code = code;
+    function->isMethod = isMethod;
     return function;
 }
 
@@ -862,6 +867,14 @@ static Function* createFunction(u_int8_t parameterCount, CompiledCodeObject* cod
  */
 static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lambdaExpression) {
     CompilerUnit functionCompiler = initCompilerUnit(compiler, compiler->globals);
+
+    // If this function is currently being compiled inside a struct, we let the function compiler know.
+    if (compiler->isInStructScope) {
+        functionCompiler.isInStructScope = compiler->isInStructScope;
+        // If we're inside a struct, this function is a method. Methods in Sol require the first
+        // argument to be the struct itself. So we increase the predicted stack height to compensate for that.
+        increaseStackHeight(&functionCompiler);
+    }
 
     // Define all parameters as locals
     for (size_t i = 0; i < lambdaExpression->parameters->used; i++) {
@@ -888,7 +901,11 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
     // Allocate the compiled code object on the heap and create a function object
     CompiledCodeObject* heapCodeObject = (CompiledCodeObject*)malloc(sizeof(CompiledCodeObject));
     *heapCodeObject = functionCompiler.compiledCodeObject;
-    Function* function = createFunction(lambdaExpression->parameters->used, heapCodeObject);
+    // If we're inside a struct, this function is actually a method, so we need to add an extra parameter
+    // which is the struct itself.
+    u_int8_t parameterCount = lambdaExpression->parameters->used + (compiler->isInStructScope ? 1 : 0);
+    bool isMethod = compiler->isInStructScope;
+    Function* function = createFunction(parameterCount, isMethod, heapCodeObject);
 
     // Create a constant for the function
     Constant functionConstant = LAMBDA_CONST(function);
@@ -905,31 +922,12 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
 }
 
 /**
- * Call a lambda function.
- *  1) Put left-hand side on the stack. Usually, this is a variable.
- *  1) Put all arguments on the stack.
- *  6) Emit bytecode to execute the function object
+ * Visit a member expression (e.g. `dog.bark`).
+ *
+ * Normally, this will push the LHS onto the stack, then pop it and push the field value. However, if
+ * maintainLeftHandSide is true, it will keep the LHS on the stack. (This is used for method calls
+ * where the LHS is the struct and we need to keep it on the stack for the method to access.)
  */
-static void visitCallExpression(CompilerUnit* compiler, CallExpression* callExpression) {
-    // Compile the arguments
-    for (size_t i = 0; i < callExpression->arguments->used; i++) {
-        visitExpression(compiler, callExpression->arguments->values[i]);
-    }
-
-    // Compile the left-hand side expression
-    visitExpression(compiler, callExpression->leftHandSide);
-
-    // The call will put a value on the stack (even if its null)
-    increaseStackHeight(compiler);
-
-    // Note: It would be nice to do compile-time arity and type check here. Type-checking
-    // could be done by adding a type field to the Local/Global struct, then checking here
-    // that the local/global being called is actually *callable*.
-
-    // Emit bytecode for the function call
-    emitBytecode(compiler, BYTECODE(OP_CALL));
-}
-
 static void visitMemberExpression(CompilerUnit* compiler, MemberExpression* memberExpression) {
     // Compile the left-hand side (the struct)
     visitExpression(compiler, memberExpression->leftHandSide);
@@ -945,9 +943,86 @@ static void visitMemberExpression(CompilerUnit* compiler, MemberExpression* memb
     emitBytecode(compiler, BYTECODE_OPERAND_1(OP_GET_FIELD, constantIndex));
 }
 
+static void visitFunctionCallExpression(CompilerUnit* compiler, CallExpression* callExpression) {
+    // Compile the arguments
+    for (size_t i = 0; i < callExpression->arguments->used; i++) {
+        visitExpression(compiler, callExpression->arguments->values[i]);
+    }
+
+    // Compile the left-hand side expression
+    visitExpression(compiler, callExpression->leftHandSide);
+
+    // The call will put a value on the stack (even if its null)
+    increaseStackHeight(compiler);
+
+    // TODO: It would be nice to do compile-time arity and type check here. Type-checking
+    // could be done by adding a type field to the Local/Global struct, then checking here
+    // that the local/global being called is actually *callable*.
+
+    // Emit bytecode for the function call
+    emitBytecode(compiler, BYTECODE(OP_CALL));
+}
+/**
+ * A method call will put Values on the stack the following order:
+ * [struct, arg1, arg2, ..., function]
+ *
+ * IDEA: We could change how function/method calls work in SolScript to be similar
+ * to Java's invokevirtual. Instead of having to put the function on the stack, we
+ * call it by its string name. So on the stack we would only need [struct, arg1, arg2]
+ */
+static void visitMethodCallExpression(CompilerUnit* compiler, CallExpression* callExpression) {
+    MemberExpression* memberExpression = callExpression->leftHandSide->as.memberExpression;
+    // Put struct on the stack
+    visitExpression(compiler, memberExpression->leftHandSide);
+    increaseStackHeight(compiler);
+
+    // Compile the actual arguments
+    size_t numArgs = callExpression->arguments->used;
+    for (size_t i = 0; i < numArgs; i++) {
+        visitExpression(compiler, callExpression->arguments->values[i]);
+    }
+
+    // Put the function on the stack
+    Constant functionNameConstant = STRING_CONST(copyStringToHeap(memberExpression->rightHandSide->as.primaryExpression->literal->as.identifierLiteral->token.start,
+                                                                  memberExpression->rightHandSide->as.primaryExpression->literal->as.identifierLiteral->token.length));
+    size_t functionNameConstantIndex = upsertConstantToPool(compiler, functionNameConstant);
+    emitBytecode(compiler, BYTECODE_OPERAND_2(OP_GET_FIELD_OFFSET, functionNameConstantIndex, numArgs));
+
+    // The function/method call will put a value on the stack (even if its null)
+    increaseStackHeight(compiler);
+
+    // TODO: It would be nice to do compile-time arity and type check here. Type-checking
+    // could be done by adding a type field to the Local/Global struct, then checking here
+    // that the local/global being called is actually *callable*.
+
+    // Emit bytecode for the function call
+    emitBytecode(compiler, BYTECODE(OP_CALL));
+}
+
+/**
+ * Call a lambda function.
+ *  1) Put left-hand side on the stack. Usually, this is a variable.
+ *  2) Put all arguments on the stack.
+ *  3) Emit bytecode to execute the function object
+ */
+static void visitCallExpression(CompilerUnit* compiler, CallExpression* callExpression) {
+    bool isMethodCall = callExpression->leftHandSide->type == MEMBER_EXPRESSION;
+    // Regular functions and methods are compiled slightly differently. Method calls need to
+    // add the struct to the stack before the arguments.
+    if (isMethodCall) {
+        visitMethodCallExpression(compiler, callExpression);
+    } else {
+        visitFunctionCallExpression(compiler, callExpression);
+    }
+}
+
 static void visitStructExpression(CompilerUnit* compiler, StructExpression* structExpression) {
     emitBytecode(compiler, BYTECODE(OP_NEW_STRUCT));
     increaseStackHeight(compiler);
+
+    // We need to track the fact we're compiling a struct so the "this" keyword can be used.
+    int wasInStructScopeBeforeThisStruct = compiler->isInStructScope;
+    compiler->isInStructScope = true;
 
     // Set each field
     for (size_t i = 0; i < structExpression->declarationArray.used; i++) {
@@ -967,6 +1042,9 @@ static void visitStructExpression(CompilerUnit* compiler, StructExpression* stru
         emitBytecode(compiler, BYTECODE_OPERAND_1(OP_SET_FIELD, constantIndex));
         decreaseStackHeight(compiler);
     }
+
+    // Reset the struct slot to what it was before. If we weren't compiling a struct before, this will be -1.
+    compiler->isInStructScope = wasInStructScopeBeforeThisStruct;
 }
 
 static void visitReturnStatement(CompilerUnit* compiler, ReturnStatement* returnStatement) {
@@ -1047,6 +1125,15 @@ static void visitBooleanLiteral(CompilerUnit* compiler, BooleanLiteral* booleanL
     increaseStackHeight(compiler);
 }
 
+static void visitThisLiteral(CompilerUnit* compiler, ThisLiteral* thisLiteral) {
+    if (!compiler->isInStructScope) {
+        errorAndExit(compiler, "Cannot use 'this' outside of a struct.");
+    }
+    // Load "this" from slot 0 of the current frame where the struct instance will be
+    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, STRUCT_SLOT_IN_METHOD_CALL));
+    increaseStackHeight(compiler);
+}
+
 static void visitIdentifierLiteral(CompilerUnit* compiler, IdentifierLiteral* identifierLiteral) {
     // Check if the identifier is a local variable
     char* identifierNameNullTerminated = strndup(identifierLiteral->token.start, identifierLiteral->token.length);
@@ -1104,6 +1191,9 @@ static void visitLiteral(CompilerUnit* compiler, Literal* literal) {
             break;
         case IDENTIFIER_LITERAL:
             visitIdentifierLiteral(compiler, literal->as.identifierLiteral);
+            break;
+        case THIS_LITERAL:
+            visitThisLiteral(compiler, literal->as.thisLiteral);
             break;
         case STRING_LITERAL:
             visitStringLiteral(compiler, literal->as.stringLiteral);

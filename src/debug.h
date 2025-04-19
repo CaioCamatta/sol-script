@@ -13,8 +13,9 @@ char const* tokenTypeToString(TokenType tokenType);
 void printAST(const Source* source);
 
 void printCompiledCode(CompiledCode compiledCode);
-void printCompiledCodeObject(CompiledCodeObject compiledCodeObject, const char* name);
+void printCompiledCodeObject(CompiledCodeObject compiledCodeObject);
 
+const char* getInstructionName(Opcode opcode);
 void printStack(const Value* topOfStack, const Value* bottomOfStack);
 
 #endif

@@ -147,6 +147,7 @@ static Token identifierOrKeyword(Scanner* scanner) {
         case 'r':
             matchKeyword(scanner, "return", TOKEN_RETURN);
         case 't':
+            matchKeyword(scanner, "this", TOKEN_THIS);
             matchKeyword(scanner, "true", TOKEN_TRUE);
         case 's':
             matchKeyword(scanner, "struct", TOKEN_STRUCT);

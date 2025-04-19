@@ -32,6 +32,7 @@ typedef struct StructExpression StructExpression;
 typedef struct BooleanLiteral BooleanLiteral;
 typedef struct NumberLiteral NumberLiteral;
 typedef struct IdentifierLiteral IdentifierLiteral;
+typedef struct ThisLiteral ThisLiteral;
 typedef struct StringLiteral StringLiteral;
 
 // --- Types ---
@@ -68,6 +69,7 @@ typedef enum {
     BOOLEAN_LITERAL,     // Stack effect: 1
     NUMBER_LITERAL,      // Stack effect: 1
     IDENTIFIER_LITERAL,  // Stack effect: 1
+    THIS_LITERAL,        // Stack effect: 1
     STRING_LITERAL       // Stack effect: 1
 } LiteralType;
 
@@ -112,6 +114,7 @@ typedef struct {
         BooleanLiteral *booleanLiteral;
         NumberLiteral *numberLiteral;
         IdentifierLiteral *identifierLiteral;
+        ThisLiteral *thisLiteral;
         StringLiteral *stringLiteral;
     } as;
 } Literal;
@@ -265,6 +268,10 @@ struct NumberLiteral {
 };
 
 struct IdentifierLiteral {
+    Token token;
+};
+
+struct ThisLiteral {
     Token token;
 };
 

@@ -179,17 +179,6 @@ void step(VM* vm) {
     CallFrame* frame = vm->currFrame;
     Bytecode* instruction = frame->IP;
 
-#if DEBUG_VM
-    if (previousFrame != frame) {
-        printf(KCYN "%-16p" RESET, frame->codeObject);
-    } else {
-        printf(KGRY "                " RESET);
-    }
-    previousFrame = frame;
-    printf(KGRY "%-4ld " RESET, frame->IP - frame->codeObject->bytecodeArray.values);
-    printStack(frame->SP, vm->stack);
-#endif
-
     // TODO: re-order switch based on frequency.
     switch (instruction->type) {
         case OP_LOAD_CONSTANT:
@@ -422,11 +411,38 @@ void step(VM* vm) {
             push(frame, entry->value);
             break;
         }
+        case OP_GET_FIELD_OFFSET: {
+            int offset = instruction->maybeOperand2;
+            Value structValue = peek(frame, offset);
+            if (!IS_STRUCT(structValue)) {
+                runtimeError(frame, "Cannot get field from non-struct value.");
+            }
+            ObjStruct* structure = structValue.as.structVal;
+            Constant constant = frame->codeObject->constantPool.values[instruction->maybeOperand1];
+            HashTableEntry* entry = hashTableGet(&structure->fields, constant.as.string);
+            if (entry == NULL) {
+                runtimeError(frame, "Undefined field '%s'.", constant.as.string);
+            }
+            push(frame, entry->value);
+            break;
+        }
         default:
             // Handle any unknown or unimplemented opcodes.
             fprintf(stderr, "Unimplemented opcode %d\n", instruction->type);
             exit(EXIT_FAILURE);
     }
+
+#if DEBUG_VM
+    if (previousFrame != frame) {
+        printf(KCYN "%-16p" RESET, frame->codeObject);
+    } else {
+        printf(KGRY "                " RESET);
+    }
+    printf(KGRY "%3ld " RESET, frame->IP - frame->codeObject->bytecodeArray.values);
+    printf("%-20s", getInstructionName(instruction->type));
+    previousFrame = frame;
+    printStack(frame->SP, vm->stack);
+#endif
 
     // Move the instruction pointer to the next instruction
     frame->IP++;

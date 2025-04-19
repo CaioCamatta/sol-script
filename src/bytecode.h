@@ -59,9 +59,10 @@ typedef enum {
     OP_RETURN,  // Exit current frame and return the value at the top of the current frame.
 
     // Structs
-    OP_NEW_STRUCT,  // Create new struct
-    OP_SET_FIELD,   // Set struct field
-    OP_GET_FIELD    // Get struct field
+    OP_NEW_STRUCT,        // Create new struct
+    OP_SET_FIELD,         // Set struct field
+    OP_GET_FIELD,         // Get struct field and pop the struct
+    OP_GET_FIELD_OFFSET,  // Get struct field from offset (0 = top of stack, 1 = second from top, etc)
 } Opcode;
 
 // Create simple bytecode with no operands or constants
@@ -69,16 +70,25 @@ typedef enum {
     (Bytecode) { .type = op }
 
 // Create bytecode with one constant
-#define BYTECODE_OPERAND_1(op, index1) \
-    (Bytecode) {                       \
-        .type = op,                    \
-        .maybeOperand1 = (index1)      \
+#define BYTECODE_OPERAND_1(op, arg1) \
+    (Bytecode) {                     \
+        .type = op,                  \
+        .maybeOperand1 = (arg1)      \
+    }
+
+// Create bytecode with one constant
+#define BYTECODE_OPERAND_2(op, arg1, arg2) \
+    (Bytecode) {                           \
+        .type = op,                        \
+        .maybeOperand1 = (arg1),           \
+        .maybeOperand2 = (arg2)            \
     }
 
 /* The bytecode contains the Opcode and optional operands depending on the type of operation. */
 typedef struct {
     Opcode type;
     size_t maybeOperand1;
+    size_t maybeOperand2;
 } Bytecode;
 
 typedef struct {
@@ -98,6 +108,7 @@ typedef enum {
 
 typedef struct {
     CompiledCodeObject* code;
+    bool isMethod;  // If the function is a method, the first parameter is a struct
     u_int8_t parameterCount;
 } Function;
 

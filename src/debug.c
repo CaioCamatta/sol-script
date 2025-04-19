@@ -342,6 +342,10 @@ static void printLiteral(const Literal* literal, int depth) {
             printf("IdentifierLiteral" KGRY "(token=\"%.*s\")\n" RESET, literal->as.identifierLiteral->token.length, literal->as.identifierLiteral->token.start);
             break;
 
+        case THIS_LITERAL:
+            printf("ThisLiteral" KGRY "(token=\"%.*s\")\n" RESET, literal->as.thisLiteral->token.length, literal->as.thisLiteral->token.start);
+            break;
+
         case STRING_LITERAL:
             printf("StringLiteral" KGRY "(token=%.*s)\n" RESET, literal->as.stringLiteral->token.length, literal->as.stringLiteral->token.start);
             break;
@@ -396,8 +400,8 @@ static void printConstantPool(ConstantPool constantPool, FunctionArray* arrayFun
                 printf("(identifier) \"%s\"\n", value.as.string);
                 break;
             case CONST_TYPE_LAMBDA:
-                printf("(function) <%p parameterCount=%d>\n",
-                       (void*)value.as.lambda->code, value.as.lambda->parameterCount);
+                printf("(function) <" KCYN "%p " KGRY "parameterCount=" RESET "%d " KGRY "isMethod=" RESET "%s>\n",
+                       (void*)value.as.lambda->code, value.as.lambda->parameterCount, value.as.lambda->isMethod ? "true" : "false");
                 insertFunction(arrayFunctionsToPrintLater, value.as.lambda);
                 break;
         }
@@ -525,17 +529,20 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
             case OP_GET_FIELD:
                 printf("GET_FIELD #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
+            case OP_GET_FIELD_OFFSET:
+                printf("GET_FIELD_OFFSET #%zu offset=%lu\n", bytecodeArray.values[i].maybeOperand1, bytecodeArray.values[i].maybeOperand2);
+                break;
         }
     }
 }
 
 void printCompiledCode(CompiledCode compiledCode) {
     printf(KBOLD KCYN "Compiled code\n" RESET KBOFF);
-    printCompiledCodeObject(compiledCode.topLevelCodeObject, "main");
+    printf(KCYN "main\n" RESET);
+    printCompiledCodeObject(compiledCode.topLevelCodeObject);
 }
 
-void printCompiledCodeObject(CompiledCodeObject compiledCodeObject, const char* name) {
-    printf(KCYN "%s\n" RESET, name);
+void printCompiledCodeObject(CompiledCodeObject compiledCodeObject) {
     FunctionArray functionsToPrint;
     initFunctionArray(&functionsToPrint);
 
@@ -550,7 +557,9 @@ void printCompiledCodeObject(CompiledCodeObject compiledCodeObject, const char* 
         Function* function = functionsToPrint.functions[i];
         char functionName[32];
         snprintf(functionName, sizeof(functionName), "%p", (void*)function->code);
-        printCompiledCodeObject(*(function->code), functionName);
+        printf(KCYN "%s" RESET, functionName);
+        printf(KGRY " (%sparameters: %d)\n" RESET, function->isMethod ? "method, " : "", function->parameterCount);
+        printCompiledCodeObject(*(function->code));
     }
 
     freeFunctionArray(&functionsToPrint);
@@ -560,32 +569,122 @@ void printCompiledCodeObject(CompiledCodeObject compiledCodeObject, const char* 
 // ----------------------------------- VM ------------------------------------
 // ---------------------------------------------------------------------------
 
+const char* getInstructionName(Opcode opcode) {
+    switch (opcode) {
+        case OP_LOAD_CONSTANT:
+            return "LOAD_CONSTANT";
+        case OP_DEFINE_GLOBAL_VAL:
+            return "DEFINE_GLOBAL_VAL";
+        case OP_DEFINE_GLOBAL_VAR:
+            return "DEFINE_GLOBAL_VAR";
+        case OP_GET_GLOBAL_VAL:
+            return "GET_GLOBAL_VAL";
+        case OP_GET_GLOBAL_VAR:
+            return "GET_GLOBAL_VAR";
+        case OP_SET_GLOBAL_VAR:
+            return "SET_GLOBAL_VAR";
+        case OP_GET_LOCAL_VAR_FAST:
+            return "GET_LOCAL_VAR_FAST";
+        case OP_GET_LOCAL_VAL_FAST:
+            return "GET_LOCAL_VAL_FAST";
+        case OP_DEFINE_LOCAL_VAL_FAST:
+            return "DEFINE_LOCAL_VAL_FAST";
+        case OP_DEFINE_LOCAL_VAR_FAST:
+            return "DEFINE_LOCAL_VAR_FAST";
+        case OP_SET_LOCAL_VAR_FAST:
+            return "SET_LOCAL_VAR_FAST";
+        case OP_NULL:
+            return "NULL";
+        case OP_TRUE:
+            return "TRUE";
+        case OP_FALSE:
+            return "FALSE";
+        case OP_PRINT:
+            return "PRINT";
+        case OP_POPN:
+            return "POPN";
+        case OP_JUMP_IF_FALSE:
+            return "JUMP_IF_FALSE";
+        case OP_JUMP:
+            return "JUMP";
+        case OP_SWAP:
+            return "SWAP";
+        case OP_UNARY_NEGATE:
+            return "UNARY_NEGATE";
+        case OP_UNARY_NOT:
+            return "UNARY_NOT";
+        case OP_BINARY_ADD:
+            return "BINARY_ADD";
+        case OP_BINARY_SUBTRACT:
+            return "BINARY_SUBTRACT";
+        case OP_BINARY_MULTIPLY:
+            return "BINARY_MULTIPLY";
+        case OP_BINARY_DIVIDE:
+            return "BINARY_DIVIDE";
+        case OP_BINARY_GT:
+            return "BINARY_GT";
+        case OP_BINARY_GTE:
+            return "BINARY_GTE";
+        case OP_BINARY_LT:
+            return "BINARY_LT";
+        case OP_BINARY_LTE:
+            return "BINARY_LTE";
+        case OP_BINARY_LOGICAL_AND:
+            return "BINARY_LOGICAL_AND";
+        case OP_BINARY_LOGICAL_OR:
+            return "BINARY_LOGICAL_OR";
+        case OP_BINARY_EQUAL:
+            return "BINARY_EQUAL";
+        case OP_BINARY_NOT_EQUAL:
+            return "BINARY_NOT_EQUAL";
+        case OP_LAMBDA:
+            return "LAMBDA";
+        case OP_CALL:
+            return "CALL";
+        case OP_RETURN:
+            return "RETURN";
+        case OP_NEW_STRUCT:
+            return "NEW_STRUCT";
+        case OP_SET_FIELD:
+            return "SET_FIELD";
+        case OP_GET_FIELD:
+            return "GET_FIELD";
+        case OP_GET_FIELD_OFFSET:
+            return "GET_FIELD_OFFSET";
+        default:
+            return "UNKNOWN";
+    }
+}
+
 // Print VM stack. The top of the stack will be on the left.
 void printStack(const Value* topOfStack, const Value* bottomOfStack) {
-    printf(KGRY "t[ " RESET);
+    // printf(KGRY "t[ " RESET);
     while (topOfStack != bottomOfStack) {
+        printf(KGRY "{ " RESET);
         topOfStack--;
         Value val = *topOfStack;
         switch (val.type) {
             case TYPE_BOOLEAN:
-                printf(KGRY "{" RESET " %s " KGRY "} " RESET, val.as.booleanVal ? "true" : "false");
+                printf("%s", val.as.booleanVal ? "true" : "false");
                 break;
             case TYPE_DOUBLE:
-                printf(KGRY "{" RESET " %.5f " KGRY "} " RESET, val.as.doubleVal);
+                printf("%.5f", val.as.doubleVal);
                 break;
             case TYPE_NULL:
-                printf(KGRY "{" RESET " NULL " KGRY "} " RESET);
+                printf("NULL");
                 break;
             case TYPE_STRING:
-                printf(KGRY "{" RESET " %.10s " KGRY "} " RESET, val.as.stringVal);
+                printf("%.10s", val.as.stringVal);
                 break;
             case TYPE_LAMBDA:
-                printf(KGRY "{" RESET " %p " KGRY "} " RESET, val.as.lambdaVal);
+                printf("l:%p", val.as.lambdaVal);
                 break;
             case TYPE_STRUCT:
-                printf(KGRY "{" RESET " struct:%p " KGRY "} " RESET, val.as.structVal);
+                printf("s:%p", val.as.structVal);
                 break;
         }
+        printf(KGRY " } " RESET);
     }
-    printf(KGRY "]b\n" RESET);
+    printf("\n");
+    // printf(KGRY "]b\n" RESET);
 }

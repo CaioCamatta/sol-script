@@ -11,6 +11,7 @@ var
 print
 while
 lambda
+this
 prototype
 
 // Identifier
