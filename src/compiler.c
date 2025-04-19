@@ -16,6 +16,9 @@
 #include "util/hash_table.h"
 #include "vm.h"
 
+// The struct is always the first argument in a method call.
+#define STRUCT_SLOT_IN_METHOD_CALL 0
+
 /**
  * Get new PredictedStack with null values and stack height zero.
  */
@@ -42,7 +45,7 @@ CompilerUnit initCompilerUnit(CompilerUnit* maybeEnclosingCompilerUnit, HashTabl
     compilerUnit.isInGlobalScope = maybeEnclosingCompilerUnit == NULL;  // Only the root compiler can be in global scope.
     compilerUnit.globals = globals;
     compilerUnit.enclosingCompilerUnit = maybeEnclosingCompilerUnit;
-    compilerUnit.currentStructSlot = -1;
+    compilerUnit.isInStructScope = false;
 
     return compilerUnit;
 }
@@ -853,11 +856,6 @@ static Function* createFunction(u_int8_t parameterCount, bool isMethod, Compiled
     return function;
 }
 
-// Returns true if the compiler is currently in the scope of a struct.
-static bool isInStructScope(CompilerUnit* compiler) {
-    return compiler->currentStructSlot >= 0;  // If set to -1, we are not in a struct scope
-}
-
 /**
  * Compile a function and emit an OP_LAMBDA, which in the just puts the function Value on the stack.
  *
@@ -871,9 +869,8 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
     CompilerUnit functionCompiler = initCompilerUnit(compiler, compiler->globals);
 
     // If this function is currently being compiled inside a struct, we let the function compiler know.
-    bool isInsideStruct = isInStructScope(compiler);
-    if (isInsideStruct) {
-        functionCompiler.currentStructSlot = compiler->currentStructSlot;
+    if (compiler->isInStructScope) {
+        functionCompiler.isInStructScope = compiler->isInStructScope;
         // If we're inside a struct, this function is a method. Methods in Sol require the first
         // argument to be the struct itself. So we increase the predicted stack height to compensate for that.
         increaseStackHeight(&functionCompiler);
@@ -906,8 +903,8 @@ static void visitLambdaExpression(CompilerUnit* compiler, LambdaExpression* lamb
     *heapCodeObject = functionCompiler.compiledCodeObject;
     // If we're inside a struct, this function is actually a method, so we need to add an extra parameter
     // which is the struct itself.
-    u_int8_t parameterCount = lambdaExpression->parameters->used + (isInsideStruct ? 1 : 0);
-    bool isMethod = isInsideStruct;
+    u_int8_t parameterCount = lambdaExpression->parameters->used + (compiler->isInStructScope ? 1 : 0);
+    bool isMethod = compiler->isInStructScope;
     Function* function = createFunction(parameterCount, isMethod, heapCodeObject);
 
     // Create a constant for the function
@@ -1024,8 +1021,8 @@ static void visitStructExpression(CompilerUnit* compiler, StructExpression* stru
     increaseStackHeight(compiler);
 
     // We need to track the fact we're compiling a struct so the "this" keyword can be used.
-    int structSlotBeforeThisStruct = compiler->currentStructSlot;
-    compiler->currentStructSlot = 0;
+    int wasInStructScopeBeforeThisStruct = compiler->isInStructScope;
+    compiler->isInStructScope = true;
 
     // Set each field
     for (size_t i = 0; i < structExpression->declarationArray.used; i++) {
@@ -1047,7 +1044,7 @@ static void visitStructExpression(CompilerUnit* compiler, StructExpression* stru
     }
 
     // Reset the struct slot to what it was before. If we weren't compiling a struct before, this will be -1.
-    compiler->currentStructSlot = structSlotBeforeThisStruct;
+    compiler->isInStructScope = wasInStructScopeBeforeThisStruct;
 }
 
 static void visitReturnStatement(CompilerUnit* compiler, ReturnStatement* returnStatement) {
@@ -1129,11 +1126,11 @@ static void visitBooleanLiteral(CompilerUnit* compiler, BooleanLiteral* booleanL
 }
 
 static void visitThisLiteral(CompilerUnit* compiler, ThisLiteral* thisLiteral) {
-    if (!(isInStructScope(compiler))) {
+    if (!compiler->isInStructScope) {
         errorAndExit(compiler, "Cannot use 'this' outside of a struct.");
     }
     // Load "this" from slot 0 of the current frame where the struct instance will be
-    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, compiler->currentStructSlot));
+    emitBytecode(compiler, BYTECODE_OPERAND_1(OP_GET_LOCAL_VAR_FAST, STRUCT_SLOT_IN_METHOD_CALL));
     increaseStackHeight(compiler);
 }
 
