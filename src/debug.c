@@ -529,6 +529,9 @@ static void printBytecodeArray(BytecodeArray bytecodeArray) {
             case OP_GET_FIELD:
                 printf("GET_FIELD #%zu\n", bytecodeArray.values[i].maybeOperand1);
                 break;
+            case OP_GET_FIELD_OFFSET:
+                printf("GET_FIELD_OFFSET #%zu offset=%lu\n", bytecodeArray.values[i].maybeOperand1, bytecodeArray.values[i].maybeOperand2);
+                break;
         }
     }
 }
@@ -646,6 +649,8 @@ const char* getInstructionName(Opcode opcode) {
             return "SET_FIELD";
         case OP_GET_FIELD:
             return "GET_FIELD";
+        case OP_GET_FIELD_OFFSET:
+            return "GET_FIELD_OFFSET";
         default:
             return "UNKNOWN";
     }

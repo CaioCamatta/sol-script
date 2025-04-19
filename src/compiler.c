@@ -965,28 +965,31 @@ static void visitFunctionCallExpression(CompilerUnit* compiler, CallExpression* 
     // Emit bytecode for the function call
     emitBytecode(compiler, BYTECODE(OP_CALL));
 }
-
+/**
+ * A method call will put Values on the stack the following order:
+ * [struct, arg1, arg2, ..., function]
+ *
+ * IDEA: We could change how function/method calls work in SolScript to be similar
+ * to Java's invokevirtual. Instead of having to put the function on the stack, we
+ * call it by its string name. So on the stack we would only need [struct, arg1, arg2]
+ */
 static void visitMethodCallExpression(CompilerUnit* compiler, CallExpression* callExpression) {
     MemberExpression* memberExpression = callExpression->leftHandSide->as.memberExpression;
-
-    // When calling a method, the first argument on the stack should be the object
-    // this function belongs to.
-    // TODO: `visitMemberExpression` already puts the left-hand side on the stack, so we should
-    // figure out a way to avoid doing it twice. This would likely require refactoring OP_CALL
-    // to be similar to Java's invokevirtual - i.e. to call a method, instead of having to put
-    // the struct on the stack, then extracting the method from it, we call the method by
-    // string name. So order would be 1) put struct on stack, 2) put args, 3) call method by
-    // name.
+    // Put struct on the stack
     visitExpression(compiler, memberExpression->leftHandSide);
     increaseStackHeight(compiler);
 
     // Compile the actual arguments
-    for (size_t i = 0; i < callExpression->arguments->used; i++) {
+    size_t numArgs = callExpression->arguments->used;
+    for (size_t i = 0; i < numArgs; i++) {
         visitExpression(compiler, callExpression->arguments->values[i]);
     }
 
     // Put the function on the stack
-    visitMemberExpression(compiler, memberExpression);
+    Constant functionNameConstant = STRING_CONST(copyStringToHeap(memberExpression->rightHandSide->as.primaryExpression->literal->as.identifierLiteral->token.start,
+                                                                  memberExpression->rightHandSide->as.primaryExpression->literal->as.identifierLiteral->token.length));
+    size_t functionNameConstantIndex = upsertConstantToPool(compiler, functionNameConstant);
+    emitBytecode(compiler, BYTECODE_OPERAND_2(OP_GET_FIELD_OFFSET, functionNameConstantIndex, numArgs));
 
     // The function/method call will put a value on the stack (even if its null)
     increaseStackHeight(compiler);
